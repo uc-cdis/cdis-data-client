@@ -10,10 +10,6 @@ import (
 func hashedCanonicalRequestV4(request *http.Request, meta *metadata) string {
 	// TASK 1. http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
 
-	payload := readAndReplaceBody(request)
-	payloadHash := hashSHA256(payload)
-	request.Header.Set("X-Amz-Content-Sha256", payloadHash)
-
 	// Set this in header values to make it appear in the range of headers to sign
 	if request.Header.Get("Host") == "" {
 		request.Header.Set("Host", request.Host)
@@ -47,6 +43,11 @@ func hashedCanonicalRequestV4(request *http.Request, meta *metadata) string {
 		}
 		headersToSign += key + ":" + value + "\n"
 	}
+
+	payload := readAndReplaceBody(request)
+	payloadHash := hashSHA256(payload)
+	request.Header.Set("X-Amz-Content-Sha256", payloadHash)
+
 	meta.signedHeaders = concat(";", sortedHeaderKeys...)
 	canonicalRequest := concat("\n", request.Method, normuri(request.URL.Path), normquery(request.URL.Query()), headersToSign, meta.signedHeaders, payloadHash)
 

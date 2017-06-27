@@ -69,11 +69,3 @@ func get_request_scope(req *http.Request, service string) string {
 	date := time.Format("20060102")
 	return fmt.Sprintf("%v/%v/%v", date, service, BIONIMBUS_REQUEST)
 }
-
-func set_req_date(req *http.Request, req_date string) {
-	for key, _ := range req.Header {
-		if REQUEST_DATE_HEADER == strings.ToLower(key) {
-			req.Header.Set(REQUEST_DATE_HEADER, req_date)
-		}
-	}
-}
