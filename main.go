@@ -13,7 +13,7 @@
 
 package main
 
-import "github.com/ronaldhshi/cdis-client/cmd"
+import "github.com/uc-cdis/cdis-data-client/cmd"
 
 func main() {
 	cmd.Execute()

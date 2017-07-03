@@ -24,8 +24,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var profile string
-
 // configureCmd represents the configure command
 var configureCmd = &cobra.Command{
 	Use:   "configure",
@@ -45,6 +43,9 @@ to quickly create a Cobra application.`,
 		fmt.Print("Secrete Access Key: ")
 		scanner.Scan()
 		secretKey := scanner.Text()
+		fmt.Print("gdcapi endpoint: ")
+		scanner.Scan()
+		gdcapi_endpoint := scanner.Text()
 
 		// Store user info in ~/.cdis/config
 		usr, _ := user.Current()
@@ -69,13 +70,14 @@ to quickly create a Cobra application.`,
 			if lines[i] == "["+profile+"]" {
 				lines[i+1] = "access_key=" + accessKey
 				lines[i+2] = "secret_key=" + secretKey
+				lines[i+3] = "gdcapi_endpoint=" + gdcapi_endpoint
 				found = true
 				break
 			}
 		}
 
 		if found {
-			f, err := os.OpenFile(configPath, os.O_WRONLY, 0777)
+			f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -84,11 +86,8 @@ to quickly create a Cobra application.`,
 					panic(err)
 				}
 			}()
-			for i := 0; i < len(lines); i++ {
-				if lines[i] != "" {
-					fmt.Print("newline\n")
-					f.WriteString(lines[i] + "\n")
-				}
+			for i := 0; i < len(lines)-1; i++ {
+				f.WriteString(lines[i] + "\n")
 			}
 		} else {
 			f, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
@@ -111,7 +110,7 @@ to quickly create a Cobra application.`,
 			if _, err := f.WriteString("secret_key=" + secretKey + "\n"); err != nil {
 				panic(err)
 			}
-			if _, err := f.WriteString("gdcapi_endpoint=IDunnoWhatThisIs" + "\n\n"); err != nil {
+			if _, err := f.WriteString("gdcapi_endpoint=" + gdcapi_endpoint + "\n\n"); err != nil {
 				panic(err)
 			}
 		}
@@ -127,7 +126,6 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// configureCmd.PersistentFlags().String("foo", "", "A help for foo")
-	configureCmd.PersistentFlags().StringVar(&profile, "profile", "default", "example: --profile user2")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:

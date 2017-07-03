@@ -39,11 +39,11 @@ func Sign(request *http.Request, credentials Credentials, service string) *http.
 	stringToSign := stringToSignV4(request, hashedCanonReq, meta, service)
 
 	// Task 3
-	signingKey := signingKeyV4(secret_key, meta.date, meta.region, meta.service)
+	signingKey := signingKeyV4(secret_key, meta.date, meta.service)
+
 	signature := signatureV4(signingKey, stringToSign)
 
 	request.Header.Set("Authorization", buildAuthHeaderV4(signature, meta, credentials))
-	request.Header.Del("X-Amz-Content-Sha256")
 
 	return request
 }

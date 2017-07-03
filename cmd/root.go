@@ -23,12 +23,13 @@ import (
 )
 
 var cfgFile string
+var profile string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "cdis-client",
-	Short: "CLI to verify AWS Signature Version 4",
-	Long:  `Placeholder longer description about this lol`,
+	Short: "CLI with HMAC verification to talk to GDCAPI",
+	Long:  `Placeholder longer description about this`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -50,6 +51,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cdis-client.yaml)")
+	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "example: --profile user2")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

@@ -10,6 +10,9 @@ import (
 func hashedCanonicalRequestV4(request *http.Request, meta *metadata) string {
 	// TASK 1. http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
 
+	payload := readAndReplaceBody(request)
+	payloadHash := hashSHA256(payload)
+	request.Header.Set("X-Amz-Content-Sha256", payloadHash)
 	// Set this in header values to make it appear in the range of headers to sign
 	if request.Header.Get("Host") == "" {
 		request.Header.Set("Host", request.Host)
@@ -35,18 +38,18 @@ func hashedCanonicalRequestV4(request *http.Request, meta *metadata) string {
 			//AWS does not include port in signing request.
 			if strings.Contains(value, ":") {
 				split := strings.Split(value, ":")
-				port := split[1]
-				if port == "80" || port == "443" {
-					value = split[0]
-				}
+				//port := split[1]
+				//if port == "80" || port == "443" {
+				value = split[0]
+				//}
 			}
 		}
 		headersToSign += key + ":" + value + "\n"
 	}
 
-	payload := readAndReplaceBody(request)
-	payloadHash := hashSHA256(payload)
-	request.Header.Set("X-Amz-Content-Sha256", payloadHash)
+	//payload := readAndReplaceBody(request)
+	//payloadHash := hashSHA256(payload)
+	//request.Header.Set("X-Amz-Content-Sha256", payloadHash)
 
 	meta.signedHeaders = concat(";", sortedHeaderKeys...)
 	canonicalRequest := concat("\n", request.Method, normuri(request.URL.Path), normquery(request.URL.Query()), headersToSign, meta.signedHeaders, payloadHash)
@@ -93,9 +96,8 @@ func prepareRequestV4(request *http.Request) *http.Request {
 	return request
 }
 
-func signingKeyV4(secretKey, date, region, service string) []byte {
+func signingKeyV4(secretKey, date, service string) []byte {
 	kDate := hmacSHA256([]byte("HMAC4"+secretKey), date)
-	//kRegion := hmacSHA256(kDate, region)
 	kService := hmacSHA256(kDate, service)
 	kSigning := hmacSHA256(kService, "hmac4_request")
 	return kSigning
