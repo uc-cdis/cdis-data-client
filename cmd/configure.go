@@ -68,9 +68,15 @@ to quickly create a Cobra application.`,
 		found := false
 		for i := 0; i < len(lines); i += 5 {
 			if lines[i] == "["+profile+"]" {
-				lines[i+1] = "access_key=" + accessKey
-				lines[i+2] = "secret_key=" + secretKey
-				lines[i+3] = "gdcapi_endpoint=" + gdcapi_endpoint
+				if accessKey != "" {
+					lines[i+1] = "access_key=" + accessKey
+				}
+				if secretKey != "" {
+					lines[i+2] = "secret_key=" + secretKey
+				}
+				if gdcapi_endpoint != "" {
+					lines[i+3] = "gdcapi_endpoint=" + gdcapi_endpoint
+				}
 				found = true
 				break
 			}

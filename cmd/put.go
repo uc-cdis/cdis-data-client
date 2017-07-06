@@ -24,9 +24,9 @@ import (
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
 )
 
-// getCmd represents the get command
-var getCmd = &cobra.Command{
-	Use:   "get",
+// putCmd represents the put command
+var putCmd = &cobra.Command{
+	Use:   "put",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -35,20 +35,22 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("put called")
 		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
 		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
 			return
 		}
-
 		client := &http.Client{}
 		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
 
 		uri = strings.TrimPrefix(uri, "/")
 
 		// Create and send request
-		req, _ := http.NewRequest("GET", "http://"+host+"/"+uri, nil)
+		body := bytes.NewBufferString(read_file(file_path, file_type))
+		req, _ := http.NewRequest("PUT", "http://"+host+"/"+uri, body)
 		req.Header.Add("Host", host)
 		req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
+		req.Header.Add("Content-Type", "application/"+file_type)
 
 		signed_req := gdcHmac.Sign(req, gdcHmac.Credentials{AccessKeyID: access_key, SecretAccessKey: secret_key}, "submission")
 
@@ -65,15 +67,15 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	RootCmd.AddCommand(getCmd)
+	RootCmd.AddCommand(putCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// getCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// putCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// getCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// putCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

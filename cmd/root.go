@@ -24,6 +24,9 @@ import (
 
 var cfgFile string
 var profile string
+var uri string
+var file_path string
+var file_type string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -52,6 +55,9 @@ func init() {
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cdis-client.yaml)")
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "example: --profile user2")
+	RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
+	RootCmd.PersistentFlags().StringVar(&file_path, "file", "", "Specify file to upload with --file=~/path/to/file")
+	RootCmd.PersistentFlags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv}")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

@@ -24,9 +24,9 @@ import (
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
 )
 
-// getCmd represents the get command
-var getCmd = &cobra.Command{
-	Use:   "get",
+// deleteCmd represents the delete command
+var deleteCmd = &cobra.Command{
+	Use:   "delete",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -35,18 +35,18 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("delete called")
 		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
 		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
 			return
 		}
-
 		client := &http.Client{}
 		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
 
 		uri = strings.TrimPrefix(uri, "/")
 
 		// Create and send request
-		req, _ := http.NewRequest("GET", "http://"+host+"/"+uri, nil)
+		req, _ := http.NewRequest("DELETE", "http://"+host+"/"+uri, nil)
 		req.Header.Add("Host", host)
 		req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
 
@@ -65,15 +65,15 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	RootCmd.AddCommand(getCmd)
+	RootCmd.AddCommand(deleteCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// getCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// deleteCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// getCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// deleteCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
