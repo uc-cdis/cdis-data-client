@@ -27,15 +27,14 @@ import (
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Send DELETE HTTP Request for given URI",
+	Long: `Deletes a given URI from the database. 
+If no profile is specified, "default" profile is used for authentication. 
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/example_id
+	  ./cdis-data-client delete --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("delete called")
 		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
 		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
 			return

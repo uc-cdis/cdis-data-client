@@ -27,13 +27,14 @@ import (
 // configureCmd represents the configure command
 var configureCmd = &cobra.Command{
 	Use:   "configure",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Add or modify a configuration profile to your config file",
+	Long: `Configuration file located at ~/.cdis/config
+Prompts for access_key, secret_key, and gdcapi endpoint
+If a field is left empty, the existing value (if it exists) will remain unchanged
+If no profile is specified, "default" profile is used
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Examples: ./cdis-data-client config
+	  ./cdis-data-client config --profile=user1`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Prompt user for info
 		scanner := bufio.NewScanner(os.Stdin)

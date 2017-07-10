@@ -27,15 +27,16 @@ import (
 // putCmd represents the put command
 var putCmd = &cobra.Command{
 	Use:   "put",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Send PUT HTTP Request to the gdcapi",
+	Long: `Sends a PUT HTTP Request to upload files to the database. 
+Specify file type as json or tsv with --file_type (default json).
+If no profile is specified, "default" profile is used for authentication. 
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json 
+	  ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.tsv --file_type=tsv
+	  ./cdis-data-client put --profile=user1 --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("put called")
 		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
 		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
 			return
@@ -46,11 +47,17 @@ to quickly create a Cobra application.`,
 		uri = strings.TrimPrefix(uri, "/")
 
 		// Create and send request
+		fmt.Println("file_type")
+		fmt.Println(file_type)
 		body := bytes.NewBufferString(read_file(file_path, file_type))
 		req, _ := http.NewRequest("PUT", "http://"+host+"/"+uri, body)
 		req.Header.Add("Host", host)
 		req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
-		req.Header.Add("Content-Type", "application/"+file_type)
+		if file_type == "json" {
+			req.Header.Add("Content-Type", "application/json")
+		} else {
+			req.Header.Add("Content-Type", "text/tab-separated-values")
+		}
 
 		signed_req := gdcHmac.Sign(req, gdcHmac.Credentials{AccessKeyID: access_key, SecretAccessKey: secret_key}, "submission")
 
