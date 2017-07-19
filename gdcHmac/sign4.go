@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 )
 
 func hashedCanonicalRequestV4(request *http.Request, meta *metadata) string {
@@ -113,7 +114,7 @@ func buildAuthHeaderV4(signature string, meta *metadata, keys Credentials) strin
 }
 
 func timestampV4() string {
-	return now().Format(timeFormatV4)
+	return time.Now().UTC().Format(timeFormatV4)
 }
 
 func tsDateV4(timestamp string) string {

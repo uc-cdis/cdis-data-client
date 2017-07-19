@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 type location struct {
@@ -100,17 +99,16 @@ func readAndReplaceBody(request *http.Request) []byte {
 	if request.Body == nil {
 		return []byte{}
 	}
-	payload, _ := ioutil.ReadAll(request.Body)
+	payload, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		panic(err)
+	}
 	request.Body = ioutil.NopCloser(bytes.NewReader(payload))
 	return payload
 }
 
 func concat(delim string, str ...string) string {
 	return strings.Join(str, delim)
-}
-
-var now = func() time.Time {
-	return time.Now().UTC()
 }
 
 func normuri(uri string) string {
