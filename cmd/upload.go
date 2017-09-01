@@ -19,8 +19,8 @@ var uploadCmd = &cobra.Command{
 Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
+		access_key, secret_key, api_endpoint := parse_config(profile)
+		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
 
@@ -31,8 +31,8 @@ Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.jso
 		body := bytes.NewBufferString(string(data[:]))
 		
 		client := &http.Client{}
-		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
-		host = strings.TrimPrefix(gdcapi_endpoint, "https://")
+		host := strings.TrimPrefix(api_endpoint, "http://")
+		host = strings.TrimPrefix(api_endpoint, "https://")
 
 		// Get the presigned url first
 		resp, err := gdcHmac.SignedGet("https://"+host+"/user/data/upload/"+uuid, "userapi", access_key, secret_key)

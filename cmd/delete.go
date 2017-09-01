@@ -21,12 +21,12 @@ Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/exampl
 	  ./cdis-data-client delete --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
+		access_key, secret_key, api_endpoint := parse_config(profile)
+		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
 		client := &http.Client{}
-		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
+		host := strings.TrimPrefix(api_endpoint, "http://")
 
 		// Declared in ./root.go
 		uri = strings.TrimPrefix(uri, "/")

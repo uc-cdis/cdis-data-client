@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/user"
 	"path"
@@ -47,26 +48,38 @@ func parse_config(profile string) (string, string, string) {
 	} else {
 		// Read in access key, secret key, endpoint for given profile
 		access_key := lines[profile_line+1]
-		r, err := regexp.Compile("access_key=(\\S*)")
+		r, err := regexp.Compile("^access_key=(\\S*)")
 		if err != nil {
 			panic(err)
 		}
-		access_key = r.FindStringSubmatch(access_key)[1]
+		match := r.FindStringSubmatch(access_key)
+		if len(match) == 0 {
+			log.Fatal("access_key not found in profile")
+		}
+		access_key = match[1]
 
 		secret_key := lines[profile_line+2]
-		r, err = regexp.Compile("secret_key=(\\S*)")
+		r, err = regexp.Compile("^secret_key=(\\S*)")
 		if err != nil {
 			panic(err)
 		}
-		secret_key = r.FindStringSubmatch(secret_key)[1]
+		match = r.FindStringSubmatch(secret_key)
+		if len(match) == 0 {
+                        log.Fatal("secret_key not found in profile")
+                }
+		secret_key = match[1]
 
-		gdcapi_endpoint := lines[profile_line+3]
-		r, err = regexp.Compile("gdcapi_endpoint=(\\S*)")
+		api_endpoint := lines[profile_line+3]
+		r, err = regexp.Compile("^api_endpoint=(\\S*)")
 		if err != nil {
 			panic(err)
 		}
-		gdcapi_endpoint = r.FindStringSubmatch(gdcapi_endpoint)[1]
-		return access_key, secret_key, gdcapi_endpoint
+		match = r.FindStringSubmatch(api_endpoint)
+		if len(match) == 0 {
+                        log.Fatal("api_endpoint not found in profile")
+                }
+		api_endpoint = match[1]
+		return access_key, secret_key, api_endpoint
 	}
 }
 

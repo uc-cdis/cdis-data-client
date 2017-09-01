@@ -20,12 +20,12 @@ Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_i
 	  ./cdis-data-client get --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
+		access_key, secret_key, api_endpoint := parse_config(profile)
+		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
 
-		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
+		host := strings.TrimPrefix(api_endpoint, "http://")
 		host = strings.TrimPrefix(host, "https://")
 		uri = strings.TrimPrefix(uri, "/")
 

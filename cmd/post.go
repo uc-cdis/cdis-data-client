@@ -24,12 +24,12 @@ Examples: ./cdis-data-client put --uri=v0/submission/graphql --file=~/Documents/
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("post called")
-		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
+		access_key, secret_key, api_endpoint := parse_config(profile)
+		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
 		client := &http.Client{}
-		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
+		host := strings.TrimPrefix(api_endpoint, "http://")
 
 		uri = strings.TrimPrefix(uri, "/")
 

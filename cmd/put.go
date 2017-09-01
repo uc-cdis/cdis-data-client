@@ -24,12 +24,12 @@ Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents
 	  ./cdis-data-client put --profile=user1 --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, gdcapi_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && gdcapi_endpoint == "" {
+		access_key, secret_key, api_endpoint := parse_config(profile)
+		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
 		client := &http.Client{}
-		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
+		host := strings.TrimPrefix(api_endpoint, "http://")
 
 		uri = strings.TrimPrefix(uri, "/")
 

@@ -31,9 +31,9 @@ Examples: ./cdis-data-client config
 		fmt.Print("Secret Key: ")
 		scanner.Scan()
 		secretKey := scanner.Text()
-		fmt.Print("gdcapi endpoint: ")
+		fmt.Print("API endpoint: ")
 		scanner.Scan()
-		gdcapi_endpoint := scanner.Text()
+		api_endpoint := scanner.Text()
 
 		// Store user info in ~/.cdis/config
 		usr, err := user.Current()
@@ -65,8 +65,8 @@ Examples: ./cdis-data-client config
 				if secretKey != "" {
 					lines[i+2] = "secret_key=" + secretKey
 				}
-				if gdcapi_endpoint != "" {
-					lines[i+3] = "gdcapi_endpoint=" + gdcapi_endpoint
+				if api_endpoint != "" {
+					lines[i+3] = "api_endpoint=" + api_endpoint
 				}
 				found = true
 				break
@@ -107,7 +107,7 @@ Examples: ./cdis-data-client config
 			if _, err := f.WriteString("secret_key=" + secretKey + "\n"); err != nil {
 				panic(err)
 			}
-			if _, err := f.WriteString("gdcapi_endpoint=" + gdcapi_endpoint + "\n\n"); err != nil {
+			if _, err := f.WriteString("api_endpoint=" + api_endpoint + "\n\n"); err != nil {
 				panic(err)
 			}
 		}
