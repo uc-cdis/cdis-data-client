@@ -28,7 +28,7 @@ Examples: ./cdis-data-client config
 		fmt.Print("Access Key: ")
 		scanner.Scan()
 		accessKey := scanner.Text()
-		fmt.Print("Secrete Access Key: ")
+		fmt.Print("Secret Key: ")
 		scanner.Scan()
 		secretKey := scanner.Text()
 		fmt.Print("gdcapi endpoint: ")

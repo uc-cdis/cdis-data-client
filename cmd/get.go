@@ -3,9 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
@@ -27,23 +25,11 @@ Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_i
 			return
 		}
 
-		client := &http.Client{}
 		host := strings.TrimPrefix(gdcapi_endpoint, "http://")
-
+		host = strings.TrimPrefix(host, "https://")
 		uri = strings.TrimPrefix(uri, "/")
 
-		// Create and send request
-		req, err := http.NewRequest("GET", "http://"+host+"/"+uri, nil)
-		if err != nil {
-			panic(err)
-		}
-		req.Header.Add("Host", host)
-		req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
-
-		signed_req := gdcHmac.Sign(req, gdcHmac.Credentials{AccessKeyID: access_key, SecretAccessKey: secret_key}, "submission")
-
-		// Display what came back
-		resp, err := client.Do(signed_req)
+		resp, err := gdcHmac.SignedGet("https://"+host+"/"+uri, "submission", access_key, secret_key)
 		if err != nil {
 			panic(err)
 		}

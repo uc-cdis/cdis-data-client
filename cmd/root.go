@@ -14,6 +14,7 @@ var profile string
 var uri string
 var file_path string
 var file_type string
+var uuid string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -40,6 +41,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
 	RootCmd.PersistentFlags().StringVar(&file_path, "file", "", "Specify file to upload with --file=~/path/to/file")
 	RootCmd.PersistentFlags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")
+	RootCmd.PersistentFlags().StringVar(&uuid, "uuid", "", "Specify the uuid for the data you would like to work with")
 }
 
 // initConfig reads in config file and ENV variables if set.
