@@ -3,9 +3,8 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"net/http"
+	"net/url"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
@@ -23,30 +22,23 @@ Examples: ./cdis-data-client put --uri=v0/submission/graphql --file=~/Documents/
 	  ./cdis-data-client put --profile=user1 --uri=v0/submission/graphql --file=~/Documents/my_grqphql_query.json
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("post called")
 		access_key, secret_key, api_endpoint := parse_config(profile)
 		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
-		client := &http.Client{}
-		host := strings.TrimPrefix(api_endpoint, "http://")
 
-		uri = strings.TrimPrefix(uri, "/")
+		host, _ := url.Parse(api_endpoint)
+		uri = "/api/" + strings.TrimPrefix(uri, "/")
 
 		// Create and send request
 		body := bytes.NewBufferString(read_file(file_path, file_type))
-		req, err := http.NewRequest("POST", "http://"+host+"/"+uri, body)
-		if err != nil {
-			panic(err)
+
+		content_type := "application/json"
+		if file_type == "tsv" {
+			content_type = "text/tab-separated-values"
 		}
-		req.Header.Add("Host", host)
-		req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
-		req.Header.Add("Content-Type", "application/"+file_type)
+		resp, err := gdcHmac.SignedRequest("POST", host.Scheme+"://"+host.Host+uri, body, content_type, "submission", access_key, secret_key)
 
-		signed_req := gdcHmac.Sign(req, gdcHmac.Credentials{AccessKeyID: access_key, SecretAccessKey: secret_key}, "submission")
-
-		// Display what came back
-		resp, err := client.Do(signed_req)
 		if err != nil {
 			panic(err)
 		}

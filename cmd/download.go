@@ -6,8 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
@@ -31,23 +31,24 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		}
 		defer out.Close()
 
-		host := strings.TrimPrefix(api_endpoint, "http://")
-		host = strings.TrimPrefix(api_endpoint, "https://")
+		host, _ := url.Parse(api_endpoint)
+		content_type := "application/json"
 
 		// Get the presigned url first
-		resp, err := gdcHmac.SignedGet("https://"+host+"/user/data/download/"+uuid, "userapi", access_key, secret_key)
-                if err != nil {
-                        panic(err)
-                }
+		resp, err := gdcHmac.SignedRequest(
+			"GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, content_type, "userapi", access_key, secret_key)
+		if err != nil {
+			panic(err)
+		}
 		defer resp.Body.Close()
 
-                buf := new(bytes.Buffer)
-                buf.ReadFrom(resp.Body)
-                presigned_download_url := buf.String()
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		presigned_download_url := buf.String()
 		if resp.StatusCode != 200 {
-			log.Fatalf("Got response code %i\n%s",resp.StatusCode, presigned_download_url)
+			log.Fatalf("Got response code %i\n%s", resp.StatusCode, presigned_download_url)
 		}
-		fmt.Println("Presigned URL to download: " + presigned_download_url)
+		fmt.Println("Downloading data from url: " + presigned_download_url)
 
 		respDown, err := http.Get(presigned_download_url)
 		if err != nil {
@@ -55,7 +56,7 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		}
 		defer respDown.Body.Close()
 		_, err = io.Copy(out, respDown.Body)
-		if err != nil  {
+		if err != nil {
 			panic(err)
 		}
 	},

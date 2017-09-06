@@ -3,9 +3,8 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"net/http"
+	"net/url"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
@@ -25,21 +24,14 @@ Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/exampl
 		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
-		client := &http.Client{}
-		host := strings.TrimPrefix(api_endpoint, "http://")
+		content_type := "application/json"
+		host, _ := url.Parse(api_endpoint)
 
 		// Declared in ./root.go
-		uri = strings.TrimPrefix(uri, "/")
-
-		// Create and send request
-		req, _ := http.NewRequest("DELETE", "http://"+host+"/"+uri, nil)
-		req.Header.Add("Host", host)
-		req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
-
-		signed_req := gdcHmac.Sign(req, gdcHmac.Credentials{AccessKeyID: access_key, SecretAccessKey: secret_key}, "submission")
+		uri = "/api/" + strings.TrimPrefix(uri, "/")
 
 		// Display what came back
-		resp, err := client.Do(signed_req)
+		resp, err := gdcHmac.SignedRequest("DELETE", host.Scheme+"://"+host.Host+uri, nil, content_type, "submission", access_key, secret_key)
 		if err != nil {
 			panic(err)
 		}

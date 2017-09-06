@@ -65,8 +65,8 @@ func parse_config(profile string) (string, string, string) {
 		}
 		match = r.FindStringSubmatch(secret_key)
 		if len(match) == 0 {
-                        log.Fatal("secret_key not found in profile")
-                }
+			log.Fatal("secret_key not found in profile")
+		}
 		secret_key = match[1]
 
 		api_endpoint := lines[profile_line+3]
@@ -76,16 +76,14 @@ func parse_config(profile string) (string, string, string) {
 		}
 		match = r.FindStringSubmatch(api_endpoint)
 		if len(match) == 0 {
-                        log.Fatal("api_endpoint not found in profile")
-                }
+			log.Fatal("api_endpoint not found in profile")
+		}
 		api_endpoint = match[1]
 		return access_key, secret_key, api_endpoint
 	}
 }
 
 func read_file(file_path, file_type string) string {
-	fmt.Println("file_path")
-	fmt.Println(file_path)
 	//Look in config file
 	var full_file_path string
 	if file_path[0] == '~' {
@@ -95,8 +93,6 @@ func read_file(file_path, file_type string) string {
 	} else {
 		full_file_path = file_path
 	}
-	fmt.Println("full_file_path")
-	fmt.Println(full_file_path)
 	if _, err := os.Stat(full_file_path); err != nil {
 		fmt.Println("File specified at " + full_file_path + " not found")
 		return ""
@@ -106,15 +102,11 @@ func read_file(file_path, file_type string) string {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("content")
-	fmt.Println(content)
 
 	content_str := string(content[:])
 
 	if file_type == "json" {
 		content_str = strings.Replace(content_str, "\n", "", -1)
 	}
-	fmt.Println("content_str")
-	fmt.Println(content_str)
 	return content_str
 }

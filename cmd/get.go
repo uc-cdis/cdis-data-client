@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -13,8 +14,8 @@ import (
 var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "Send GET HTTP Request for given URI",
-	Long: `Gets a given URI from the database. 
-If no profile is specified, "default" profile is used for authentication. 
+	Long: `Gets a given URI from the database.
+If no profile is specified, "default" profile is used for authentication.
 
 Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_id
 	  ./cdis-data-client get --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
@@ -25,11 +26,11 @@ Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_i
 			return
 		}
 
-		host := strings.TrimPrefix(api_endpoint, "http://")
-		host = strings.TrimPrefix(host, "https://")
-		uri = strings.TrimPrefix(uri, "/")
+		host, _ := url.Parse(api_endpoint)
+		uri = "/api/" + strings.TrimPrefix(uri, "/")
+		content_type := "application/json"
 
-		resp, err := gdcHmac.SignedGet("https://"+host+"/"+uri, "submission", access_key, secret_key)
+		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+uri, nil, content_type, "submission", access_key, secret_key)
 		if err != nil {
 			panic(err)
 		}

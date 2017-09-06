@@ -3,9 +3,8 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"net/http"
+	"net/url"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
@@ -15,11 +14,11 @@ import (
 var putCmd = &cobra.Command{
 	Use:   "put",
 	Short: "Send PUT HTTP Request to the gdcapi",
-	Long: `Sends a PUT HTTP Request to upload files to the database. 
+	Long: `Sends a PUT HTTP Request to upload files to the database.
 Specify file type as json or tsv with --file_type (default json).
-If no profile is specified, "default" profile is used for authentication. 
+If no profile is specified, "default" profile is used for authentication.
 
-Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json 
+Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 	  ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.tsv --file_type=tsv
 	  ./cdis-data-client put --profile=user1 --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 `,
@@ -28,31 +27,19 @@ Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents
 		if access_key == "" && secret_key == "" && api_endpoint == "" {
 			return
 		}
-		client := &http.Client{}
-		host := strings.TrimPrefix(api_endpoint, "http://")
-
-		uri = strings.TrimPrefix(uri, "/")
+		host, _ := url.Parse(api_endpoint)
+		uri = "/api/" + strings.TrimPrefix(uri, "/")
 
 		// Create and send request
-		fmt.Println("file_type")
-		fmt.Println(file_type)
 		body := bytes.NewBufferString(read_file(file_path, file_type))
-		req, err := http.NewRequest("PUT", "http://"+host+"/"+uri, body)
-		if err != nil {
-			panic(err)
-		}
-		req.Header.Add("Host", host)
-		req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
-		if file_type == "json" {
-			req.Header.Add("Content-Type", "application/json")
-		} else {
-			req.Header.Add("Content-Type", "text/tab-separated-values")
-		}
 
-		signed_req := gdcHmac.Sign(req, gdcHmac.Credentials{AccessKeyID: access_key, SecretAccessKey: secret_key}, "submission")
+		content_type := "application/json"
+		if file_type == "tsv" {
+			content_type = "text/tab-separated-values"
+		}
 
 		// Display what came back
-		resp, err := client.Do(signed_req)
+		resp, err := gdcHmac.SignedRequest("POST", host.Scheme+"://"+host.Host+uri, body, content_type, "submission", access_key, secret_key)
 		if err != nil {
 			panic(err)
 		}

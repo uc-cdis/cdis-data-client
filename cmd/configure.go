@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/user"
 	"path"
@@ -34,6 +35,14 @@ Examples: ./cdis-data-client config
 		fmt.Print("API endpoint: ")
 		scanner.Scan()
 		api_endpoint := scanner.Text()
+		parsed_url, err := url.Parse(api_endpoint)
+		if err != nil {
+			panic(err)
+		}
+		if parsed_url.Host == "" {
+			fmt.Print("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
+			os.Exit(1)
+		}
 
 		// Store user info in ~/.cdis/config
 		usr, err := user.Current()

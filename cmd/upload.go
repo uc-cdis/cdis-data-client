@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
@@ -29,25 +29,25 @@ Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.jso
 			log.Fatal(err)
 		}
 		body := bytes.NewBufferString(string(data[:]))
-		
+
 		client := &http.Client{}
-		host := strings.TrimPrefix(api_endpoint, "http://")
-		host = strings.TrimPrefix(api_endpoint, "https://")
+		host, _ := url.Parse(api_endpoint)
+		content_type := "application/json"
 
 		// Get the presigned url first
-		resp, err := gdcHmac.SignedGet("https://"+host+"/user/data/upload/"+uuid, "userapi", access_key, secret_key)
-                if err != nil {
-                        panic(err)
-                }
+		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid, nil, content_type, "userapi", access_key, secret_key)
+		if err != nil {
+			panic(err)
+		}
 		defer resp.Body.Close()
-                
+
 		buf := new(bytes.Buffer)
-                buf.ReadFrom(resp.Body)
-                presigned_upload_url := buf.String()
+		buf.ReadFrom(resp.Body)
+		presigned_upload_url := buf.String()
 		if resp.StatusCode != 200 {
-                        log.Fatalf("Got response code %i\n%s",resp.StatusCode, presigned_upload_url)
-                }
-		fmt.Println("Presigned URL to upload: " + presigned_upload_url)
+			log.Fatalf("Got response code %i\n%s", resp.StatusCode, presigned_upload_url)
+		}
+		fmt.Println("Uploading data from URL: " + presigned_upload_url)
 
 		// Create and send request
 		req, err := http.NewRequest("PUT", presigned_upload_url, body)
