@@ -1,57 +1,58 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/user"
+	"path"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-var profile string
-
-// configureCmd represents the configure command
 var configureCmd = &cobra.Command{
 	Use:   "configure",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Add or modify a configuration profile to your config file",
+	Long: `Configuration file located at ~/.cdis/config
+Prompts for access_key, secret_key, and gdcapi endpoint
+If a field is left empty, the existing value (if it exists) will remain unchanged
+If no profile is specified, "default" profile is used
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Examples: ./cdis-data-client config
+	  ./cdis-data-client config --profile=user1`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Prompt user for info
 		scanner := bufio.NewScanner(os.Stdin)
 		fmt.Print("Access Key: ")
 		scanner.Scan()
 		accessKey := scanner.Text()
-		fmt.Print("Secrete Access Key: ")
+		fmt.Print("Secret Key: ")
 		scanner.Scan()
 		secretKey := scanner.Text()
+		fmt.Print("API endpoint: ")
+		scanner.Scan()
+		api_endpoint := scanner.Text()
+		parsed_url, err := url.Parse(api_endpoint)
+		if err != nil {
+			panic(err)
+		}
+		if parsed_url.Host == "" {
+			fmt.Print("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
+			os.Exit(1)
+		}
 
 		// Store user info in ~/.cdis/config
-		usr, _ := user.Current()
+		usr, err := user.Current()
+		if err != nil {
+			panic(err)
+		}
 		homeDir := usr.HomeDir
-		configPath := homeDir + "/.cdis/config"
-		if _, err := os.Stat(homeDir + "/.cdis/"); os.IsNotExist(err) {
-			os.Mkdir(homeDir+"/.cdis/", os.FileMode(0777))
+		configPath := path.Join(homeDir + "/.cdis/config")
+		if _, err := os.Stat(path.Join(homeDir + "/.cdis/")); os.IsNotExist(err) {
+			os.Mkdir(path.Join(homeDir+"/.cdis/"), os.FileMode(0777))
 			os.Create(configPath)
 		}
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -67,15 +68,22 @@ to quickly create a Cobra application.`,
 		found := false
 		for i := 0; i < len(lines); i += 5 {
 			if lines[i] == "["+profile+"]" {
-				lines[i+1] = "access_key=" + accessKey
-				lines[i+2] = "secret_key=" + secretKey
+				if accessKey != "" {
+					lines[i+1] = "access_key=" + accessKey
+				}
+				if secretKey != "" {
+					lines[i+2] = "secret_key=" + secretKey
+				}
+				if api_endpoint != "" {
+					lines[i+3] = "api_endpoint=" + api_endpoint
+				}
 				found = true
 				break
 			}
 		}
 
 		if found {
-			f, err := os.OpenFile(configPath, os.O_WRONLY, 0777)
+			f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
 			if err != nil {
 				panic(err)
 			}
@@ -84,11 +92,8 @@ to quickly create a Cobra application.`,
 					panic(err)
 				}
 			}()
-			for i := 0; i < len(lines); i++ {
-				if lines[i] != "" {
-					fmt.Print("newline\n")
-					f.WriteString(lines[i] + "\n")
-				}
+			for i := 0; i < len(lines)-1; i++ {
+				f.WriteString(lines[i] + "\n")
 			}
 		} else {
 			f, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
@@ -111,7 +116,7 @@ to quickly create a Cobra application.`,
 			if _, err := f.WriteString("secret_key=" + secretKey + "\n"); err != nil {
 				panic(err)
 			}
-			if _, err := f.WriteString("gdcapi_endpoint=IDunnoWhatThisIs" + "\n\n"); err != nil {
+			if _, err := f.WriteString("api_endpoint=" + api_endpoint + "\n\n"); err != nil {
 				panic(err)
 			}
 		}
@@ -121,15 +126,4 @@ to quickly create a Cobra application.`,
 
 func init() {
 	RootCmd.AddCommand(configureCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// configureCmd.PersistentFlags().String("foo", "", "A help for foo")
-	configureCmd.PersistentFlags().StringVar(&profile, "profile", "default", "example: --profile user2")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// configureCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

@@ -1,84 +1,91 @@
 package gdcHmac
 
 import (
-	"bytes"
-	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 )
 
-/*
-func TestSign(t *testing.T) {
-	secret_key := "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
-	service := "submission"
-	date := "20110909"
-	//key := HMAC4SigningKey(secret_key, service, date)
-	//b := bytes.NewBufferString("Action=ListUsers&Version=2010-05-08")
-	req, _ := http.NewRequest("POST", "", nil)
-	req.Header.Add("Host", "example.amazonaws.com")
-	req.Header.Add("X-Amz-Date", "20150830T123600Z")
+var testMethods = map[string]string{
+	"GET":    "67598ed4f2d48da0d554a57b6ddbd395a3382873c5558be855322ce2d02015c1",
+	"POST":   "e0ea126a02a9f7ad8741e919031e3e4f3e84124a41a110403f6f871ad45dad01",
+	"PUT":    "ee12296d03895236ffb8863161d83624022bacab47e679aa88deb227cce3beb3",
+	"DELETE": "e2da8fd17f5e563e1df50d2f7f537444c750b2263e575342536e1ec2fcc0c7b3"}
 
-	//auth = HMAC4Auth("dummy", key)
+func TestSigningTasks(t *testing.T) {
+	get_vanilla, _ := http.NewRequest("GET", "/", nil)
+	get_vanilla.Header.Add("Host", "example.amazonaws.com")
+	get_vanilla.Header.Add("X-Amz-Date", "20150830T123600Z")
 
-	sreq := Sign(req, Credentials{AccessKeyID: "", SecretAccessKey: secret_key}, service, date)
-	signature := sreq.Header.Get("Authorization")
-
-	expected := ""
-	if signature != expected {
-		t.Errorf("Signature incorrect. got: %v, want: %v", signature, expected)
+	meta := new(metadata)
+	// (Task 1) The canonical request should be built correctly
+	hashedCanonReq := hashedCanonicalRequestV4(get_vanilla, meta)
+	if hashedCanonReq != "bb579772317eb040ac9ed261061d46c1f17a8133879d6129b6e1c25292927e63" {
+		t.Error("Task 1 error, Canonical Request was misformed!")
 	}
 
+	// (Task 2) The string to sign should be built correctly
+	stringToSign := stringToSignV4(get_vanilla, hashedCanonReq, meta, "submission")
+	if stringToSign != "HMAC-SHA256\n20150830T123600Z\n20150830/submission/bionimbus_request\nbb579772317eb040ac9ed261061d46c1f17a8133879d6129b6e1c25292927e63" {
+		t.Error(stringToSign)
+		t.Error("Task 2 error")
+	}
+
+	// (Task 3) The version 4 signed signature should be correct
+	secret_key := "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"
+	signingKey := signingKeyV4(secret_key, meta.date, meta.region, meta.service)
+	signature := signatureV4(signingKey, stringToSign)
+	if signature != "67598ed4f2d48da0d554a57b6ddbd395a3382873c5558be855322ce2d02015c1" {
+		t.Error("Task 3 error, Signature incorrect")
+	}
 }
-*/
-
-func TestSet_req_date(t *testing.T) {
-	req, _ := http.NewRequest("POST", "", nil)
-	req.Header.Add("Host", "example.amazonaws.com")
-	req.Header.Add("X-Amz-Date", "20150830T123600Z")
-	date := "20110909"
-	//fmt.Println(req.Header)
-	set_req_date(req, date)
-	//fmt.Println(req.Header)
-}
-
-func TestHashBody(t *testing.T) {
-	req, _ := http.NewRequest("POST", "", nil)
-	req.Header.Add("Host", "example.amazonaws.com")
-	req.Header.Add("X-Amz-Date", "20150830T123600Z")
-	//fmt.Println(req.Header)
-
-	payload := readAndReplaceBody(req)
-	//payloadHash :=
-	req.Header.Set("X-Amz-Content-Sha256", hashSHA256(payload))
-	//fmt.Println(req.Header)
-}
-
-func TestHashedCanonicalRequestV4(t *testing.T) {
-	req, _ := http.NewRequest("POST", "", nil)
-	req.Header.Add("Host", "example.amazonaws.com")
-	req.Header.Add("X-Amz-Date", "20110909T233600Z")
-	date := "20110909"
-	set_req_date(req, date)
-
-	//meta := new(metadata)
-	//hashedCanonReq :=
-	//fmt.Println(hashedCanonicalRequestV4(req, meta))
-}
-
 func TestSign(t *testing.T) {
-	body := "ExampleBody"
-	buf := bytes.NewBufferString(body)
-	req, _ := http.NewRequest("POST", "", buf)
-	req.Header.Add("Host", "example.amazonaws.com")
-	req.Header.Add("X-Amz-Date", "20110909T233600Z")
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-	fmt.Println("Initial req.Header")
-	fmt.Println(req.Header)
-	date := "20110909"
-	set_req_date(req, date)
+	for method, sig := range testMethods {
+		get_vanilla, _ := http.NewRequest(method, "/", nil)
+		get_vanilla.Header.Add("Host", "example.amazonaws.com")
+		get_vanilla.Header.Add("X-Amz-Date", "20150830T123600Z")
+		sget_vanilla := Sign(get_vanilla, Credentials{AccessKeyID: "AKIDEXAMPLE", SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"}, "submission")
 
-	signed_req := Sign(req, Credentials{AccessKeyID: "20150830/us-east-1/service", SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"}, "submission", date)
-	fmt.Println(signed_req.Header)
-	//hashedCanonReq :=
-	//fmt.Println(hashedCanonicalRequestV4(req, meta))
+		if sget_vanilla.Header.Get("Host") != "example.amazonaws.com" {
+			t.Error("Host header incorrect! Expected example.amazonaws.com, got " + sget_vanilla.Header.Get("Host"))
+		}
+		if sget_vanilla.Header.Get("X-Amz-Date") != "20150830T123600Z" {
+			t.Error("X-Amz-Date header incorrect! Expected 20150830T123600Z, got " + sget_vanilla.Header.Get("X-Amz-Date"))
+		}
+		if sget_vanilla.Header.Get("Authorization") == "" {
+			t.Error("Authorization header missing!")
+		} else {
+			splitAuth := strings.Split(sget_vanilla.Header.Get("Authorization"), " ")
+			if splitAuth[0] != "HMAC-SHA256" {
+				t.Error("For " + method + " Algorithm in authorization header incorrect! Expected HMAC-SHA256, got " + splitAuth[0])
+			}
+			if splitAuth[1] != "Credential=AKIDEXAMPLE/20150830/submission/bionimbus_request," {
+				t.Error("For " + method + " Credential in authorization header incorrect! Expected Credential=AKIDEXAMPLE/20150830/submission/bionimbus_request,, got " + splitAuth[1])
+			}
+			if splitAuth[2] != "SignedHeaders=host;x-amz-date," {
+				t.Error("For " + method + " SignedHeaders in authorization header incorrect! Expected SignedHeaders=host;x-amz-date,, got " + splitAuth[2])
+			}
+			if splitAuth[3] != "Signature="+sig {
+				t.Error("For " + method + " Signature in authorization header incorrect! Expected Signature=" + sig + ", got " + splitAuth[3])
+			}
+		}
+	}
+}
+
+func TestVerify(t *testing.T) {
+	for method, sig := range testMethods {
+		get_vanilla, _ := http.NewRequest(method, "/", nil)
+		get_vanilla.Host = "example.amazonaws.com"
+		get_vanilla.Header.Add("User-Agent", "gzip")
+		get_vanilla.Header.Add("Authorization", "HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/submission/bionimbus_request, SignedHeaders=host;x-amz-date, Signature="+sig)
+		get_vanilla.Header.Add("X-Amz-Date", "20150830T123600Z")
+		get_vanilla.Header.Add("Accept-Encoding", "gzip")
+
+		if Verify("submission", get_vanilla, "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY") != true {
+			t.Error("For " + method + " Verify was supposed to be true, but is false!")
+		}
+		if Verify("submission", get_vanilla, "wJalrXUtnFEMI/K7MDENG+bPxRfiCYWRONGWRONG") == true {
+			t.Error("For " + method + " Verify was supposed to be false, but is true!")
+		}
+	}
 }

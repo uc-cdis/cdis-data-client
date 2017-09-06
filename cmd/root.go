@@ -1,16 +1,3 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
@@ -23,15 +10,18 @@ import (
 )
 
 var cfgFile string
+var profile string
+var uri string
+var file_path string
+var file_type string
+var uuid string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "cdis-client",
-	Short: "CLI to verify AWS Signature Version 4",
-	Long:  `Placeholder longer description about this lol`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Short: "CLI with HMAC verification to talk to GDCAPI",
+	Long: `Send GET, PUT, POST, DELETE HTTP requests to interact with the GDCAPI
+that are signed using HMAC protocol`,
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -46,14 +36,12 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cdis-client.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Define flags and configuration settings.
+	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "Specify profile to add or edit with --profile user2")
+	RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
+	RootCmd.PersistentFlags().StringVar(&file_path, "file", "", "Specify file to upload with --file=~/path/to/file")
+	RootCmd.PersistentFlags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")
+	RootCmd.PersistentFlags().StringVar(&uuid, "uuid", "", "Specify the uuid for the data you would like to work with")
 }
 
 // initConfig reads in config file and ENV variables if set.
