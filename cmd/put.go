@@ -39,7 +39,7 @@ Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents
 		}
 
 		// Display what came back
-		resp, err := gdcHmac.SignedRequest("POST", host.Scheme+"://"+host.Host+uri, body, content_type, "submission", access_key, secret_key)
+		resp, err := gdcHmac.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri, body, content_type, "submission", access_key, secret_key)
 		if err != nil {
 			panic(err)
 		}
