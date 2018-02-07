@@ -23,23 +23,26 @@ Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents
 	  ./cdis-data-client put --profile=user1 --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, api_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && api_endpoint == "" {
+		cred := ParseConfig(profile)
+		if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 			return
 		}
-		host, _ := url.Parse(api_endpoint)
-		uri = "/api/" + strings.TrimPrefix(uri, "/")
-
-		// Create and send request
-		body := bytes.NewBufferString(read_file(file_path, file_type))
 
 		content_type := "application/json"
+		host, _ := url.Parse(cred.APIEndpoint)
+
+		uri = "/api/" + strings.TrimPrefix(uri, "/")
+		// Create and send request
+		body := bytes.NewBufferString(ReadFile(file_path, file_type))
+
 		if file_type == "tsv" {
 			content_type = "text/tab-separated-values"
 		}
 
 		// Display what came back
-		resp, err := gdcHmac.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri, body, content_type, "submission", access_key, secret_key)
+		// TODO: Replace here by function of JWT
+		resp, err := gdcHmac.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri, body,
+			content_type, "submission", cred.AccessKey, cred.APIKey)
 		if err != nil {
 			panic(err)
 		}

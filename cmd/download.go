@@ -20,10 +20,13 @@ var downloadCmd = &cobra.Command{
 Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, api_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && api_endpoint == "" {
+		cred := ParseConfig(profile)
+		if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 			return
 		}
+
+		content_type := "application/json"
+		host, _ := url.Parse(cred.APIEndpoint)
 
 		out, err := os.Create(file_path)
 		if err != nil {
@@ -31,12 +34,11 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		}
 		defer out.Close()
 
-		host, _ := url.Parse(api_endpoint)
-		content_type := "application/json"
-
 		// Get the presigned url first
+		// TODO: Replace here by function of JWT
 		resp, err := gdcHmac.SignedRequest(
-			"GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, content_type, "userapi", access_key, secret_key)
+			"GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, content_type,
+			"userapi", cred.AccessKey, cred.APIKey)
 		if err != nil {
 			panic(err)
 		}
@@ -46,7 +48,7 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		buf.ReadFrom(resp.Body)
 		presigned_download_url := buf.String()
 		if resp.StatusCode != 200 {
-			log.Fatalf("Got response code %i\n%s", resp.StatusCode, presigned_download_url)
+			log.Fatalf("Got response code %d\n%s", resp.StatusCode, presigned_download_url)
 		}
 		fmt.Println("Downloading data from url: " + presigned_download_url)
 

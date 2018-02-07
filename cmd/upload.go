@@ -19,10 +19,13 @@ var uploadCmd = &cobra.Command{
 Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, api_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && api_endpoint == "" {
+		cred := ParseConfig(profile)
+		if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 			return
 		}
+
+		content_type := "application/json"
+		host, _ := url.Parse(cred.APIEndpoint)
 
 		data, err := ioutil.ReadFile(file_path)
 		if err != nil {
@@ -31,11 +34,11 @@ Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.jso
 		body := bytes.NewBufferString(string(data[:]))
 
 		client := &http.Client{}
-		host, _ := url.Parse(api_endpoint)
-		content_type := "application/json"
 
 		// Get the presigned url first
-		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid, nil, content_type, "userapi", access_key, secret_key)
+		// TODO: Replace here by function of JWT
+		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
+			nil, content_type, "userapi", cred.AccessKey, cred.APIKey)
 		if err != nil {
 			panic(err)
 		}
@@ -45,7 +48,7 @@ Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.jso
 		buf.ReadFrom(resp.Body)
 		presigned_upload_url := buf.String()
 		if resp.StatusCode != 200 {
-			log.Fatalf("Got response code %i\n%s", resp.StatusCode, presigned_upload_url)
+			log.Fatalf("Got response code %d\n%s", resp.StatusCode, presigned_upload_url)
 		}
 		fmt.Println("Uploading data from URL: " + presigned_upload_url)
 

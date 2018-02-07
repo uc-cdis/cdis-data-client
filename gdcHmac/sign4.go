@@ -11,8 +11,8 @@ import (
 func hashedCanonicalRequestV4(request *http.Request, meta *metadata) string {
 	// TASK 1. http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
 
-	payload := readAndReplaceBody(request)
-	payloadHash := hashSHA256(payload)
+	payload := ReadAndReplaceBody(request)
+	payloadHash := HashSHA256(payload)
 	request.Header.Set("X-Amz-Content-Sha256", payloadHash)
 	// Set this in header values to make it appear in the range of headers to sign
 	if request.Header.Get("Host") == "" {
@@ -48,14 +48,14 @@ func hashedCanonicalRequestV4(request *http.Request, meta *metadata) string {
 		headersToSign += key + ":" + value + "\n"
 	}
 
-	//payload := readAndReplaceBody(request)
-	//payloadHash := hashSHA256(payload)
+	//payload := ReadAndReplaceBody(request)
+	//payloadHash := HashSHA256(payload)
 	//request.Header.Set("X-Amz-Content-Sha256", payloadHash)
 
-	meta.signedHeaders = concat(";", sortedHeaderKeys...)
-	canonicalRequest := concat("\n", request.Method, normuri(request.URL.Path), normquery(request.URL.Query()), headersToSign, meta.signedHeaders, payloadHash)
+	meta.signedHeaders = Concat(";", sortedHeaderKeys...)
+	canonicalRequest := Concat("\n", request.Method, NormUri(request.URL.Path), NormQuery(request.URL.Query()), headersToSign, meta.signedHeaders, payloadHash)
 
-	return hashSHA256([]byte(canonicalRequest))
+	return HashSHA256([]byte(canonicalRequest))
 }
 
 func stringToSignV4(request *http.Request, hashedCanonReq string, meta *metadata, service string) string {
@@ -66,15 +66,15 @@ func stringToSignV4(request *http.Request, hashedCanonReq string, meta *metadata
 	meta.algorithm = ALGORITHM
 	meta.service = service
 	meta.date = tsDateV4(requestTs)
-	meta.credentialScope = get_request_scope(request, meta.service)
+	meta.credentialScope = GetRequestScope(request, meta.service)
 
-	return concat("\n", meta.algorithm, requestTs, meta.credentialScope, hashedCanonReq)
+	return Concat("\n", meta.algorithm, requestTs, meta.credentialScope, hashedCanonReq)
 }
 
 func signatureV4(signingKey []byte, stringToSign string) string {
 	// TASK 3. http://docs.aws.amazon.com/general/latest/gr/sigv4-calculate-signature.html
 
-	return hex.EncodeToString(hmacSHA256(signingKey, stringToSign))
+	return hex.EncodeToString(HmacSHA256(signingKey, stringToSign))
 }
 
 func prepareRequestV4(request *http.Request) *http.Request {
@@ -98,9 +98,9 @@ func prepareRequestV4(request *http.Request) *http.Request {
 }
 
 func signingKeyV4(secretKey, date, service string) []byte {
-	kDate := hmacSHA256([]byte("HMAC4"+secretKey), date)
-	kService := hmacSHA256(kDate, service)
-	kSigning := hmacSHA256(kService, "hmac4_request")
+	kDate := HmacSHA256([]byte("HMAC4"+secretKey), date)
+	kService := HmacSHA256(kDate, service)
+	kSigning := HmacSHA256(kService, "hmac4_request")
 	return kSigning
 }
 

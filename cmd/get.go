@@ -21,16 +21,19 @@ Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_i
 	  ./cdis-data-client get --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, api_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && api_endpoint == "" {
+		cred := ParseConfig(profile)
+		if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 			return
 		}
 
-		host, _ := url.Parse(api_endpoint)
-		uri = "/api/" + strings.TrimPrefix(uri, "/")
 		content_type := "application/json"
+		host, _ := url.Parse(cred.APIEndpoint)
 
-		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+uri, nil, content_type, "submission", access_key, secret_key)
+		uri = "/api/" + strings.TrimPrefix(uri, "/")
+
+		// TODO: Replace here by function of JWT
+		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+uri,
+			nil, content_type, "submission", cred.AccessKey, cred.APIKey)
 		if err != nil {
 			panic(err)
 		}
