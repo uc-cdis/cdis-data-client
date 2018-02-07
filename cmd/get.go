@@ -1,14 +1,25 @@
 package cmd
 
 import (
-	"bytes"
-	"fmt"
-	"net/url"
 	"strings"
-
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
+	"net/http"
+	"net/url"
+	"fmt"
 )
+
+func RequestGet(cred Credential, host *url.URL, contentType string) (*http.Response) {
+	uri = "/api/" + strings.TrimPrefix(uri, "/")
+
+	// TODO: Replace here by function of JWT
+	resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+uri,
+		nil, contentType, "submission", cred.AccessKey, cred.APIKey)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
@@ -21,26 +32,8 @@ Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_i
 	  ./cdis-data-client get --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		cred := ParseConfig(profile)
-		if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-			return
-		}
-
-		content_type := "application/json"
-		host, _ := url.Parse(cred.APIEndpoint)
-
-		uri = "/api/" + strings.TrimPrefix(uri, "/")
-
-		// TODO: Replace here by function of JWT
-		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+uri,
-			nil, content_type, "submission", cred.AccessKey, cred.APIKey)
-		if err != nil {
-			panic(err)
-		}
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		s := buf.String()
-		fmt.Println(s)
+		resp := DoRequestWithSignedHeader(RequestGet)
+		fmt.Println(ResponseToString(resp))
 	},
 }
 

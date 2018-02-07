@@ -9,6 +9,9 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"net/url"
+	"net/http"
+	"bytes"
 )
 
 func ParseKeyValue(str string, expr string, errMsg string) (string) {
@@ -111,4 +114,28 @@ func TryReadFile(filePath string) ([]byte, error) {
 	}
 
 	return ioutil.ReadFile(filePath)
+}
+
+type DoRequest func(cred Credential, host *url.URL, contentType string) (*http.Response)
+
+func DoRequestWithSignedHeader(fn DoRequest) (*http.Response){
+	cred := ParseConfig(profile)
+	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
+		panic("No credential found")
+	}
+	//TODO: 1. If cred.AccessKey == "",
+	//TODO: 2. include cred.APIKey into the request header to refresh cred.AccessKey then write to profile
+	//TODO: 3. Else If cred.AccessKey != "",
+	//TODO: 4. include cred.AccessKey into the request header and do requesting,
+	//TODO: 5. If response says that the AccessKey is expired, repeat step 2 to refresh AccessKey
+
+	contentType := "application/json"
+	host, _ := url.Parse(cred.APIEndpoint)
+	return fn(cred, host, contentType)
+}
+
+func ResponseToString(resp *http.Response) (string) {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	return buf.String()
 }

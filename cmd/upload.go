@@ -6,11 +6,46 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
+	"net/url"
 )
+
+func RequestUpload(cred Credential, host *url.URL, contentType string) (*http.Response) {
+	// TODO: Replace here by function of JWT
+	// Get the presigned url first
+	resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
+		nil, contentType, "userapi", cred.AccessKey, cred.APIKey)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	presignedUploadUrl := ResponseToString(resp)
+	if resp.StatusCode != 200 {
+		log.Fatalf("Got response code %d\n%s", resp.StatusCode, presignedUploadUrl)
+	}
+	fmt.Println("Uploading data from URL: " + presignedUploadUrl)
+
+	// Create and send request
+	client := &http.Client{}
+	data, err := ioutil.ReadFile(file_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body := bytes.NewBufferString(string(data[:]))
+	req, err := http.NewRequest("PUT", presignedUploadUrl, body)
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	return resp
+}
 
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
@@ -19,53 +54,8 @@ var uploadCmd = &cobra.Command{
 Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		cred := ParseConfig(profile)
-		if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-			return
-		}
-
-		content_type := "application/json"
-		host, _ := url.Parse(cred.APIEndpoint)
-
-		data, err := ioutil.ReadFile(file_path)
-		if err != nil {
-			log.Fatal(err)
-		}
-		body := bytes.NewBufferString(string(data[:]))
-
-		client := &http.Client{}
-
-		// Get the presigned url first
-		// TODO: Replace here by function of JWT
-		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
-			nil, content_type, "userapi", cred.AccessKey, cred.APIKey)
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
-
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		presigned_upload_url := buf.String()
-		if resp.StatusCode != 200 {
-			log.Fatalf("Got response code %d\n%s", resp.StatusCode, presigned_upload_url)
-		}
-		fmt.Println("Uploading data from URL: " + presigned_upload_url)
-
-		// Create and send request
-		req, err := http.NewRequest("PUT", presigned_upload_url, body)
-		if err != nil {
-			panic(err)
-		}
-
-		resp, err = client.Do(req)
-		if err != nil {
-			panic(err)
-		}
-		buf = new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		s := buf.String()
-		fmt.Println(s)
+		resp := DoRequestWithSignedHeader(RequestUpload)
+		fmt.Println(ResponseToString(resp))
 	},
 }
 
