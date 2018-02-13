@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,6 +14,15 @@ import (
 	"regexp"
 	"strings"
 )
+
+type APIKeyStruct struct {
+	Api_key string
+	Key_id  string
+}
+
+type AccessTokenStruct struct {
+	Access_token string
+}
 
 func ParseKeyValue(str string, expr string, errMsg string) string {
 	r, err := regexp.Compile(expr)
@@ -116,10 +126,13 @@ func TryReadFile(filePath string) ([]byte, error) {
 	return ioutil.ReadFile(filePath)
 }
 
-func MakeARequest(client *http.Client, method string, path string, body *bytes.Buffer) (*http.Response, error) {
+func MakeARequest(client *http.Client, method string, path string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
 	req, err := http.NewRequest(method, path, body)
 	if err != nil {
 		return nil, err
+	}
+	for k, v := range headers {
+		req.Header.Add(k, v)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -129,58 +142,82 @@ func MakeARequest(client *http.Client, method string, path string, body *bytes.B
 
 }
 
-func GetAPIKey(client *http.Client, path string) (*http.Response, error) {
+func GetAPIKey(client *http.Client, path string) (APIKeyStruct, error) {
 	body := bytes.NewBufferString("'scope': ['data', 'user']")
-	return MakeARequest(client, "POST", path, body)
+	headers := make(map[string]string)
+	headers["Content-Type"] = "application/x-www-form-urlencode"
+	resp, err := MakeARequest(client, "POST", path, headers, body)
+	var m APIKeyStruct
+	if err != nil {
+		return m, err
+	}
+	err = json.Unmarshal(ResponseToBytes(resp), &m)
+	if err != nil {
+		return m, err
+	}
+	return m, nil
+
 }
 
-func GetAccessKey(client *http.Client, path string, apiKey string) (*http.Response, error) {
-	body := bytes.NewBufferString("'api_key': " + apiKey)
-	return MakeARequest(client, "POST", path, body)
+func GetAccessKey(client *http.Client, path string, apiKey string) (AccessTokenStruct, error) {
+	body := bytes.NewBufferString("{\"api_key\": \"" + apiKey + "\"}")
+	headers := make(map[string]string)
+	headers["Content-Type"] = "application/json"
+	resp, err := MakeARequest(client, "POST", path, headers, body)
+	var m AccessTokenStruct
+	if err != nil {
+		return m, err
+	}
+	err = json.Unmarshal(ResponseToBytes(resp), &m)
+	if err != nil {
+		return m, err
+	}
+	return m, nil
+}
+
+func Requesting(cred Credential, host *url.URL, contentType string) *http.Response {
+	return nil
 }
 
 type DoRequest func(cred Credential, host *url.URL, contentType string) *http.Response
 
 func DoRequestWithSignedHeader(fn DoRequest) *http.Response {
+	//cred := Credential{KeyId: "", APIKey: "", AccessKey: "", APIEndpoint: "http://localhost:8000"}
+
+	print(profile)
 	cred := ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 		panic("No credential found")
 	}
+
+	println("\n\n\n")
+	println(cred.APIKey)
+	println("\n\n\n")
+
 	client := &http.Client{}
 
-	//TODO: 1. If cred.AccessKey == "", get api_key
-
+	//If cred.AccessKey == "", get api_key
 	if cred.AccessKey == "" {
-		resp, err := GetAPIKey(client, "/credentials/cdis")
+
+		apiKeyStruct, err := GetAPIKey(client, cred.APIEndpoint+"/credentials/cdis/")
+		if err != nil {
+			return nil
+		}
+		cred.APIKey = apiKeyStruct.Api_key
+		cred.KeyId = apiKeyStruct.Key_id
+
+		//Include cred.APIKey into the request header to refresh cred.AccessKey then write to profile
+		accessKeyStruct, err := GetAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", cred.APIKey)
 		if err != nil {
 			return nil
 		}
 
-		// need to get api_key from resp and update to cred
-		fmt.Println(ResponseToString(resp))
-		apiKey := ""
-		cred.APIKey = apiKey
-
-		//TODO: 2. include cred.APIKey into the request header to refresh cred.AccessKey then write to profile
-		resp, err = GetAccessKey(client, "/credentials/cdis/access_token", cred.APIKey)
-		if err != nil {
-			return nil
-		}
-
-		//need to get access_key from resp
-		fmt.Println(ResponseToString(resp))
-		accessKey := ""
-		cred.AccessKey = accessKey
-
-		//update profile file
-		content, err := TryReadFile(file_path)
-		apiEndpoint := ParseUrl()
-		configPath, content, err := TryReadConfigFile()
-		if err != nil {
-			panic(err)
-		}
-		UpdateConfigFile(cred, content, apiEndpoint, configPath)
-
+		cred.AccessKey = accessKeyStruct.Access_token
+		usr, _ := user.Current()
+		homeDir := usr.HomeDir
+		configPath := path.Join(homeDir + "/.cdis/config")
+		content := ReadFile(configPath, "json")
+		UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath)
 	}
 
 	contentType := "application/json"
@@ -188,26 +225,14 @@ func DoRequestWithSignedHeader(fn DoRequest) *http.Response {
 	return fn(cred, host, contentType)
 }
 
-// type DoRequest func(cred Credential, host *url.URL, contentType string) (*http.Response)
-
-// func DoRequestWithSignedHeader(fn DoRequest) (*http.Response){
-// 	cred := ParseConfig(profile)
-// 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-// 		panic("No credential found")
-// 	}
-// 	//TODO: 1. If cred.AccessKey == "",
-// 	//TODO: 2. include cred.APIKey into the request header to refresh cred.AccessKey then write to profile
-// 	//TODO: 3. Else If cred.AccessKey != "",
-// 	//TODO: 4. include cred.AccessKey into the request header and do requesting,
-// 	//TODO: 5. If response says that the AccessKey is expired, repeat step 2 to refresh AccessKey
-
-// 	contentType := "application/json"
-// 	host, _ := url.Parse(cred.APIEndpoint)
-// 	return fn(cred, host, contentType)
-// }
-
 func ResponseToString(resp *http.Response) string {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	return buf.String()
+}
+
+func ResponseToBytes(resp *http.Response) []byte {
+	strBuf := ResponseToString(resp)
+	strBuf = strings.Replace(strBuf, "\n", "", -1)
+	return []byte(strBuf)
 }
