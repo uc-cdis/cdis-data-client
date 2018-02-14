@@ -80,7 +80,7 @@ func ParseConfig(profile string) Credential {
 		// Read in access key, secret key, endpoint for given profile
 		cred.KeyId = ParseKeyValue(lines[profile_line+1], "^key_id=(\\S*)", "key_id not found in profile")
 		cred.APIKey = ParseKeyValue(lines[profile_line+2], "^api_key=(\\S*)", "api_key not found in profile")
-		cred.APIKey = ParseKeyValue(lines[profile_line+3], "^access_key=(\\S*)", "access_key not found in profile")
+		cred.AccessKey = ParseKeyValue(lines[profile_line+3], "^access_key=(\\S*)", "access_key not found in profile")
 		cred.APIEndpoint = ParseKeyValue(lines[profile_line+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
 		return cred
 	}
@@ -182,41 +182,28 @@ func Requesting(cred Credential, host *url.URL, contentType string) *http.Respon
 type DoRequest func(cred Credential, host *url.URL, contentType string) *http.Response
 
 func DoRequestWithSignedHeader(fn DoRequest) *http.Response {
-	//cred := Credential{KeyId: "", APIKey: "", AccessKey: "", APIEndpoint: "http://localhost:8000"}
 
-	print(profile)
 	cred := ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 		panic("No credential found")
 	}
 
-	println("\n\n\n")
-	println(cred.APIKey)
-	println("\n\n\n")
-
 	client := &http.Client{}
 
-	//If cred.AccessKey == "", get api_key
 	if cred.AccessKey == "" {
-
-		apiKeyStruct, err := GetAPIKey(client, cred.APIEndpoint+"/credentials/cdis/")
-		if err != nil {
-			return nil
-		}
-		cred.APIKey = apiKeyStruct.Api_key
-		cred.KeyId = apiKeyStruct.Key_id
 
 		//Include cred.APIKey into the request header to refresh cred.AccessKey then write to profile
 		accessKeyStruct, err := GetAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", cred.APIKey)
 		if err != nil {
 			return nil
 		}
-
 		cred.AccessKey = accessKeyStruct.Access_token
+
 		usr, _ := user.Current()
 		homeDir := usr.HomeDir
 		configPath := path.Join(homeDir + "/.cdis/config")
-		content := ReadFile(configPath, "json")
+		content := ReadFile(configPath, "")
+		print("keyid", cred.KeyId)
 		UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath)
 	}
 

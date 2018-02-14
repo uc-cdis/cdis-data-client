@@ -7,17 +7,17 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/gdcHmac"
+	"github.com/uc-cdis/cdis-data-client/jwt"
+
 	"net/url"
+
+	"github.com/spf13/cobra"
 )
 
-func RequestDownload(cred Credential, host *url.URL, contentType string) (*http.Response) {
+func RequestDownload(cred Credential, host *url.URL, contentType string) *http.Response {
 	// Get the presigned url first
-	// TODO: Replace here by function of JWT
-	resp, err := gdcHmac.SignedRequest(
-		"GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, contentType,
-		"userapi", cred.AccessKey, cred.APIKey)
+	resp, err := jwt.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+
 	if err != nil {
 		panic(err)
 	}

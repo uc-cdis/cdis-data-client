@@ -1,24 +1,24 @@
 package cmd
 
 import (
-	"strings"
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
-	"bufio"
 	"net/url"
+	"os"
 	"os/user"
 	"path"
+	"strings"
 )
 
 type Credential struct {
-	KeyId string
-	APIKey string
-	AccessKey string
+	KeyId       string
+	APIKey      string
+	AccessKey   string
 	APIEndpoint string
 }
 
-func ReadCredentials(filePath string) (Credential) {
+func ReadCredentials(filePath string) Credential {
 	var configuration Credential
 	jsonContent := ReadFile(filePath, "json")
 	jsonContent = strings.Replace(jsonContent, "key_id", "KeyId", -1)
@@ -31,7 +31,7 @@ func ReadCredentials(filePath string) (Credential) {
 	return configuration
 }
 
-func ParseUrl() (string) {
+func ParseUrl() string {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("API endpoint: ")
 	scanner.Scan()
@@ -65,7 +65,7 @@ func ReadLines(cred Credential, configContent []byte, apiEndpoint string) ([]str
 	for i := 0; i < len(lines); i += 6 {
 		if lines[i] == "["+profile+"]" {
 			if cred.KeyId != "" {
-				lines[i+1] = "key_id=" + cred.APIKey
+				lines[i+1] = "key_id=" + cred.KeyId
 			}
 			if cred.APIKey != "" {
 				lines[i+2] = "api_key=" + cred.APIKey
@@ -81,7 +81,7 @@ func ReadLines(cred Credential, configContent []byte, apiEndpoint string) ([]str
 	return lines, found
 }
 
-func UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint string, configPath string) () {
+func UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint string, configPath string) {
 	lines, found := ReadLines(cred, configContent, apiEndpoint)
 	if found {
 		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
@@ -111,7 +111,7 @@ func UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint string,
 			"key_id=" + cred.KeyId + "\n" +
 			"api_key=" + cred.APIKey + "\n" +
 			"access_key=" + cred.AccessKey + "\n" +
-			"api_endpoint=" + apiEndpoint + "\n\n");
+			"api_endpoint=" + apiEndpoint + "\n\n")
 
 		if err != nil {
 			panic(err)
