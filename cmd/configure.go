@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
+var conf jwt.Configure
 var credFile string
 
 var configureCmd = &cobra.Command{
@@ -18,15 +20,16 @@ Examples: ./cdis-data-client configure
 	  ./cdis-data-client configure --profile=user1 --creds creds.json`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Prompt user for info
-		cred := ReadCredentials(credFile)
-		apiEndpoint := ParseUrl()
+
+		cred := conf.ReadCredentials(credFile)
+		apiEndpoint := conf.ParseUrl()
 
 		// Store user info in ~/.cdis/config
-		configPath, content, err := TryReadConfigFile()
+		configPath, content, err := conf.TryReadConfigFile()
 		if err != nil {
 			panic(err)
 		}
-		UpdateConfigFile(cred, content, apiEndpoint, configPath)
+		conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, "default")
 	},
 }
 

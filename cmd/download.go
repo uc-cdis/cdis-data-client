@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 
@@ -15,7 +14,9 @@ import (
 )
 
 type Download struct {
-	function jwt.FunctionInterface
+	Function jwt.FunctionInterface
+	Request  jwt.RequestInterface
+	Utils    jwt.UtilInterface
 }
 
 type DownloadInterface interface {
@@ -24,19 +25,23 @@ type DownloadInterface interface {
 
 func (download *Download) RequestDownload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
 	// Get the presigned url first
-	resp, err := download.function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+	resp, err := download.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
 
 	if err != nil {
+
 		panic(err)
 	}
-	defer resp.Body.Close()
+	//defer resp.Body.Close()
 
-	presignedDownloadUrl := jwt.ResponseToString(resp)
+	presignedDownloadUrl := download.Utils.ResponseToString(resp)
+
 	if resp.StatusCode == 401 {
-		log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
+		//log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
 		client := &http.Client{}
-		download.function.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = download.function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+		download.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
+		resp, err = download.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+		presignedDownloadUrl = download.Utils.ResponseToString(resp)
+
 	}
 
 	fmt.Println("Downloading data from url: " + presignedDownloadUrl)
@@ -55,7 +60,20 @@ var downloadCmd = &cobra.Command{
 Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		respDown := DoRequestWithSignedHeader(RequestDownload)
+
+		utils := new(jwt.Utils)
+		request := new(jwt.Request)
+		request.Utils = utils
+		configure := new(jwt.Configure)
+		function := new(jwt.Functions)
+
+		function.Utils = utils
+		function.Config = configure
+		function.Request = request
+
+		download := Download{Function: function, Request: request, Utils: utils}
+
+		respDown := function.DoRequestWithSignedHeader(download.RequestDownload, profile)
 
 		out, err := os.Create(file_path)
 		if err != nil {

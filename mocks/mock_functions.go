@@ -60,16 +60,6 @@ func (mr *MockFunctionInterfaceMockRecorder) GetAccessKeyFromFileConfig(arg0 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccessKeyFromFileConfig", reflect.TypeOf((*MockFunctionInterface)(nil).GetAccessKeyFromFileConfig), arg0)
 }
 
-// RequestNewAccessKey mocks base method
-func (m *MockFunctionInterface) RequestNewAccessKey(arg0 *http.Client, arg1 string, arg2 *jwt.Credential) {
-	m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1, arg2)
-}
-
-// RequestNewAccessKey indicates an expected call of RequestNewAccessKey
-func (mr *MockFunctionInterfaceMockRecorder) RequestNewAccessKey(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessKey", reflect.TypeOf((*MockFunctionInterface)(nil).RequestNewAccessKey), arg0, arg1, arg2)
-}
-
 // Requesting mocks base method
 func (m *MockFunctionInterface) Requesting(arg0 jwt.Credential, arg1 *url.URL, arg2 string) *http.Response {
 	ret := m.ctrl.Call(m, "Requesting", arg0, arg1, arg2)

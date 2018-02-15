@@ -4,17 +4,28 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/gdcHmac"
-	"net/url"
-	"net/http"
 	"fmt"
+	"net/http"
+	"net/url"
+
+	"github.com/spf13/cobra"
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-func RequestPut(cred Credential, host *url.URL, contentType string) (*http.Response) {
+type PutRequest struct {
+	Function  jwt.FunctionInterface
+	Configure jwt.ConfigureInterface
+	Request   jwt.RequestInterface
+}
+
+type PutRequestInterface interface {
+	RequestPut(jwt.Credential, *url.URL, string) *http.Response
+}
+
+func (putRequest *PutRequest) RequestPut(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
 	uri = "/api/" + strings.TrimPrefix(uri, "/")
 	// Create and send request
-	body := bytes.NewBufferString(ReadFile(file_path, file_type))
+	body := bytes.NewBufferString(putRequest.Configure.ReadFile(file_path, file_type))
 
 	if file_type == "tsv" {
 		contentType = "text/tab-separated-values"
@@ -22,11 +33,27 @@ func RequestPut(cred Credential, host *url.URL, contentType string) (*http.Respo
 
 	// Display what came back
 	// TODO: Replace here by function of JWT
-	resp, err := gdcHmac.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri, body,
-		contentType, "submission", cred.AccessKey, cred.APIKey)
+	// resp, err := gdcHmac.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri, body,
+	// 	contentType, "submission", cred.AccessKey, cred.APIKey)
+
+	resp, err := putRequest.Function.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri,
+		body, cred.AccessKey)
+
 	if err != nil {
 		panic(err)
 	}
+
+	if resp.StatusCode == 401 {
+		//log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
+		client := &http.Client{}
+		putRequest.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
+		resp, err = putRequest.Function.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri,
+			body, cred.AccessKey)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	return resp
 }
 
@@ -43,8 +70,21 @@ Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents
 	  ./cdis-data-client put --profile=user1 --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		resp := DoRequestWithSignedHeader(RequestPut)
-		fmt.Println(ResponseToString(resp))
+
+		utils := new(jwt.Utils)
+		request := new(jwt.Request)
+		request.Utils = utils
+		configure := new(jwt.Configure)
+		function := new(jwt.Functions)
+
+		function.Utils = utils
+		function.Config = configure
+		function.Request = request
+
+		putRequest := PutRequest{Function: function, Configure: configure, Request: request}
+
+		resp := function.DoRequestWithSignedHeader(putRequest.RequestPut, profile)
+		fmt.Println(utils.ResponseToString(resp))
 	},
 }
 

@@ -19,16 +19,18 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	RequestNewAccessKey(*http.Client, string, *Credential)
 	Requesting(Credential, *url.URL, string) *http.Response
 	GetAccessKeyFromFileConfig(string) Credential
 	DoRequestWithSignedHeader(DoRequest, string) *http.Response
 	SignedRequest(string, string, io.Reader, string) (*http.Response, error)
 }
 
-type Request struct{}
+type Request struct {
+	Utils UtilInterface
+}
 type RequestInterface interface {
 	MakeARequest(*http.Client, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
+	RequestNewAccessKey(*http.Client, string, *Credential)
 }
 
 // func (f *Functions) Set(config Configure, request Request, utils Utils){
@@ -51,16 +53,16 @@ func (r *Request) MakeARequest(client *http.Client, method string, path string, 
 
 }
 
-func (f *Functions) RequestNewAccessKey(client *http.Client, path string, cred *Credential) {
+func (r *Request) RequestNewAccessKey(client *http.Client, path string, cred *Credential) {
 	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
-	resp, err := f.Request.MakeARequest(client, "POST", path, headers, body)
+	resp, err := r.MakeARequest(client, "POST", path, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(ResponseToBytes(resp), &m)
+	err = json.Unmarshal(r.Utils.ResponseToBytes(resp), &m)
 	if err != nil {
 		return
 	}
@@ -80,7 +82,6 @@ var WrapDoConfig = func(u UtilInterface, profile string) Credential {
 
 func (f *Functions) GetAccessKeyFromFileConfig(profile string) Credential {
 	return f.Utils.ParseConfig(profile)
-	//return WrapDoConfig(u, profile)
 }
 
 func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string) *http.Response {
@@ -94,20 +95,18 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string) *htt
 	if cred.AccessKey == "" {
 
 		//Include cred.APIKey into the request header to refresh cred.AccessKey then write to profile
-		f.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
+		f.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
 
 		usr, _ := user.Current()
 		homeDir := usr.HomeDir
 		configPath := path.Join(homeDir + "/.cdis/config")
 		content := f.Config.ReadFile(configPath, "")
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
-
-		contentType := "application/json"
-		host, _ := url.Parse(cred.APIEndpoint)
-		return fn(cred, host, contentType)
 	}
 
-	return nil
+	contentType := "application/json"
+	host, _ := url.Parse(cred.APIEndpoint)
+	return fn(cred, host, contentType)
 
 }
 

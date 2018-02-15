@@ -7,6 +7,7 @@ package mocks
 import (
 	bytes "bytes"
 	gomock "github.com/golang/mock/gomock"
+	jwt "github.com/uc-cdis/cdis-data-client/jwt"
 	http "net/http"
 	reflect "reflect"
 )
@@ -45,4 +46,14 @@ func (m *MockRequestInterface) MakeARequest(arg0 *http.Client, arg1, arg2 string
 // MakeARequest indicates an expected call of MakeARequest
 func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockRequestInterface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4)
+}
+
+// RequestNewAccessKey mocks base method
+func (m *MockRequestInterface) RequestNewAccessKey(arg0 *http.Client, arg1 string, arg2 *jwt.Credential) {
+	m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1, arg2)
+}
+
+// RequestNewAccessKey indicates an expected call of RequestNewAccessKey
+func (mr *MockRequestInterfaceMockRecorder) RequestNewAccessKey(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessKey", reflect.TypeOf((*MockRequestInterface)(nil).RequestNewAccessKey), arg0, arg1, arg2)
 }

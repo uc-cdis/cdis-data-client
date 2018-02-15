@@ -13,7 +13,16 @@ import (
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-func RequestDelete(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
+type DeleteRequest struct {
+	Function jwt.FunctionInterface
+	Utils    jwt.UtilInterface
+}
+
+type DeleteRequestInterface interface {
+	RequestDelete(jwt.Credential, *url.URL, string) *http.Response
+}
+
+func (delRequest *DeleteRequest) RequestDelete(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
 	// Declared in ./root.go
 	uri = "/api/" + strings.TrimPrefix(uri, "/")
 
@@ -37,8 +46,20 @@ Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/exampl
 	  ./cdis-data-client delete --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		resp := DoRequestWithSignedHeader(RequestDelete)
-		fmt.Println(ResponseToString(resp))
+		utils := new(jwt.Utils)
+		request := new(jwt.Request)
+		request.Utils = utils
+		configure := new(jwt.Configure)
+		function := new(jwt.Functions)
+
+		function.Utils = utils
+		function.Config = configure
+		function.Request = request
+
+		delRequest := DeleteRequest{Function: function, Utils: utils}
+
+		resp := function.DoRequestWithSignedHeader(delRequest.RequestDelete, profile)
+		fmt.Println(utils.ResponseToString(resp))
 	},
 }
 

@@ -26,6 +26,8 @@ type UtilInterface interface {
 	ParseKeyValue(string, string, string) string
 	ParseConfig(string) Credential
 	TryReadFile(string) ([]byte, error)
+	ResponseToString(*http.Response) string
+	ResponseToBytes(*http.Response) []byte
 }
 
 type Utils struct{}
@@ -104,14 +106,14 @@ func (utils *Utils) TryReadFile(filePath string) ([]byte, error) {
 	return ioutil.ReadFile(filePath)
 }
 
-func ResponseToString(resp *http.Response) string {
+func (utils *Utils) ResponseToString(resp *http.Response) string {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(resp.Body)
 	return buf.String()
 }
 
-func ResponseToBytes(resp *http.Response) []byte {
-	strBuf := ResponseToString(resp)
+func (utils *Utils) ResponseToBytes(resp *http.Response) []byte {
+	strBuf := utils.ResponseToString(resp)
 	strBuf = strings.Replace(strBuf, "\n", "", -1)
 	return []byte(strBuf)
 }

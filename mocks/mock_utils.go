@@ -7,6 +7,7 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	jwt "github.com/uc-cdis/cdis-data-client/jwt"
+	http "net/http"
 	reflect "reflect"
 )
 
@@ -55,6 +56,30 @@ func (m *MockUtilInterface) ParseKeyValue(arg0, arg1, arg2 string) string {
 // ParseKeyValue indicates an expected call of ParseKeyValue
 func (mr *MockUtilInterfaceMockRecorder) ParseKeyValue(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseKeyValue", reflect.TypeOf((*MockUtilInterface)(nil).ParseKeyValue), arg0, arg1, arg2)
+}
+
+// ResponseToBytes mocks base method
+func (m *MockUtilInterface) ResponseToBytes(arg0 *http.Response) []byte {
+	ret := m.ctrl.Call(m, "ResponseToBytes", arg0)
+	ret0, _ := ret[0].([]byte)
+	return ret0
+}
+
+// ResponseToBytes indicates an expected call of ResponseToBytes
+func (mr *MockUtilInterfaceMockRecorder) ResponseToBytes(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResponseToBytes", reflect.TypeOf((*MockUtilInterface)(nil).ResponseToBytes), arg0)
+}
+
+// ResponseToString mocks base method
+func (m *MockUtilInterface) ResponseToString(arg0 *http.Response) string {
+	ret := m.ctrl.Call(m, "ResponseToString", arg0)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ResponseToString indicates an expected call of ResponseToString
+func (mr *MockUtilInterfaceMockRecorder) ResponseToString(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResponseToString", reflect.TypeOf((*MockUtilInterface)(nil).ResponseToString), arg0)
 }
 
 // TryReadFile mocks base method

@@ -7,12 +7,24 @@ import (
 	"log"
 	"net/http"
 
+	"net/url"
+
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
-	"net/url"
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-func RequestUpload(cred Credential, host *url.URL, contentType string) (*http.Response) {
+type Upload struct {
+	Function jwt.FunctionInterface
+	Request  jwt.RequestInterface
+	Utils    jwt.UtilInterface
+}
+
+type UploadInterface interface {
+	RequestUpload(jwt.Credential, *url.URL, string) *http.Response
+}
+
+func (upload *Upload) RequestUpload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
 	// TODO: Replace here by function of JWT
 	// Get the presigned url first
 	resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
@@ -22,14 +34,17 @@ func RequestUpload(cred Credential, host *url.URL, contentType string) (*http.Re
 	}
 	defer resp.Body.Close()
 
-	presignedUploadUrl := ResponseToString(resp)
+	presignedUploadUrl := upload.Utils.ResponseToString(resp)
+	client := &http.Client{}
 	if resp.StatusCode != 200 {
-		log.Fatalf("Got response code %d\n%s", resp.StatusCode, presignedUploadUrl)
+		fmt.Println("Got response code %d\n%s", resp.StatusCode, presignedUploadUrl)
+		upload.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
+		resp, err = upload.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+		presignedUploadUrl = upload.Utils.ResponseToString(resp)
 	}
 	fmt.Println("Uploading data from URL: " + presignedUploadUrl)
 
 	// Create and send request
-	client := &http.Client{}
 	data, err := ioutil.ReadFile(file_path)
 	if err != nil {
 		log.Fatal(err)
@@ -54,8 +69,20 @@ var uploadCmd = &cobra.Command{
 Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		resp := DoRequestWithSignedHeader(RequestUpload)
-		fmt.Println(ResponseToString(resp))
+		utils := new(jwt.Utils)
+		request := new(jwt.Request)
+		request.Utils = utils
+		configure := new(jwt.Configure)
+		function := new(jwt.Functions)
+
+		function.Utils = utils
+		function.Config = configure
+		function.Request = request
+
+		upload := Upload{Function: function, Request: request, Utils: utils}
+
+		respDown := function.DoRequestWithSignedHeader(upload.RequestUpload, profile)
+		fmt.Println(utils.ResponseToString(respDown))
 	},
 }
 

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"path"
 	"strings"
 )
 
@@ -88,16 +89,17 @@ func (conf *Configure) ParseUrl() string {
 	return apiEndpoint
 }
 
-// func (conf Configure) TryReadConfigFile() (string, []byte, error) {
-// 	usr, err := user.Current()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	homeDir := usr.HomeDir
-// 	configPath := path.Join(homeDir + "/.cdis/config")
-// 	content, err := TryReadFile(configPath)
-// 	return configPath, content, err
-// }
+func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	homeDir := usr.HomeDir
+	configPath := path.Join(homeDir + "/.cdis/config")
+	u := Utils{}
+	content, err := u.TryReadFile(configPath)
+	return configPath, content, err
+}
 
 func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint string, profile string) ([]string, bool) {
 	lines := strings.Split(string(configContent), "\n")

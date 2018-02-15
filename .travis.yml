@@ -6,8 +6,11 @@ go:
 install:
   - go get github.com/golang/mock/gomock
   - go get github.com/golang/mock/mockgen
+  - go get github.com/mitchellh/go-homedir
+  - go get github.com/spf13/cobra
+  - go get github.com/spf13/viper
   - go get .
 
 script:
-  - go test -v tests/functions_test.go
+  - go test -v tests/functions_test.go tests/download_test.go
 
