@@ -14,19 +14,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func RequestDownload(cred Credential, host *url.URL, contentType string) *http.Response {
+type Download struct {
+	function jwt.FunctionInterface
+}
+
+type DownloadInterface interface {
+	RequestDownload(jwt.Credential, *url.URL, string) *http.Response
+}
+
+func (download *Download) RequestDownload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
 	// Get the presigned url first
-	resp, err := jwt.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+	resp, err := download.function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
 
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
 
-	presignedDownloadUrl := ResponseToString(resp)
-	if resp.StatusCode != 200 {
-		log.Fatalf("Got response code %d\n%s", resp.StatusCode, presignedDownloadUrl)
+	presignedDownloadUrl := jwt.ResponseToString(resp)
+	if resp.StatusCode == 401 {
+		log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
+		client := &http.Client{}
+		download.function.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
+		resp, err = download.function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
 	}
+
 	fmt.Println("Downloading data from url: " + presignedDownloadUrl)
 
 	respDown, err := http.Get(presignedDownloadUrl)

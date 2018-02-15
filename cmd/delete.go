@@ -3,14 +3,17 @@ package cmd
 import (
 	"strings"
 
+	"fmt"
+	"net/http"
+	"net/url"
+
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/gdcHmac"
-	"net/url"
-	"net/http"
-	"fmt"
+
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-func RequestDelete(cred Credential, host *url.URL, contentType string) (*http.Response) {
+func RequestDelete(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
 	// Declared in ./root.go
 	uri = "/api/" + strings.TrimPrefix(uri, "/")
 

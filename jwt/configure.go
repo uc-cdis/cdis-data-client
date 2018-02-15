@@ -1,13 +1,15 @@
-package cmd
+package jwt
+
+//go:generate mockgen -destination=mocks/mock_configure.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt ConfigureInterface
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"os/user"
-	"path"
 	"strings"
 )
 
@@ -18,9 +20,48 @@ type Credential struct {
 	APIEndpoint string
 }
 
-func ReadCredentials(filePath string) Credential {
+type Configure struct{}
+
+type ConfigureInterface interface {
+	ReadFile(string, string) string
+	ReadCredentials(string) Credential
+	ParseUrl() string
+	ReadLines(Credential, []byte, string, string) ([]string, bool)
+	UpdateConfigFile(Credential, []byte, string, string, string)
+	TestMock() bool
+}
+
+func (conf *Configure) ReadFile(file_path string, file_type string) string {
+	//Look in config file
+	var full_file_path string
+	if file_path[0] == '~' {
+		usr, _ := user.Current()
+		homeDir := usr.HomeDir
+		full_file_path = homeDir + file_path[1:]
+	} else {
+		full_file_path = file_path
+	}
+	if _, err := os.Stat(full_file_path); err != nil {
+		fmt.Println("File specified at " + full_file_path + " not found")
+		return ""
+	}
+
+	content, err := ioutil.ReadFile(full_file_path)
+	if err != nil {
+		panic(err)
+	}
+
+	content_str := string(content[:])
+
+	if file_type == "json" {
+		content_str = strings.Replace(content_str, "\n", "", -1)
+	}
+	return content_str
+}
+
+func (conf *Configure) ReadCredentials(filePath string) Credential {
 	var configuration Credential
-	jsonContent := ReadFile(filePath, "json")
+	jsonContent := conf.ReadFile(filePath, "json")
 	jsonContent = strings.Replace(jsonContent, "key_id", "KeyId", -1)
 	jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
 	err := json.Unmarshal([]byte(jsonContent), &configuration)
@@ -31,7 +72,7 @@ func ReadCredentials(filePath string) Credential {
 	return configuration
 }
 
-func ParseUrl() string {
+func (conf *Configure) ParseUrl() string {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Print("API endpoint: ")
 	scanner.Scan()
@@ -47,18 +88,18 @@ func ParseUrl() string {
 	return apiEndpoint
 }
 
-func TryReadConfigFile() (string, []byte, error) {
-	usr, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	homeDir := usr.HomeDir
-	configPath := path.Join(homeDir + "/.cdis/config")
-	content, err := TryReadFile(configPath)
-	return configPath, content, err
-}
+// func (conf Configure) TryReadConfigFile() (string, []byte, error) {
+// 	usr, err := user.Current()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	homeDir := usr.HomeDir
+// 	configPath := path.Join(homeDir + "/.cdis/config")
+// 	content, err := TryReadFile(configPath)
+// 	return configPath, content, err
+// }
 
-func ReadLines(cred Credential, configContent []byte, apiEndpoint string) ([]string, bool) {
+func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint string, profile string) ([]string, bool) {
 	lines := strings.Split(string(configContent), "\n")
 
 	found := false
@@ -81,8 +122,8 @@ func ReadLines(cred Credential, configContent []byte, apiEndpoint string) ([]str
 	return lines, found
 }
 
-func UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint string, configPath string) {
-	lines, found := ReadLines(cred, configContent, apiEndpoint)
+func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint string, configPath string, profile string) {
+	lines, found := conf.ReadLines(cred, configContent, apiEndpoint, profile)
 	if found {
 		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
 		if err != nil {
@@ -117,4 +158,8 @@ func UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint string,
 			panic(err)
 		}
 	}
+}
+
+func (conf *Configure) TestMock() bool {
+	return true
 }
