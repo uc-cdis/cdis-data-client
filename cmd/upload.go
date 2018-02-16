@@ -10,7 +10,6 @@ import (
 	"net/url"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/gdcHmac"
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
@@ -27,8 +26,9 @@ type UploadInterface interface {
 func (upload *Upload) RequestUpload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
 	// TODO: Replace here by function of JWT
 	// Get the presigned url first
-	resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
-		nil, contentType, "userapi", cred.AccessKey, cred.APIKey)
+	resp, err := upload.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
+		nil, cred.AccessKey)
+
 	if err != nil {
 		panic(err)
 	}
@@ -39,10 +39,11 @@ func (upload *Upload) RequestUpload(cred jwt.Credential, host *url.URL, contentT
 	if resp.StatusCode != 200 {
 		fmt.Println("Got response code %d\n%s", resp.StatusCode, presignedUploadUrl)
 		upload.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = upload.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+		resp, err = upload.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
+			nil, cred.AccessKey)
 		presignedUploadUrl = upload.Utils.ResponseToString(resp)
 	}
-	fmt.Println("Uploading data from URL: " + presignedUploadUrl)
+	fmt.Println("Uploading data to URL: " + presignedUploadUrl)
 
 	// Create and send request
 	data, err := ioutil.ReadFile(file_path)
