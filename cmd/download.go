@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -16,33 +18,42 @@ import (
 type Download struct {
 	Function jwt.FunctionInterface
 	Request  jwt.RequestInterface
-	Utils    jwt.UtilInterface
 }
 
 type DownloadInterface interface {
 	RequestDownload(jwt.Credential, *url.URL, string) *http.Response
+	GetPreSignedURL(jwt.Credential, *url.URL, string) string
 }
 
-func (download *Download) RequestDownload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
+func (download *Download) GetPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) string {
 	// Get the presigned url first
-	resp, err := download.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
-
+	resp, err := download.Function.SignedRequest("GET",
+		host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
 	if err != nil {
 
 		panic(err)
 	}
-	//defer resp.Body.Close()
-
-	presignedDownloadUrl := download.Utils.ResponseToString(resp)
-
+	defer resp.Body.Close()
 	if resp.StatusCode == 401 {
-		//log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
+
 		client := &http.Client{}
 		download.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = download.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
-		presignedDownloadUrl = download.Utils.ResponseToString(resp)
-
+		resp, err = download.Function.SignedRequest("GET",
+			host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+		if resp.StatusCode == 401 {
+			log.Fatalf(jwt.ResponseToString(resp))
+		}
 	}
+
+	respString := jwt.ResponseToString(resp)
+	message := JsonMessage{url: "google.com"}
+	err = json.Unmarshal([]byte(respString), &message)
+
+	return message.url
+}
+func (download *Download) RequestDownload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
+
+	presignedDownloadUrl := download.GetPreSignedURL(cred, host, contentType)
 
 	fmt.Println("Downloading data from url: " + presignedDownloadUrl)
 
@@ -61,19 +72,16 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		utils := new(jwt.Utils)
 		request := new(jwt.Request)
-		request.Utils = utils
 		configure := new(jwt.Configure)
 		function := new(jwt.Functions)
 
-		function.Utils = utils
 		function.Config = configure
 		function.Request = request
 
-		download := Download{Function: function, Request: request, Utils: utils}
+		download := Download{Function: function, Request: request}
 
-		respDown := function.DoRequestWithSignedHeader(download.RequestDownload, profile)
+		respDown := function.DoRequestWithSignedHeader(download.RequestDownload, profile, file_type)
 
 		out, err := os.Create(file_path)
 		if err != nil {
@@ -84,6 +92,7 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		defer respDown.Body.Close()
 		_, err = io.Copy(out, respDown.Body)
 		if err != nil {
+
 			panic(err)
 		}
 	},

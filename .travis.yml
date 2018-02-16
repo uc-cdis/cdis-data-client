@@ -12,5 +12,5 @@ install:
   - go get .
 
 script:
-  - go test -v tests/functions_test.go tests/download_test.go
+  - go test -v tests/functions_test.go tests/download_test.go tests/upload_test.go
 

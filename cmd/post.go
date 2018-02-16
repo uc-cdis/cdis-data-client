@@ -65,20 +65,17 @@ Examples: ./cdis-data-client put --uri=v0/submission/graphql --file=~/Documents/
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		utils := new(jwt.Utils)
 		request := new(jwt.Request)
-		request.Utils = utils
 		configure := new(jwt.Configure)
 		function := new(jwt.Functions)
 
-		function.Utils = utils
 		function.Config = configure
 		function.Request = request
 
 		postRequest := PostRequest{Function: function, Configure: configure, Request: request}
 
-		resp := function.DoRequestWithSignedHeader(postRequest.RequestPost, profile)
-		fmt.Println(utils.ResponseToString(resp))
+		resp := function.DoRequestWithSignedHeader(postRequest.RequestPost, profile, file_type)
+		fmt.Println(jwt.ResponseToString(resp))
 	},
 }
 

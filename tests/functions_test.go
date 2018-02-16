@@ -1,8 +1,6 @@
 package tests
 
 import (
-	"os/user"
-	"path"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -18,7 +16,7 @@ func assertPanic(t *testing.T, f func()) {
 	}()
 	f()
 }
-func TestNoProfile(t *testing.T) {
+func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
 			t.Errorf("The code did not panic")
@@ -28,68 +26,39 @@ func TestNoProfile(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockUtils := mocks.NewMockUtilInterface(mockCtrl)
-	mockConfigure := mocks.NewMockConfigureInterface(nil)
-	mockRequest := mocks.NewMockRequestInterface(nil)
-	testFunction := &jwt.Functions{Config: mockConfigure, Request: mockRequest, Utils: mockUtils}
+	mockConfig := mocks.NewMockConfigureInterface(nil)
+	testFunction := &jwt.Functions{Config: mockConfig}
 
 	cred := jwt.Credential{KeyId: "", APIKey: "", AccessKey: "", APIEndpoint: ""}
 
-	mockUtils.EXPECT().ParseConfig("default").Return(cred).AnyTimes()
+	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 
 	function := jwt.Functions{}
 
-	testFunction.DoRequestWithSignedHeader(function.Requesting, "default")
+	testFunction.DoRequestWithSignedHeader(function.Requesting, "default", "notjson")
 
 }
 
-func TestReturnNil(t *testing.T) {
+func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockUtils := mocks.NewMockUtilInterface(mockCtrl)
-	mockConfigure := mocks.NewMockConfigureInterface(nil)
-	mockRequest := mocks.NewMockRequestInterface(nil)
-	testFunction := &jwt.Functions{Config: mockConfigure, Request: mockRequest, Utils: mockUtils}
-
-	cred := jwt.Credential{KeyId: "", APIKey: "", AccessKey: "fake_access_key", APIEndpoint: ""}
-
-	mockUtils.EXPECT().ParseConfig("default").Return(cred).AnyTimes()
-
-	function := jwt.Functions{}
-
-	res := testFunction.DoRequestWithSignedHeader(function.Requesting, "default")
-	if res == nil {
-		t.Fail()
-	}
-
-}
-
-func TestReturnNotNil(t *testing.T) {
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	mockUtils := mocks.NewMockUtilInterface(mockCtrl)
-	mockConfigure := mocks.NewMockConfigureInterface(mockCtrl)
+	mockConfig := mocks.NewMockConfigureInterface(mockCtrl)
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
-	testFunction := &jwt.Functions{Config: mockConfigure, Request: mockRequest, Utils: mockUtils}
+	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "", APIEndpoint: ""}
+	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "", APIEndpoint: "test.com"}
 
-	mockUtils.EXPECT().ParseConfig("default").Return(cred).AnyTimes()
+	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
+	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
+	mockConfig.EXPECT().UpdateConfigFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
 	mockRequest.EXPECT().RequestNewAccessKey(gomock.Any(), cred.APIEndpoint+"/credentials/cdis/access_token", &cred).Times(1)
 
-	usr, _ := user.Current()
-	homeDir := usr.HomeDir
-	configPath := path.Join(homeDir + "/.cdis/config")
-	mockConfigure.EXPECT().ReadFile(configPath, "").Return("").AnyTimes()
-	mockConfigure.EXPECT().UpdateConfigFile(cred, gomock.Any(), cred.APIEndpoint, configPath, "default").Times(1)
 	function := new(jwt.Functions)
 
-	res := testFunction.DoRequestWithSignedHeader(function.Requesting, "default")
+	res := testFunction.DoRequestWithSignedHeader(function.Requesting, "default", "")
 	if res == nil {
 		t.Fail()
 	}

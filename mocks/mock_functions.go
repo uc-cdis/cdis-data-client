@@ -37,27 +37,15 @@ func (m *MockFunctionInterface) EXPECT() *MockFunctionInterfaceMockRecorder {
 }
 
 // DoRequestWithSignedHeader mocks base method
-func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1 string) *http.Response {
-	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1)
+func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1, arg2 string) *http.Response {
+	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*http.Response)
 	return ret0
 }
 
 // DoRequestWithSignedHeader indicates an expected call of DoRequestWithSignedHeader
-func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1)
-}
-
-// GetAccessKeyFromFileConfig mocks base method
-func (m *MockFunctionInterface) GetAccessKeyFromFileConfig(arg0 string) jwt.Credential {
-	ret := m.ctrl.Call(m, "GetAccessKeyFromFileConfig", arg0)
-	ret0, _ := ret[0].(jwt.Credential)
-	return ret0
-}
-
-// GetAccessKeyFromFileConfig indicates an expected call of GetAccessKeyFromFileConfig
-func (mr *MockFunctionInterfaceMockRecorder) GetAccessKeyFromFileConfig(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccessKeyFromFileConfig", reflect.TypeOf((*MockFunctionInterface)(nil).GetAccessKeyFromFileConfig), arg0)
+func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2)
 }
 
 // Requesting mocks base method

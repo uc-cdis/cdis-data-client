@@ -23,8 +23,8 @@ func (getRequest *GetRequest) RequestGet(cred jwt.Credential, host *url.URL, con
 	uri = "/api/" + strings.TrimPrefix(uri, "/")
 
 	// TODO: Replace here by function of JWT
-	resp, err := getRequest.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid,
-		nil, cred.AccessKey)
+	resp, err := getRequest.Function.SignedRequest("GET",
+		host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
 
 	if err != nil {
 		panic(err)
@@ -40,7 +40,13 @@ func (getRequest *GetRequest) RequestGet(cred jwt.Credential, host *url.URL, con
 			panic(err)
 		}
 	}
+	// respString := download.Utils.ResponseToString(resp)
+	// message := JsonMessage{}
+	// err = json.Unmarshal([]byte(respString), &message)
+
+	// presignedDownloadUrl := message.url
 	return resp
+
 }
 
 // getCmd represents the get command
@@ -54,20 +60,17 @@ Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_i
 	  ./cdis-data-client get --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		utils := new(jwt.Utils)
 		request := new(jwt.Request)
-		request.Utils = utils
 		configure := new(jwt.Configure)
 		function := new(jwt.Functions)
 
-		function.Utils = utils
 		function.Config = configure
 		function.Request = request
 
 		getRequest := GetRequest{Function: function, Request: request}
 
-		resp := function.DoRequestWithSignedHeader(getRequest.RequestGet, profile)
-		fmt.Println(utils.ResponseToString(resp))
+		resp := function.DoRequestWithSignedHeader(getRequest.RequestGet, profile, file_type)
+		fmt.Println(jwt.ResponseToString(resp))
 	},
 }
 

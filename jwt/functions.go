@@ -13,20 +13,17 @@ import (
 )
 
 type Functions struct {
-	Config  ConfigureInterface
 	Request RequestInterface
-	Utils   UtilInterface
+	Config  ConfigureInterface
 }
 
 type FunctionInterface interface {
 	Requesting(Credential, *url.URL, string) *http.Response
-	GetAccessKeyFromFileConfig(string) Credential
-	DoRequestWithSignedHeader(DoRequest, string) *http.Response
+	DoRequestWithSignedHeader(DoRequest, string, string) *http.Response
 	SignedRequest(string, string, io.Reader, string) (*http.Response, error)
 }
 
 type Request struct {
-	Utils UtilInterface
 }
 type RequestInterface interface {
 	MakeARequest(*http.Client, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
@@ -62,7 +59,7 @@ func (r *Request) RequestNewAccessKey(client *http.Client, path string, cred *Cr
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(r.Utils.ResponseToBytes(resp), &m)
+	err = json.Unmarshal(ResponseToBytes(resp), &m)
 	if err != nil {
 		return
 	}
@@ -76,16 +73,8 @@ func (f *Functions) Requesting(cred Credential, host *url.URL, contentType strin
 
 type DoRequest func(cred Credential, host *url.URL, contentType string) *http.Response
 
-var WrapDoConfig = func(u UtilInterface, profile string) Credential {
-	return u.ParseConfig(profile)
-}
-
-func (f *Functions) GetAccessKeyFromFileConfig(profile string) Credential {
-	return f.Utils.ParseConfig(profile)
-}
-
-func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string) *http.Response {
-	cred := f.GetAccessKeyFromFileConfig(profile)
+func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file_type string) *http.Response {
+	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 		panic("No credential found")
 	}
@@ -100,7 +89,7 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string) *htt
 		usr, _ := user.Current()
 		homeDir := usr.HomeDir
 		configPath := path.Join(homeDir + "/.cdis/config")
-		content := f.Config.ReadFile(configPath, "")
+		content := f.Config.ReadFile(configPath, file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 	}
 
