@@ -8,7 +8,6 @@ import (
 	"net/url"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/gdcHmac"
 
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
@@ -18,22 +17,18 @@ type DeleteRequest struct {
 }
 
 type DeleteRequestInterface interface {
-	RequestDelete(jwt.Credential, *url.URL, string) *http.Response
+	RequestDelete(jwt.Credential, *url.URL, string) (*http.Response, error)
 }
 
 //Not support yet
-func (delRequest *DeleteRequest) RequestDelete(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
+func (delRequest *DeleteRequest) RequestDelete(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
 	// Declared in ./root.go
 	uri = "/api/" + strings.TrimPrefix(uri, "/")
 
 	// Display what came back
 	// TODO: Replace here by function of JWT
-	resp, err := gdcHmac.SignedRequest("DELETE", host.Scheme+"://"+host.Host+uri,
-		nil, contentType, "submission", cred.AccessKey, cred.APIKey)
-	if err != nil {
-		panic(err)
-	}
-	return resp
+	panic("Not supported !!!!")
+	return nil, nil
 }
 
 var deleteCmd = &cobra.Command{
@@ -55,7 +50,7 @@ Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/exampl
 
 		delRequest := DeleteRequest{Function: function}
 
-		resp := function.DoRequestWithSignedHeader(delRequest.RequestDelete, profile, file_type)
+		resp, _ := function.DoRequestWithSignedHeader(delRequest.RequestDelete, profile, file_type)
 		fmt.Println(jwt.ResponseToString(resp))
 	},
 }

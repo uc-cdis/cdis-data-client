@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"bytes"
-	"strings"
-
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 
@@ -19,37 +20,56 @@ type PostRequest struct {
 }
 
 type PostRequestInterface interface {
-	RequestPost(jwt.Credential, *url.URL, string) *http.Response
+	RequestPost(jwt.Credential, *url.URL, string) (*http.Response, error)
+	GetUploadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error)
 }
 
-func (postRequest *PostRequest) RequestPost(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
-	uri = "/api/" + strings.TrimPrefix(uri, "/")
-	// Create and send request
-	body := bytes.NewBufferString(postRequest.Configure.ReadFile(file_path, file_type))
-
-	if file_type == "tsv" {
-		contentType = "text/tab-separated-values"
-	}
-
-	resp, err := postRequest.Function.SignedRequest("POST", host.Scheme+"://"+host.Host+uri,
-		body, cred.AccessKey)
-
+func (postRequest *PostRequest) GetUploadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+	   Get presigned url for upload
+	*/
+	resp, err := postRequest.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
+		nil, cred.AccessKey)
 	if err != nil {
 		panic(err)
 	}
-
-	if resp.StatusCode == 401 {
-		//log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
-		client := &http.Client{}
-		postRequest.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = postRequest.Function.SignedRequest("POST", host.Scheme+"://"+host.Host+uri,
-			body, cred.AccessKey)
-		if err != nil {
-			panic(err)
-		}
+	if resp.StatusCode != 200 {
+		log.Fatalf("User error %d\n", resp.StatusCode)
 	}
+	return resp, err
+}
 
-	return resp
+func (postRequest *PostRequest) RequestPost(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+		Upload file with
+		Args:
+			cred: crediential
+			host: file address
+			contentType: content type of the request
+		Returns:
+			httpResponse, error
+
+	*/
+	resp, err := postRequest.GetUploadPreSignedURL(cred, host, contentType)
+	message := JsonMessage{}
+	err = json.Unmarshal([]byte(jwt.ResponseToString(resp)), &message)
+	presignedUploadUrl := message.url
+
+	fmt.Println("Uploading data to URL: " + presignedUploadUrl)
+	// Create and send request
+	data, err := ioutil.ReadFile(file_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body := bytes.NewBufferString(string(data[:]))
+	req, _ := http.NewRequest("PUT", presignedUploadUrl, body)
+
+	client := &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	return resp, err
 }
 
 // postCmd represents the post command
@@ -74,7 +94,7 @@ Examples: ./cdis-data-client put --uri=v0/submission/graphql --file=~/Documents/
 
 		postRequest := PostRequest{Function: function, Configure: configure, Request: request}
 
-		resp := function.DoRequestWithSignedHeader(postRequest.RequestPost, profile, file_type)
+		resp, _ := function.DoRequestWithSignedHeader(postRequest.RequestPost, profile, file_type)
 		fmt.Println(jwt.ResponseToString(resp))
 	},
 }

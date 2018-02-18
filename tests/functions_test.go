@@ -26,12 +26,12 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockConfig := mocks.NewMockConfigureInterface(nil)
+	mockConfig := mocks.NewMockConfigureInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig}
 
 	cred := jwt.Credential{KeyId: "", APIKey: "", AccessKey: "", APIEndpoint: ""}
 
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
+	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
 
 	function := jwt.Functions{}
 
@@ -39,7 +39,24 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 
 }
 
-func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
+func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockConfig := mocks.NewMockConfigureInterface(mockCtrl)
+	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
+	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
+
+	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "test.com"}
+	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
+
+	function := new(jwt.Functions)
+	res, _ := testFunction.DoRequestWithSignedHeader(function.Requesting, "default", "")
+	if res == nil {
+		t.Fail()
+	}
+}
+func TestDoRequestWithSignedHeaderCreateNewTokenCalled(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -54,11 +71,11 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
 	mockConfig.EXPECT().UpdateConfigFile(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
-	mockRequest.EXPECT().RequestNewAccessKey(gomock.Any(), cred.APIEndpoint+"/credentials/cdis/access_token", &cred).Times(1)
+	mockRequest.EXPECT().RequestNewAccessKey(cred.APIEndpoint+"/credentials/cdis/access_token", &cred).Times(1)
 
 	function := new(jwt.Functions)
 
-	res := testFunction.DoRequestWithSignedHeader(function.Requesting, "default", "")
+	res, _ := testFunction.DoRequestWithSignedHeader(function.Requesting, "default", "")
 	if res == nil {
 		t.Fail()
 	}

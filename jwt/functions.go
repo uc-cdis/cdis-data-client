@@ -18,8 +18,8 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	Requesting(Credential, *url.URL, string) *http.Response
-	DoRequestWithSignedHeader(DoRequest, string, string) *http.Response
+	Requesting(Credential, *url.URL, string) (*http.Response, error)
+	DoRequestWithSignedHeader(DoRequest, string, string) (*http.Response, error)
 	SignedRequest(string, string, io.Reader, string) (*http.Response, error)
 }
 
@@ -27,12 +27,8 @@ type Request struct {
 }
 type RequestInterface interface {
 	MakeARequest(*http.Client, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
-	RequestNewAccessKey(*http.Client, string, *Credential)
+	RequestNewAccessKey(string, *Credential)
 }
-
-// func (f *Functions) Set(config Configure, request Request, utils Utils){
-// 	f.Config := Configure
-// }
 
 func (r *Request) MakeARequest(client *http.Client, method string, path string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
 	req, err := http.NewRequest(method, path, body)
@@ -50,51 +46,54 @@ func (r *Request) MakeARequest(client *http.Client, method string, path string, 
 
 }
 
-func (r *Request) RequestNewAccessKey(client *http.Client, path string, cred *Credential) {
+func (r *Request) RequestNewAccessKey(path string, cred *Credential) {
 	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
+	client := &http.Client{}
 	resp, err := r.MakeARequest(client, "POST", path, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
 		return
 	}
+	//println(ResponseToString(resp))
 	err = json.Unmarshal(ResponseToBytes(resp), &m)
 	if err != nil {
 		return
 	}
 	cred.AccessKey = m.Access_token
-
 }
 
-func (f *Functions) Requesting(cred Credential, host *url.URL, contentType string) *http.Response {
-	return &http.Response{}
+func (f *Functions) Requesting(cred Credential, host *url.URL, contentType string) (*http.Response, error) {
+	return &http.Response{}, nil
 }
 
-type DoRequest func(cred Credential, host *url.URL, contentType string) *http.Response
+type DoRequest func(cred Credential, host *url.URL, contentType string) (*http.Response, error)
 
-func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file_type string) *http.Response {
+func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file_type string) (*http.Response, error) {
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 		panic("No credential found")
 	}
+	contentType := "application/json"
+	host, _ := url.Parse(cred.APIEndpoint)
+	isExpiredToken := false
 
-	client := &http.Client{}
-
-	if cred.AccessKey == "" {
-
-		//Include cred.APIKey into the request header to refresh cred.AccessKey then write to profile
-		f.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-
+	if cred.AccessKey != "" {
+		resp, err := fn(cred, host, contentType)
+		if resp.StatusCode == 401 {
+			isExpiredToken = true
+		} else {
+			return resp, err
+		}
+	}
+	if cred.AccessKey == "" || isExpiredToken {
+		f.Request.RequestNewAccessKey(cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
 		usr, _ := user.Current()
-		homeDir := usr.HomeDir
-		configPath := path.Join(homeDir + "/.cdis/config")
+		configPath := path.Join(usr.HomeDir + "/.cdis/config")
 		content := f.Config.ReadFile(configPath, file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 	}
-
-	contentType := "application/json"
-	host, _ := url.Parse(cred.APIEndpoint)
 	return fn(cred, host, contentType)
 
 }

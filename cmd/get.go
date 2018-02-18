@@ -1,10 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/jwt"
@@ -16,37 +17,48 @@ type GetRequest struct {
 }
 
 type GetRequestInterface interface {
-	RequestGet(jwt.Credential, *url.URL, string) *http.Response
+	RequestGet(jwt.Credential, *url.URL, string) (*http.Response, error)
+	GetDownloadPreSignedURL(jwt.Credential, *url.URL, string) (*http.Response, error)
 }
 
-func (getRequest *GetRequest) RequestGet(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
-	uri = "/api/" + strings.TrimPrefix(uri, "/")
-
-	// TODO: Replace here by function of JWT
+func (getRequest *GetRequest) GetDownloadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+		Get the presigned url for dwonload
+	*/
 	resp, err := getRequest.Function.SignedRequest("GET",
 		host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
+	defer resp.Body.Close()
 
 	if err != nil {
 		panic(err)
 	}
-
-	if resp.StatusCode == 401 {
-		//log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
-		client := &http.Client{}
-		getRequest.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = getRequest.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid,
-			nil, cred.AccessKey)
-		if err != nil {
-			panic(err)
-		}
+	if resp.StatusCode != 200 {
+		log.Fatalf("User error %d\n", resp.StatusCode)
 	}
-	// respString := download.Utils.ResponseToString(resp)
-	// message := JsonMessage{}
-	// err = json.Unmarshal([]byte(respString), &message)
 
-	// presignedDownloadUrl := message.url
-	return resp
+	return resp, err
+}
 
+func (getRequest *GetRequest) RequestGet(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+		Download file from given url with
+		Args:
+			cred: crediential
+			host: file address
+			contentType: content type of the request
+		Returns:
+			httpResponse, error
+
+	*/
+	resp, err := getRequest.GetDownloadPreSignedURL(cred, host, contentType)
+	message := JsonMessage{}
+	err = json.Unmarshal([]byte(jwt.ResponseToString(resp)), &message)
+
+	presignedDownloadURL := message.url
+	fmt.Println("Downloading data from url: " + presignedDownloadURL)
+
+	respDown, err := http.Get(presignedDownloadURL)
+	return respDown, err
 }
 
 // getCmd represents the get command
@@ -69,7 +81,7 @@ Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_i
 
 		getRequest := GetRequest{Function: function, Request: request}
 
-		resp := function.DoRequestWithSignedHeader(getRequest.RequestGet, profile, file_type)
+		resp, _ := function.DoRequestWithSignedHeader(getRequest.RequestGet, profile, file_type)
 		fmt.Println(jwt.ResponseToString(resp))
 	},
 }

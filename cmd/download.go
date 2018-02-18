@@ -21,47 +21,47 @@ type Download struct {
 }
 
 type DownloadInterface interface {
-	RequestDownload(jwt.Credential, *url.URL, string) *http.Response
-	GetPreSignedURL(jwt.Credential, *url.URL, string) string
+	RequestDownload(jwt.Credential, *url.URL, string) (*http.Response, error)
+	GetDownloadPreSignedURL(jwt.Credential, *url.URL, string) string
 }
 
-func (download *Download) GetPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) string {
-	// Get the presigned url first
+func (download *Download) GetDownloadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+		Get the presigned url for dwonload
+	*/
 	resp, err := download.Function.SignedRequest("GET",
 		host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
-	if err != nil {
-
-		panic(err)
-	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 401 {
 
-		client := &http.Client{}
-		download.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = download.Function.SignedRequest("GET",
-			host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
-		if resp.StatusCode == 401 {
-			log.Fatalf(jwt.ResponseToString(resp))
-		}
-	}
-
-	respString := jwt.ResponseToString(resp)
-	message := JsonMessage{url: "google.com"}
-	err = json.Unmarshal([]byte(respString), &message)
-
-	return message.url
-}
-func (download *Download) RequestDownload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
-
-	presignedDownloadUrl := download.GetPreSignedURL(cred, host, contentType)
-
-	fmt.Println("Downloading data from url: " + presignedDownloadUrl)
-
-	respDown, err := http.Get(presignedDownloadUrl)
 	if err != nil {
 		panic(err)
 	}
-	return respDown
+	if resp.StatusCode != 200 {
+		log.Fatalf("User error %d\n", resp.StatusCode)
+	}
+
+	return resp, err
+}
+func (download *Download) RequestDownload(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+		Download file from given url with
+		Args:
+			cred: crediential
+			host: file address
+			contentType: content type of the request
+		Returns:
+			httpResponse, error
+
+	*/
+	resp, err := download.GetDownloadPreSignedURL(cred, host, contentType)
+	message := JsonMessage{}
+	err = json.Unmarshal([]byte(jwt.ResponseToString(resp)), &message)
+
+	presignedDownloadURL := message.url
+	fmt.Println("Downloading data from url: " + presignedDownloadURL)
+
+	respDown, err := http.Get(presignedDownloadURL)
+	return respDown, err
 }
 
 var downloadCmd = &cobra.Command{
@@ -81,7 +81,7 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 
 		download := Download{Function: function, Request: request}
 
-		respDown := function.DoRequestWithSignedHeader(download.RequestDownload, profile, file_type)
+		respDown, _ := function.DoRequestWithSignedHeader(download.RequestDownload, profile, file_type)
 
 		out, err := os.Create(file_path)
 		if err != nil {

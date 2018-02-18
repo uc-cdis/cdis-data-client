@@ -37,10 +37,11 @@ func (m *MockFunctionInterface) EXPECT() *MockFunctionInterfaceMockRecorder {
 }
 
 // DoRequestWithSignedHeader mocks base method
-func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1, arg2 string) *http.Response {
+func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1, arg2 string) (*http.Response, error) {
 	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*http.Response)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // DoRequestWithSignedHeader indicates an expected call of DoRequestWithSignedHeader
@@ -49,10 +50,11 @@ func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg
 }
 
 // Requesting mocks base method
-func (m *MockFunctionInterface) Requesting(arg0 jwt.Credential, arg1 *url.URL, arg2 string) *http.Response {
+func (m *MockFunctionInterface) Requesting(arg0 jwt.Credential, arg1 *url.URL, arg2 string) (*http.Response, error) {
 	ret := m.ctrl.Call(m, "Requesting", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*http.Response)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Requesting indicates an expected call of Requesting

@@ -20,38 +20,40 @@ type Upload struct {
 }
 
 type UploadInterface interface {
-	RequestUpload(jwt.Credential, *url.URL, string) *http.Response
-	GetPreSignedURL(jwt.Credential, *url.URL, string) string
+	RequestUpload(jwt.Credential, *url.URL, string) (*http.Response, error)
+	GetUploadPreSignedURL(jwt.Credential, *url.URL, string) string
 }
 
-func (upload *Upload) GetPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) string {
-
-	// Get the presigned url first
+func (upload *Upload) GetUploadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+	   Get presigned url for upload
+	*/
 	resp, err := upload.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
 		nil, cred.AccessKey)
-
 	if err != nil {
 		panic(err)
 	}
-	//defer resp.Body.Close()
-	client := &http.Client{}
-	if resp.StatusCode == 401 {
-		upload.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = upload.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
-			nil, cred.AccessKey)
-		if resp.StatusCode == 401 {
-			log.Fatalf(jwt.ResponseToString(resp))
-		}
+	if resp.StatusCode != 200 {
+		log.Fatalf("User error %d\n", resp.StatusCode)
 	}
-	respString := jwt.ResponseToString(resp)
-	message := JsonMessage{}
-	err = json.Unmarshal([]byte(respString), &message)
-	return message.url
+	return resp, err
 }
 
-func (upload *Upload) RequestUpload(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
+func (upload *Upload) RequestUpload(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	/*
+		Upload file with
+		Args:
+			cred: crediential
+			host: file address
+			contentType: content type of the request
+		Returns:
+			httpResponse, error
 
-	presignedUploadUrl := upload.GetPreSignedURL(cred, host, contentType)
+	*/
+	resp, err := upload.GetUploadPreSignedURL(cred, host, contentType)
+	message := JsonMessage{}
+	err = json.Unmarshal([]byte(jwt.ResponseToString(resp)), &message)
+	presignedUploadUrl := message.url
 
 	fmt.Println("Uploading data to URL: " + presignedUploadUrl)
 	// Create and send request
@@ -60,16 +62,14 @@ func (upload *Upload) RequestUpload(cred jwt.Credential, host *url.URL, contentT
 		log.Fatal(err)
 	}
 	body := bytes.NewBufferString(string(data[:]))
-	req, err := http.NewRequest("PUT", presignedUploadUrl, body)
-	if err != nil {
-		panic(err)
-	}
+	req, _ := http.NewRequest("PUT", presignedUploadUrl, body)
+
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		panic(err)
 	}
-	return resp
+	return resp, err
 }
 
 var uploadCmd = &cobra.Command{
@@ -87,8 +87,7 @@ Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.jso
 		function.Request = request
 
 		upload := Upload{Function: function, Request: request}
-
-		respDown := function.DoRequestWithSignedHeader(upload.RequestUpload, profile, file_type)
+		respDown, _ := function.DoRequestWithSignedHeader(upload.RequestUpload, profile, file_type)
 		fmt.Println(jwt.ResponseToString(respDown))
 	},
 }

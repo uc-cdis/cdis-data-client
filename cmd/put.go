@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"bytes"
-	"strings"
-
 	"fmt"
 	"net/http"
 	"net/url"
@@ -19,42 +16,24 @@ type PutRequest struct {
 }
 
 type PutRequestInterface interface {
-	RequestPut(jwt.Credential, *url.URL, string) *http.Response
+	RequestPut(jwt.Credential, *url.URL, string) (*http.Response, error)
 }
 
-func (putRequest *PutRequest) RequestPut(cred jwt.Credential, host *url.URL, contentType string) *http.Response {
-	uri = "/api/" + strings.TrimPrefix(uri, "/")
-	// Create and send request
-	body := bytes.NewBufferString(putRequest.Configure.ReadFile(file_path, file_type))
+func (putRequest *PutRequest) RequestPut(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+	// uri = "/api/" + strings.TrimPrefix(uri, "/")
+	// // Create and send request
+	// body := bytes.NewBufferString(putRequest.Configure.ReadFile(file_path, file_type))
 
-	if file_type == "tsv" {
-		contentType = "text/tab-separated-values"
-	}
+	// if file_type == "tsv" {
+	// 	contentType = "text/tab-separated-values"
+	// }
 
-	// Display what came back
-	// TODO: Replace here by function of JWT
+	// // Display what came back
+	// // TODO: Replace here by function of JWT
 	// resp, err := gdcHmac.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri, body,
 	// 	contentType, "submission", cred.AccessKey, cred.APIKey)
-
-	resp, err := putRequest.Function.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri,
-		body, cred.AccessKey)
-
-	if err != nil {
-		panic(err)
-	}
-
-	if resp.StatusCode == 401 {
-		//log.Fatalf("Access token is expired %d\n%s", resp.StatusCode, presignedDownloadUrl)
-		client := &http.Client{}
-		putRequest.Request.RequestNewAccessKey(client, cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
-		resp, err = putRequest.Function.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri,
-			body, cred.AccessKey)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return resp
+	//return resp, err
+	panic("Use upload instead !!!")
 }
 
 // putCmd represents the put command
@@ -80,7 +59,7 @@ Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents
 
 		putRequest := PutRequest{Function: function, Configure: configure, Request: request}
 
-		resp := function.DoRequestWithSignedHeader(putRequest.RequestPut, profile, file_type)
+		resp, _ := function.DoRequestWithSignedHeader(putRequest.RequestPut, profile, file_type)
 		fmt.Println(jwt.ResponseToString(resp))
 	},
 }

@@ -49,11 +49,11 @@ func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3,
 }
 
 // RequestNewAccessKey mocks base method
-func (m *MockRequestInterface) RequestNewAccessKey(arg0 *http.Client, arg1 string, arg2 *jwt.Credential) {
-	m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1, arg2)
+func (m *MockRequestInterface) RequestNewAccessKey(arg0 string, arg1 *jwt.Credential) {
+	m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1)
 }
 
 // RequestNewAccessKey indicates an expected call of RequestNewAccessKey
-func (mr *MockRequestInterfaceMockRecorder) RequestNewAccessKey(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessKey", reflect.TypeOf((*MockRequestInterface)(nil).RequestNewAccessKey), arg0, arg1, arg2)
+func (mr *MockRequestInterfaceMockRecorder) RequestNewAccessKey(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessKey", reflect.TypeOf((*MockRequestInterface)(nil).RequestNewAccessKey), arg0, arg1)
 }
