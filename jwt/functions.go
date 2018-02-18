@@ -5,6 +5,7 @@ package jwt
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -93,9 +94,9 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file
 		configPath := path.Join(usr.HomeDir + "/.cdis/config")
 		content := f.Config.ReadFile(configPath, file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
+		return fn(cred, host, contentType)
 	}
-	return fn(cred, host, contentType)
-
+	return nil,  error(errors.New("Unexpected case"))
 }
 
 func (f *Functions) SignedRequest(method string, url_string string, body io.Reader, access_key string) (*http.Response, error) {
