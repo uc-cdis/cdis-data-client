@@ -7,9 +7,7 @@ package mocks
 import (
 	gomock "github.com/golang/mock/gomock"
 	jwt "github.com/uc-cdis/cdis-data-client/jwt"
-	io "io"
 	http "net/http"
-	url "net/url"
 	reflect "reflect"
 )
 
@@ -37,40 +35,13 @@ func (m *MockFunctionInterface) EXPECT() *MockFunctionInterfaceMockRecorder {
 }
 
 // DoRequestWithSignedHeader mocks base method
-func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1, arg2 string) (*http.Response, error) {
-	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2)
+func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1, arg2, arg3 string) *http.Response {
+	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*http.Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // DoRequestWithSignedHeader indicates an expected call of DoRequestWithSignedHeader
-func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2)
-}
-
-// Requesting mocks base method
-func (m *MockFunctionInterface) Requesting(arg0 jwt.Credential, arg1 *url.URL, arg2 string) (*http.Response, error) {
-	ret := m.ctrl.Call(m, "Requesting", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*http.Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Requesting indicates an expected call of Requesting
-func (mr *MockFunctionInterfaceMockRecorder) Requesting(arg0, arg1, arg2 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Requesting", reflect.TypeOf((*MockFunctionInterface)(nil).Requesting), arg0, arg1, arg2)
-}
-
-// SignedRequest mocks base method
-func (m *MockFunctionInterface) SignedRequest(arg0, arg1 string, arg2 io.Reader, arg3 string) (*http.Response, error) {
-	ret := m.ctrl.Call(m, "SignedRequest", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*http.Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SignedRequest indicates an expected call of SignedRequest
-func (mr *MockFunctionInterfaceMockRecorder) SignedRequest(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignedRequest", reflect.TypeOf((*MockFunctionInterface)(nil).SignedRequest), arg0, arg1, arg2, arg3)
+func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3)
 }

@@ -2,28 +2,21 @@ package jwt
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
-	"strings"
 )
 
-type APIKeyStruct struct {
-	Api_key string
-	Key_id  string
-}
+type Message interface{}
 
 type AccessTokenStruct struct {
 	Access_token string
 }
 
-// type UtilInterface interface {
-// 	ParseKeyValue(string, string, string) string
-// 	ParseConfig(string) Credential
-// 	TryReadFile(string) ([]byte, error)
-// 	ResponseToString(*http.Response) string
-// 	ResponseToBytes(*http.Response) []byte
-// }
+type JsonMessage struct {
+	Url string
+}
 
-//type Utils struct{}
+type DoRequest func(*http.Response) *http.Response
 
 func ResponseToString(resp *http.Response) string {
 	buf := new(bytes.Buffer)
@@ -31,8 +24,10 @@ func ResponseToString(resp *http.Response) string {
 	return buf.String()
 }
 
-func ResponseToBytes(resp *http.Response) []byte {
-	strBuf := ResponseToString(resp)
-	strBuf = strings.Replace(strBuf, "\n", "", -1)
-	return []byte(strBuf)
+func DecodeJsonFromResponse(resp *http.Response, msg Message) error {
+	err := json.NewDecoder(resp.Body).Decode(&msg)
+	if err != nil {
+		panic(err)
+	}
+	return err
 }

@@ -11,10 +11,6 @@ import (
 	"strings"
 )
 
-type JsonMessage struct {
-	url string
-}
-
 func parse_config(profile string) (string, string, string) {
 	//Look in config file
 	usr, _ := user.Current()

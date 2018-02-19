@@ -3,36 +3,12 @@ package cmd
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-type PutRequest struct {
-	Function  jwt.FunctionInterface
-	Configure jwt.ConfigureInterface
-	Request   jwt.RequestInterface
-}
-
-type PutRequestInterface interface {
-	RequestPut(jwt.Credential, *url.URL, string) (*http.Response, error)
-}
-
-func (putRequest *PutRequest) RequestPut(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
-	// uri = "/api/" + strings.TrimPrefix(uri, "/")
-	// // Create and send request
-	// body := bytes.NewBufferString(putRequest.Configure.ReadFile(file_path, file_type))
-
-	// if file_type == "tsv" {
-	// 	contentType = "text/tab-separated-values"
-	// }
-
-	// // Display what came back
-	// // TODO: Replace here by function of JWT
-	// resp, err := gdcHmac.SignedRequest("PUT", host.Scheme+"://"+host.Host+uri, body,
-	// 	contentType, "submission", cred.AccessKey, cred.APIKey)
-	//return resp, err
+func RequestPut(resp *http.Response) *http.Response {
 	panic("Use upload instead !!!")
 }
 
@@ -44,9 +20,9 @@ var putCmd = &cobra.Command{
 Specify file type as json or tsv with --file_type (default json).
 If no profile is specified, "default" profile is used for authentication.
 
-Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
-	  ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.tsv --file_type=tsv
-	  ./cdis-data-client put --profile=user1 --uri=v0/submission/bpa/test --file=~/Documents/file_to_upload.json
+Examples: ./cdis-data-client put --uri=/v0/submission/bpa/test --file=~/Documents/file_to_upload.json
+	  ./cdis-data-client put --uri=/v0/submission/bpa/test --file=~/Documents/file_to_upload.tsv --file_type=tsv
+	  ./cdis-data-client put --profile=user1 --uri=/v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -57,10 +33,8 @@ Examples: ./cdis-data-client put --uri=v0/submission/bpa/test --file=~/Documents
 		function.Config = configure
 		function.Request = request
 
-		putRequest := PutRequest{Function: function, Configure: configure, Request: request}
-
-		resp, _ := function.DoRequestWithSignedHeader(putRequest.RequestPut, profile, file_type)
-		fmt.Println(jwt.ResponseToString(resp))
+		fmt.Println(jwt.ResponseToString(
+			function.DoRequestWithSignedHeader(RequestUpload, profile, file_type, uri)))
 	},
 }
 

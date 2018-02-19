@@ -1,34 +1,22 @@
 package cmd
 
 import (
-	"strings"
-
 	"fmt"
 	"net/http"
-	"net/url"
+	"strings"
 
 	"github.com/spf13/cobra"
-
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-type DeleteRequest struct {
-	Function jwt.FunctionInterface
-}
-
-type DeleteRequestInterface interface {
-	RequestDelete(jwt.Credential, *url.URL, string) (*http.Response, error)
-}
-
 //Not support yet
-func (delRequest *DeleteRequest) RequestDelete(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+func RequestDelete(*http.Response) *http.Response {
 	// Declared in ./root.go
 	uri = "/api/" + strings.TrimPrefix(uri, "/")
 
 	// Display what came back
 	// TODO: Replace here by function of JWT
 	panic("Not supported !!!!")
-	return nil, nil
 }
 
 var deleteCmd = &cobra.Command{
@@ -48,10 +36,8 @@ Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/exampl
 		function.Config = configure
 		function.Request = request
 
-		delRequest := DeleteRequest{Function: function}
-
-		resp, _ := function.DoRequestWithSignedHeader(delRequest.RequestDelete, profile, file_type)
-		fmt.Println(jwt.ResponseToString(resp))
+		fmt.Println(jwt.ResponseToString(
+			function.DoRequestWithSignedHeader(RequestDelete, profile, file_type, uri)))
 	},
 }
 

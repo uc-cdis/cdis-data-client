@@ -1,67 +1,32 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 
-	"github.com/uc-cdis/cdis-data-client/jwt"
-
-	"net/url"
-
 	"github.com/spf13/cobra"
+
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-type Download struct {
-	Function jwt.FunctionInterface
-	Request  jwt.RequestInterface
-}
-
-type DownloadInterface interface {
-	RequestDownload(jwt.Credential, *url.URL, string) (*http.Response, error)
-	GetDownloadPreSignedURL(jwt.Credential, *url.URL, string) string
-}
-
-func (download *Download) GetDownloadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+func RequestDownload(resp *http.Response) *http.Response {
 	/*
-		Get the presigned url for dwonload
+		Download file from given url encoded in resp
 	*/
-	resp, err := download.Function.SignedRequest("GET",
-		host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, cred.AccessKey)
-	defer resp.Body.Close()
 
-	if err != nil {
-		panic(err)
-	}
-	if resp.StatusCode != 200 {
-		log.Fatalf("User error %d\n", resp.StatusCode)
-	}
+	msg := jwt.JsonMessage{}
+	jwt.DecodeJsonFromResponse(resp, &msg)
 
-	return resp, err
-}
-func (download *Download) RequestDownload(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
-	/*
-		Download file from given url with
-		Args:
-			cred: crediential
-			host: file address
-			contentType: content type of the request
-		Returns:
-			httpResponse, error
-
-	*/
-	resp, err := download.GetDownloadPreSignedURL(cred, host, contentType)
-	message := JsonMessage{}
-	err = json.Unmarshal([]byte(jwt.ResponseToString(resp)), &message)
-
-	presignedDownloadURL := message.url
+	presignedDownloadURL := msg.Url
 	fmt.Println("Downloading data from url: " + presignedDownloadURL)
 
 	respDown, err := http.Get(presignedDownloadURL)
-	return respDown, err
+	if err != nil {
+		panic(err)
+	}
+	return respDown
 }
 
 var downloadCmd = &cobra.Command{
@@ -79,9 +44,8 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		function.Config = configure
 		function.Request = request
 
-		download := Download{Function: function, Request: request}
-
-		respDown, _ := function.DoRequestWithSignedHeader(download.RequestDownload, profile, file_type)
+		endPointPostfix := "/user/data/download/" + uuid
+		respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, file_type, endPointPostfix)
 
 		out, err := os.Create(file_path)
 		if err != nil {

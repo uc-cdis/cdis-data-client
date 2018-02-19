@@ -2,74 +2,39 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-type PostRequest struct {
-	Function  jwt.FunctionInterface
-	Configure jwt.ConfigureInterface
-	Request   jwt.RequestInterface
-}
-
-type PostRequestInterface interface {
-	RequestPost(jwt.Credential, *url.URL, string) (*http.Response, error)
-	GetUploadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error)
-}
-
-func (postRequest *PostRequest) GetUploadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+func RequestPost(resp *http.Response) *http.Response {
 	/*
-	   Get presigned url for upload
+		Upload file with presigned encoded in resp
 	*/
-	resp, err := postRequest.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
-		nil, cred.AccessKey)
-	if err != nil {
-		panic(err)
-	}
-	if resp.StatusCode != 200 {
-		log.Fatalf("User error %d\n", resp.StatusCode)
-	}
-	return resp, err
-}
+	msg := jwt.JsonMessage{}
+	jwt.DecodeJsonFromResponse(resp, &msg)
 
-func (postRequest *PostRequest) RequestPost(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
-	/*
-		Upload file with
-		Args:
-			cred: crediential
-			host: file address
-			contentType: content type of the request
-		Returns:
-			httpResponse, error
+	presignedUploadURL := msg.Url
 
-	*/
-	resp, err := postRequest.GetUploadPreSignedURL(cred, host, contentType)
-	message := JsonMessage{}
-	err = json.Unmarshal([]byte(jwt.ResponseToString(resp)), &message)
-	presignedUploadUrl := message.url
-
-	fmt.Println("Uploading data to URL: " + presignedUploadUrl)
+	fmt.Println("Uploading data to URL: " + presignedUploadURL)
 	// Create and send request
 	data, err := ioutil.ReadFile(file_path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	body := bytes.NewBufferString(string(data[:]))
-	req, _ := http.NewRequest("PUT", presignedUploadUrl, body)
+	req, _ := http.NewRequest("PUT", presignedUploadURL, body)
 
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
 		panic(err)
 	}
-	return resp, err
+	return resp
 }
 
 // postCmd represents the post command
@@ -80,8 +45,8 @@ var postCmd = &cobra.Command{
 local json files to the gdcapi. 
 If no profile is specified, "default" profile is used for authentication. 
 
-Examples: ./cdis-data-client put --uri=v0/submission/graphql --file=~/Documents/my_grqphql_query.json
-	  ./cdis-data-client put --profile=user1 --uri=v0/submission/graphql --file=~/Documents/my_grqphql_query.json
+Examples: ./cdis-data-client put --uri=/v0/submission/graphql --file=~/Documents/my_grqphql_query.json
+	  ./cdis-data-client put --profile=user1 --uri=/v0/submission/graphql --file=~/Documents/my_grqphql_query.json
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -92,10 +57,8 @@ Examples: ./cdis-data-client put --uri=v0/submission/graphql --file=~/Documents/
 		function.Config = configure
 		function.Request = request
 
-		postRequest := PostRequest{Function: function, Configure: configure, Request: request}
-
-		resp, _ := function.DoRequestWithSignedHeader(postRequest.RequestPost, profile, file_type)
-		fmt.Println(jwt.ResponseToString(resp))
+		fmt.Println(jwt.ResponseToString(
+			function.DoRequestWithSignedHeader(RequestUpload, profile, file_type, uri)))
 	},
 }
 

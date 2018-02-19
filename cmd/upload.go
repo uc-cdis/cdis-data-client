@@ -2,74 +2,41 @@ package cmd
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 
-	"net/url"
-
 	"github.com/spf13/cobra"
+
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
-type Upload struct {
-	Function jwt.FunctionInterface
-	Request  jwt.RequestInterface
-}
-
-type UploadInterface interface {
-	RequestUpload(jwt.Credential, *url.URL, string) (*http.Response, error)
-	GetUploadPreSignedURL(jwt.Credential, *url.URL, string) string
-}
-
-func (upload *Upload) GetUploadPreSignedURL(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
+func RequestUpload(resp *http.Response) *http.Response {
 	/*
-	   Get presigned url for upload
+		Upload file with presigned url encoded in response's json
 	*/
-	resp, err := upload.Function.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid,
-		nil, cred.AccessKey)
-	if err != nil {
-		panic(err)
-	}
-	if resp.StatusCode != 200 {
-		log.Fatalf("User error %d\n", resp.StatusCode)
-	}
-	return resp, err
-}
 
-func (upload *Upload) RequestUpload(cred jwt.Credential, host *url.URL, contentType string) (*http.Response, error) {
-	/*
-		Upload file with
-		Args:
-			cred: crediential
-			host: file address
-			contentType: content type of the request
-		Returns:
-			httpResponse, error
+	msg := jwt.JsonMessage{}
+	jwt.DecodeJsonFromResponse(resp, &msg)
 
-	*/
-	resp, err := upload.GetUploadPreSignedURL(cred, host, contentType)
-	message := JsonMessage{}
-	err = json.Unmarshal([]byte(jwt.ResponseToString(resp)), &message)
-	presignedUploadUrl := message.url
+	presignedUploadURL := msg.Url
 
-	fmt.Println("Uploading data to URL: " + presignedUploadUrl)
+	fmt.Println("Uploading data to URL: " + presignedUploadURL)
 	// Create and send request
 	data, err := ioutil.ReadFile(file_path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	body := bytes.NewBufferString(string(data[:]))
-	req, _ := http.NewRequest("PUT", presignedUploadUrl, body)
+	req, _ := http.NewRequest("PUT", presignedUploadURL, body)
 
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
 		panic(err)
 	}
-	return resp, err
+	return resp
 }
 
 var uploadCmd = &cobra.Command{
@@ -86,9 +53,10 @@ Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.jso
 		function.Config = configure
 		function.Request = request
 
-		upload := Upload{Function: function, Request: request}
-		respDown, _ := function.DoRequestWithSignedHeader(upload.RequestUpload, profile, file_type)
-		fmt.Println(jwt.ResponseToString(respDown))
+		endPointPostfix := "/user/data/upload/" + uuid
+
+		fmt.Println(jwt.ResponseToString(
+			function.DoRequestWithSignedHeader(RequestUpload, profile, file_type, endPointPostfix)))
 	},
 }
 

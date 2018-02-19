@@ -4,9 +4,8 @@ package jwt
 
 import (
 	"bytes"
-	"encoding/json"
-	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os/user"
@@ -19,9 +18,7 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	Requesting(Credential, *url.URL, string) (*http.Response, error)
-	DoRequestWithSignedHeader(DoRequest, string, string) (*http.Response, error)
-	SignedRequest(string, string, io.Reader, string) (*http.Response, error)
+	DoRequestWithSignedHeader(DoRequest, string, string, string) *http.Response
 }
 
 type Request struct {
@@ -29,6 +26,8 @@ type Request struct {
 type RequestInterface interface {
 	MakeARequest(*http.Client, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
 	RequestNewAccessKey(string, *Credential)
+	SignedRequest(string, string, io.Reader, string) (*http.Response, error)
+	GetPresignedURL(host *url.URL, endpointPostPrefix string, accessKey string) *http.Response
 }
 
 func (r *Request) MakeARequest(client *http.Client, method string, path string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
@@ -57,49 +56,67 @@ func (r *Request) RequestNewAccessKey(path string, cred *Credential) {
 	if err != nil {
 		return
 	}
-	//println(ResponseToString(resp))
-	err = json.Unmarshal(ResponseToBytes(resp), &m)
+
+	err = DecodeJsonFromResponse(resp, &m)
 	if err != nil {
 		return
 	}
+
 	cred.AccessKey = m.Access_token
 }
 
-func (f *Functions) Requesting(cred Credential, host *url.URL, contentType string) (*http.Response, error) {
-	return &http.Response{}, nil
-}
+func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file_type string, endpointPostPrefix string) *http.Response {
 
-type DoRequest func(cred Credential, host *url.URL, contentType string) (*http.Response, error)
-
-func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file_type string) (*http.Response, error) {
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 		panic("No credential found")
 	}
-	contentType := "application/json"
 	host, _ := url.Parse(cred.APIEndpoint)
+	prefixEndPoint := host.Scheme + "://" + host.Host
 	isExpiredToken := false
 
 	if cred.AccessKey != "" {
-		resp, err := fn(cred, host, contentType)
+		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
+
 		if resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else {
-			return resp, err
+			return resp
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
-		f.Request.RequestNewAccessKey(cred.APIEndpoint+"/credentials/cdis/access_token", &cred)
+		f.Request.RequestNewAccessKey(prefixEndPoint+"/credentials/cdis/access_token", &cred)
 		usr, _ := user.Current()
 		configPath := path.Join(usr.HomeDir + "/.cdis/config")
 		content := f.Config.ReadFile(configPath, file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
-		return fn(cred, host, contentType)
+		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
+		return fn(resp)
 	}
-	return nil,  error(errors.New("Unexpected case"))
+	panic("Unexpected case")
 }
 
-func (f *Functions) SignedRequest(method string, url_string string, body io.Reader, access_key string) (*http.Response, error) {
+func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, accessKey string) *http.Response {
+	/*
+		Get the presigned url
+	*/
+
+	apiEndPoint := host.Scheme + "://" + host.Host + endpointPostPrefix
+	resp, err := r.SignedRequest("GET", apiEndPoint, nil, accessKey)
+	defer resp.Body.Close()
+
+	if err != nil {
+		panic(err)
+	}
+	if resp.StatusCode != 200 && resp.StatusCode != 401 {
+		log.Fatalf("User error %d\n", resp.StatusCode)
+	}
+
+	return resp
+
+}
+
+func (r *Request) SignedRequest(method string, url_string string, body io.Reader, access_key string) (*http.Response, error) {
 
 	client := &http.Client{}
 

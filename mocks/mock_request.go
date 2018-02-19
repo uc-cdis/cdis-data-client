@@ -8,7 +8,9 @@ import (
 	bytes "bytes"
 	gomock "github.com/golang/mock/gomock"
 	jwt "github.com/uc-cdis/cdis-data-client/jwt"
+	io "io"
 	http "net/http"
+	url "net/url"
 	reflect "reflect"
 )
 
@@ -35,6 +37,18 @@ func (m *MockRequestInterface) EXPECT() *MockRequestInterfaceMockRecorder {
 	return m.recorder
 }
 
+// GetPresignedURL mocks base method
+func (m *MockRequestInterface) GetPresignedURL(arg0 *url.URL, arg1, arg2 string) *http.Response {
+	ret := m.ctrl.Call(m, "GetPresignedURL", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*http.Response)
+	return ret0
+}
+
+// GetPresignedURL indicates an expected call of GetPresignedURL
+func (mr *MockRequestInterfaceMockRecorder) GetPresignedURL(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPresignedURL", reflect.TypeOf((*MockRequestInterface)(nil).GetPresignedURL), arg0, arg1, arg2)
+}
+
 // MakeARequest mocks base method
 func (m *MockRequestInterface) MakeARequest(arg0 *http.Client, arg1, arg2 string, arg3 map[string]string, arg4 *bytes.Buffer) (*http.Response, error) {
 	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4)
@@ -56,4 +70,17 @@ func (m *MockRequestInterface) RequestNewAccessKey(arg0 string, arg1 *jwt.Creden
 // RequestNewAccessKey indicates an expected call of RequestNewAccessKey
 func (mr *MockRequestInterfaceMockRecorder) RequestNewAccessKey(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessKey", reflect.TypeOf((*MockRequestInterface)(nil).RequestNewAccessKey), arg0, arg1)
+}
+
+// SignedRequest mocks base method
+func (m *MockRequestInterface) SignedRequest(arg0, arg1 string, arg2 io.Reader, arg3 string) (*http.Response, error) {
+	ret := m.ctrl.Call(m, "SignedRequest", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*http.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SignedRequest indicates an expected call of SignedRequest
+func (mr *MockRequestInterfaceMockRecorder) SignedRequest(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignedRequest", reflect.TypeOf((*MockRequestInterface)(nil).SignedRequest), arg0, arg1, arg2, arg3)
 }
