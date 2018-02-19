@@ -11,6 +11,7 @@ import (
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
+/* performing function of download data */
 func RequestDownload(resp *http.Response) *http.Response {
 	/*
 		Download file from given url encoded in resp
@@ -29,6 +30,7 @@ func RequestDownload(resp *http.Response) *http.Response {
 	return respDown
 }
 
+// represent to download command
 var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "download a file from a UUID",

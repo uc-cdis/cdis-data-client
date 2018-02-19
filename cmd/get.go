@@ -10,6 +10,7 @@ import (
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
+// RequestGet is used to perform GET request to endpoint
 func RequestGet(resp *http.Response) *http.Response {
 	/*
 		Download file from given url encoded in resp

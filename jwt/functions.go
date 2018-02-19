@@ -66,6 +66,9 @@ func (r *Request) RequestNewAccessKey(path string, cred *Credential) {
 }
 
 func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file_type string, endpointPostPrefix string) *http.Response {
+	/*
+		Do request with signed header. User may have more than one profile and use a profile to
+	*/
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
@@ -99,6 +102,12 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file
 func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, accessKey string) *http.Response {
 	/*
 		Get the presigned url
+		Args:
+			host: host endpoint
+			endpointPostPrefix: prefix url which is different for download/upload
+			accessKey: access key for authZ
+		Returns:
+			Http response containing presigned url for download and upload
 	*/
 
 	apiEndPoint := host.Scheme + "://" + host.Host + endpointPostPrefix
@@ -117,6 +126,16 @@ func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, acce
 }
 
 func (r *Request) SignedRequest(method string, url_string string, body io.Reader, access_key string) (*http.Response, error) {
+	/*
+		Make a request to server with signed url
+		Args:
+			method: POST or GET
+			url_string: api service endpoint
+			body: request body
+			access_key: access_key in profile
+		Returns:
+			http response
+	*/
 
 	client := &http.Client{}
 

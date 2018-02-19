@@ -8,10 +8,10 @@ import (
 	"net/http"
 
 	"github.com/spf13/cobra"
-
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
+/* used to perform upload data */
 func RequestUpload(resp *http.Response) *http.Response {
 	/*
 		Upload file with presigned url encoded in response's json
@@ -39,6 +39,7 @@ func RequestUpload(resp *http.Response) *http.Response {
 	return resp
 }
 
+/* represent to download command */
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload a file to a UUID",

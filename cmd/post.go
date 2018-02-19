@@ -1,41 +1,11 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
-
-func RequestPost(resp *http.Response) *http.Response {
-	/*
-		Upload file with presigned encoded in resp
-	*/
-	msg := jwt.JsonMessage{}
-	jwt.DecodeJsonFromResponse(resp, &msg)
-
-	presignedUploadURL := msg.Url
-
-	fmt.Println("Uploading data to URL: " + presignedUploadURL)
-	// Create and send request
-	data, err := ioutil.ReadFile(file_path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	body := bytes.NewBufferString(string(data[:]))
-	req, _ := http.NewRequest("PUT", presignedUploadURL, body)
-
-	client := &http.Client{}
-	resp, err = client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	return resp
-}
 
 // postCmd represents the post command
 var postCmd = &cobra.Command{

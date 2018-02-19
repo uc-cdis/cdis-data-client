@@ -8,6 +8,7 @@ import (
 var conf jwt.Configure
 var credFile string
 
+// configureCmd represents the command to configure profile
 var configureCmd = &cobra.Command{
 	Use:   "configure",
 	Short: "Add or modify a configuration profile to your config file",

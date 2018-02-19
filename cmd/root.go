@@ -16,7 +16,7 @@ var file_path string
 var file_type string
 var uuid string
 
-// RootCmd represents the base command when called without any subcommands
+/* RootCmd represents the base command when called without any subcommands */
 var RootCmd = &cobra.Command{
 	Use:   "cdis-client",
 	Short: "CLI with HMAC verification to talk to GDCAPI",
@@ -24,8 +24,8 @@ var RootCmd = &cobra.Command{
 that are signed using HMAC protocol`,
 }
 
-// Execute adds all child commands to the root command sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+/* Execute adds all child commands to the root command sets flags appropriately
+   This is called by main.main(). It only needs to happen once to the rootCmd. */
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)

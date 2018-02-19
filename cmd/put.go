@@ -2,15 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
-
-func RequestPut(resp *http.Response) *http.Response {
-	panic("Use upload instead !!!")
-}
 
 // putCmd represents the put command
 var putCmd = &cobra.Command{

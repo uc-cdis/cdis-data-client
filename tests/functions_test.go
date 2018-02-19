@@ -15,14 +15,6 @@ func Requesting(*http.Response) *http.Response {
 	return &http.Response{}
 }
 
-func assertPanic(t *testing.T, f func()) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
-		}
-	}()
-	f()
-}
 func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {

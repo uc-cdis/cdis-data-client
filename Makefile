@@ -25,6 +25,9 @@ lint:
 
 test: fmt lint vet
 	@echo "+ $@"
+	@mockgen -destination=mocks/mock_configure.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt ConfigureInterface
+	@mockgen -destination=mocks/mock_request.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt RequestInterface
+	@mockgen -destination=mocks/mock_functions.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt FunctionInterface
 	@go test -v -tags "$(BUILDTAGS) cgo" $(shell go list ./... | grep -v vendor)
 
 vet:
