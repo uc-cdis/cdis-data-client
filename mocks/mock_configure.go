@@ -69,18 +69,6 @@ func (mr *MockConfigureInterfaceMockRecorder) ParseUrl() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseUrl", reflect.TypeOf((*MockConfigureInterface)(nil).ParseUrl))
 }
 
-// ReadCredentials mocks base method
-func (m *MockConfigureInterface) ReadCredentials(arg0 string) jwt.Credential {
-	ret := m.ctrl.Call(m, "ReadCredentials", arg0)
-	ret0, _ := ret[0].(jwt.Credential)
-	return ret0
-}
-
-// ReadCredentials indicates an expected call of ReadCredentials
-func (mr *MockConfigureInterfaceMockRecorder) ReadCredentials(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadCredentials", reflect.TypeOf((*MockConfigureInterface)(nil).ReadCredentials), arg0)
-}
-
 // ReadFile mocks base method
 func (m *MockConfigureInterface) ReadFile(arg0, arg1 string) string {
 	ret := m.ctrl.Call(m, "ReadFile", arg0, arg1)
@@ -104,19 +92,6 @@ func (m *MockConfigureInterface) ReadLines(arg0 jwt.Credential, arg1 []byte, arg
 // ReadLines indicates an expected call of ReadLines
 func (mr *MockConfigureInterfaceMockRecorder) ReadLines(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadLines", reflect.TypeOf((*MockConfigureInterface)(nil).ReadLines), arg0, arg1, arg2, arg3)
-}
-
-// TryReadFile mocks base method
-func (m *MockConfigureInterface) TryReadFile(arg0 string) ([]byte, error) {
-	ret := m.ctrl.Call(m, "TryReadFile", arg0)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TryReadFile indicates an expected call of TryReadFile
-func (mr *MockConfigureInterfaceMockRecorder) TryReadFile(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TryReadFile", reflect.TypeOf((*MockConfigureInterface)(nil).TryReadFile), arg0)
 }
 
 // UpdateConfigFile mocks base method

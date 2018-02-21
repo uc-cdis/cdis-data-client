@@ -30,8 +30,11 @@ type RequestInterface interface {
 	GetPresignedURL(host *url.URL, endpointPostPrefix string, accessKey string) *http.Response
 }
 
-func (r *Request) MakeARequest(client *http.Client, method string, path string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
-	req, err := http.NewRequest(method, path, body)
+func (r *Request) MakeARequest(client *http.Client, method string, apiEndpoint string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
+	/*
+		Make http request with header and body
+	*/
+	req, err := http.NewRequest(method, apiEndpoint, body)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +49,21 @@ func (r *Request) MakeARequest(client *http.Client, method string, path string, 
 
 }
 
-func (r *Request) RequestNewAccessKey(path string, cred *Credential) {
+func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
+	/*
+		Request new access token to replace the expired one.
+
+		Args:
+			apiEndpoint: the api enpoint for request new access token
+		Returns:
+			cred: new credential
+
+	*/
 	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
 	headers := make(map[string]string)
 	headers["Content-Type"] = "application/json"
 	client := &http.Client{}
-	resp, err := r.MakeARequest(client, "POST", path, headers, body)
+	resp, err := r.MakeARequest(client, "POST", apiEndpoint, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
 		return
