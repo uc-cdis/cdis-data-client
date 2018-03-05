@@ -4,6 +4,7 @@ package jwt
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -75,6 +76,30 @@ func (conf *Configure) ParseUrl() string {
 		os.Exit(1)
 	}
 	return apiEndpoint
+}
+
+func (conf *Configure) ReadCredentials(filePath string) Credential {
+	var configuration Credential
+	jsonContent := conf.ReadFile(filePath, "json")
+	jsonContent = strings.Replace(jsonContent, "key_id", "KeyId", -1)
+	jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
+	err := json.Unmarshal([]byte(jsonContent), &configuration)
+	if err != nil {
+		fmt.Println("Cannot read json file: " + err.Error())
+		os.Exit(1)
+	}
+	return configuration
+}
+
+func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	homeDir := usr.HomeDir
+	configPath := path.Join(homeDir + "/.cdis/config")
+	content, err := conf.TryReadFile(configPath)
+	return configPath, content, err
 }
 
 func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint string, profile string) ([]string, bool) {
@@ -248,4 +273,16 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		cred.APIEndpoint = conf.ParseKeyValue(lines[profile_line+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
 		return cred
 	}
+}
+
+func (conf *Configure) TryReadFile(filePath string) ([]byte, error) {
+	if _, err := os.Stat(path.Dir(filePath)); os.IsNotExist(err) {
+		os.Mkdir(path.Join(path.Dir(filePath)), os.FileMode(0777))
+		os.Create(filePath)
+	}
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		os.Create(filePath)
+	}
+
+	return ioutil.ReadFile(filePath)
 }
