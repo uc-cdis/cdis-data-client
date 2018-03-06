@@ -29,7 +29,14 @@ func RequestUpload(resp *http.Response) *http.Response {
 		log.Fatal(err)
 	}
 	body := bytes.NewBufferString(string(data[:]))
+
+	content_type := "application/json"
+	if file_type == "tsv" {
+		content_type = "text/tab-separated-values"
+	}
+
 	req, _ := http.NewRequest("PUT", presignedUploadURL, body)
+	req.Header.Add("content_type", content_type)
 
 	client := &http.Client{}
 	resp, err = client.Do(req)
@@ -57,7 +64,7 @@ Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.jso
 		endPointPostfix := "/user/data/upload/" + uuid
 
 		fmt.Println(jwt.ResponseToString(
-			function.DoRequestWithSignedHeader(RequestUpload, profile, file_type, endPointPostfix)))
+			function.DoRequestWithSignedHeader(RequestUpload, profile, "", endPointPostfix)))
 	},
 }
 

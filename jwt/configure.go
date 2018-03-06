@@ -59,7 +59,7 @@ func (conf *Configure) ReadFile(file_path string, file_type string) string {
 	if file_type == "json" {
 		content_str = strings.Replace(content_str, "\n", "", -1)
 	}
-	return content_str
+	return string(content[:])
 }
 
 func (conf *Configure) ParseUrl() string {
@@ -98,13 +98,15 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 	}
 	homeDir := usr.HomeDir
 	configPath := path.Join(homeDir + "/.cdis/config")
+
 	content, err := conf.TryReadFile(configPath)
+
 	return configPath, content, err
 }
 
 func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint string, profile string) ([]string, bool) {
 	lines := strings.Split(string(configContent), "\n")
-
+	//println(string(configContent))
 	found := false
 	for i := 0; i < len(lines); i += 6 {
 		if lines[i] == "["+profile+"]" {

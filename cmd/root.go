@@ -10,6 +10,7 @@ import (
 )
 
 var cfgFile string
+var credFile string
 var profile string
 var uri string
 var file_path string
@@ -38,6 +39,7 @@ func init() {
 
 	// Define flags and configuration settings.
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "Specify profile to add or edit with --profile user2")
+	RootCmd.PersistentFlags().StringVar(&credFile, "cred", "", "Specify cred file --cred credentials.json")
 	RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
 	RootCmd.PersistentFlags().StringVar(&file_path, "file", "", "Specify file to upload with --file=~/path/to/file")
 	RootCmd.PersistentFlags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")

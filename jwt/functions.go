@@ -75,9 +75,10 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	}
 
 	cred.AccessKey = m.Access_token
+
 }
 
-func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file_type string, endpointPostPrefix string) *http.Response {
+func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, config_file_type string, endpointPostPrefix string) *http.Response {
 	/*
 		Do request with signed header. User may have more than one profile and use a profile to
 	*/
@@ -96,14 +97,14 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, file
 		if resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else {
-			return resp
+			return fn(resp)
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
-		f.Request.RequestNewAccessKey(prefixEndPoint+"/credentials/cdis/access_token", &cred)
+		f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/cdis/access_token", &cred)
 		usr, _ := user.Current()
 		configPath := path.Join(usr.HomeDir + "/.cdis/config")
-		content := f.Config.ReadFile(configPath, file_type)
+		content := f.Config.ReadFile(configPath, config_file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
 		return fn(resp)
@@ -121,10 +122,8 @@ func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, acce
 		Returns:
 			Http response containing presigned url for download and upload
 	*/
-
 	apiEndPoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	resp, err := r.SignedRequest("GET", apiEndPoint, nil, accessKey)
-	defer resp.Body.Close()
 
 	if err != nil {
 		panic(err)

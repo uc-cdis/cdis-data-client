@@ -6,7 +6,6 @@ import (
 )
 
 var conf jwt.Configure
-var credFile string
 
 // configureCmd represents the command to configure profile
 var configureCmd = &cobra.Command{
@@ -20,7 +19,10 @@ If no profile is specified, "default" profile is used
 Examples: ./cdis-data-client configure
 	  ./cdis-data-client configure --profile=user1 --creds creds.json`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Prompt user for info
+
+		if credFile == "" {
+			panic("You need to speficy the credentials file.\nRun command: ./cdis-data-client configure --profile=user1 --creds creds.json")
+		}
 
 		cred := conf.ReadCredentials(credFile)
 		apiEndpoint := conf.ParseUrl()
@@ -30,7 +32,7 @@ Examples: ./cdis-data-client configure
 		if err != nil {
 			panic(err)
 		}
-		conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, "default")
+		conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
 	},
 }
 

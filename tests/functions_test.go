@@ -78,7 +78,7 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
 	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
-	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/credentials/cdis/access_token", &cred).Times(1)
+	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(1)
 
 	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")
@@ -108,7 +108,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
 	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), "http://www.test.com", gomock.Any(), "default").Times(1)
 
-	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/credentials/cdis/access_token", &cred).Times(1)
+	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(2)
 
 	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")

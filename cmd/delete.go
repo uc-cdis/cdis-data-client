@@ -37,7 +37,7 @@ Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/exampl
 		function.Request = request
 
 		fmt.Println(jwt.ResponseToString(
-			function.DoRequestWithSignedHeader(RequestDelete, profile, file_type, uri)))
+			function.DoRequestWithSignedHeader(RequestDelete, profile, "txt", uri)))
 	},
 }
 

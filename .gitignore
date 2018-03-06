@@ -25,3 +25,4 @@ _test.go
 *.exe
 *.test
 *.prof
+credentials.json

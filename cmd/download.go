@@ -35,7 +35,7 @@ var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "download a file from a UUID",
 	Long: `Gets a presigned URL for a file from a UUID and then downloads the specified file. 
-Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download.json 
+Examples: ./cdis-data-client download --profile user1 --uuid f6923cf3-3836-4340-ad29-14ab3f84f9d6 --file=~/Documents/file_to_download.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
@@ -47,7 +47,8 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		function.Request = request
 
 		endPointPostfix := "/user/data/download/" + uuid
-		respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, file_type, endPointPostfix)
+
+		respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, "", endPointPostfix)
 
 		out, err := os.Create(file_path)
 		if err != nil {
@@ -58,7 +59,6 @@ Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download
 		defer respDown.Body.Close()
 		_, err = io.Copy(out, respDown.Body)
 		if err != nil {
-
 			panic(err)
 		}
 	},
