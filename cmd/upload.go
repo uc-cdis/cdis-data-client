@@ -17,32 +17,32 @@ func RequestUpload(resp *http.Response) *http.Response {
 		Upload file with presigned url encoded in response's json
 	*/
 
-	msg := jwt.JsonMessage{}
-	jwt.DecodeJsonFromResponse(resp, &msg)
-
-	presignedUploadURL := msg.Url
+	//msg := jwt.JsonMessage{}
+	//println(jwt.ResponseToString(resp))
+	//jwt.DecodeJsonFromResponse(resp, &msg
+	//presignedUploadURL := msg.Url
+	presignedUploadURL := jwt.GetUrlFromResponse(resp)
 
 	fmt.Println("Uploading data to URL: " + presignedUploadURL)
 	// Create and send request
 	data, err := ioutil.ReadFile(file_path)
+	println(file_path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	body := bytes.NewBufferString(string(data[:]))
-
 	content_type := "application/json"
 	if file_type == "tsv" {
 		content_type = "text/tab-separated-values"
 	}
-
 	req, _ := http.NewRequest("PUT", presignedUploadURL, body)
-	req.Header.Add("content_type", content_type)
-
+	req.Header.Set("content_type", content_type)
 	client := &http.Client{}
 	resp, err = client.Do(req)
 	if err != nil {
 		panic(err)
 	}
+
 	return resp
 }
 
@@ -51,7 +51,7 @@ var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload a file to a UUID",
 	Long: `Gets a presigned URL for which to upload a file associated with a UUID and then uploads the specified file. 
-Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.json 
+Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-3836-4340-ad29-14ab3f84f9d6 --file=~/Documents/file_to_upload
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		request := new(jwt.Request)

@@ -1,6 +1,6 @@
 package jwt
 
-//go:generate mockgen -destination=mocks/mock_functions.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt FunctionInterface
+//mockgen -destination=mocks/mock_functions.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt FunctionInterface
 
 import (
 	"bytes"
@@ -92,8 +92,12 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 	isExpiredToken := false
 
 	if cred.AccessKey != "" {
+		println("endpoint")
+		println(endpointPostPrefix)
 		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
 
+		// 401 code is general error code from fence. the error message is also not clear for the case
+		// that the token expired. Temporary solution: get new access token and make another attempt.
 		if resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else {
@@ -122,9 +126,9 @@ func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, acce
 		Returns:
 			Http response containing presigned url for download and upload
 	*/
+
 	apiEndPoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	resp, err := r.SignedRequest("GET", apiEndPoint, nil, accessKey)
-
 	if err != nil {
 		panic(err)
 	}
@@ -147,11 +151,11 @@ func (r *Request) SignedRequest(method string, url_string string, body io.Reader
 		Returns:
 			http response
 	*/
-
 	client := &http.Client{}
 
 	req, err := http.NewRequest(method, url_string, body)
 	if err != nil {
+		println("error", err)
 		return nil, err
 	}
 	req.Header.Add("Authorization", "Bearer "+access_key)

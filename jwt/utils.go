@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 type Message interface{}
@@ -30,4 +31,20 @@ func DecodeJsonFromResponse(resp *http.Response, msg Message) error {
 		panic(err)
 	}
 	return err
+}
+
+func GetUrlFromResponse(resp *http.Response) string {
+	/*
+		extract url from http.Response
+		This function is a replacement for DecodeJsonFromResponse since both Unmarshal and NewDecoder are not stable!
+	*/
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	data := buf.String()
+	first := strings.Index(data, "http")
+	last := strings.LastIndex(data, "\"")
+
+	println(data[first:last])
+	return data[first:last]
+
 }
