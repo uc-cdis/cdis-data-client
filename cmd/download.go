@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -18,15 +19,26 @@ func RequestDownload(resp *http.Response) *http.Response {
 	*/
 
 	msg := jwt.JsonMessage{}
-	jwt.DecodeJsonFromResponse(resp, &msg)
+
+	str := jwt.ResponseToString(resp)
+	jwt.DecodeJsonFromString(str, &msg)
+
+	if msg.Url == "" {
+		log.Fatalf("Can not get url from " + str)
+	}
 
 	presignedDownloadURL := msg.Url
-	fmt.Println("Downloading data from url: " + presignedDownloadURL)
+	fmt.Println("Downloading data ...")
 
 	respDown, err := http.Get(presignedDownloadURL)
 	if err != nil {
 		panic(err)
 	}
+
+	if resp.StatusCode == 200 {
+		fmt.Println("Done!!!")
+	}
+
 	return respDown
 }
 

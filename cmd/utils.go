@@ -44,7 +44,7 @@ func parse_config(profile string) (string, string, string) {
 	}
 
 	if profile_line == -1 {
-		fmt.Println("Profile not in config file. Need to run \"cdis-data-client configure --profile=" + profile + "\" first")
+		fmt.Println("Profile not in config file. Need to run \"cdis-data-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
 		return "", "", ""
 	} else {
 		// Read in access key, secret key, endpoint for given profile

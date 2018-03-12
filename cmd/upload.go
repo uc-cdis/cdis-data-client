@@ -18,11 +18,16 @@ func RequestUpload(resp *http.Response) *http.Response {
 	*/
 
 	msg := jwt.JsonMessage{}
-	jwt.DecodeJsonFromResponse(resp, &msg)
-	presignedUploadURL := msg.Url
-	//presignedUploadURL := jwt.GetUrlFromResponse(resp)
 
-	fmt.Println("Uploading data to URL: " + presignedUploadURL)
+	str := jwt.ResponseToString(resp)
+	jwt.DecodeJsonFromString(str, &msg)
+	if msg.Url == "" {
+		log.Fatalf("Can not get url from " + str)
+	}
+
+	presignedUploadURL := msg.Url
+
+	fmt.Println("Uploading data ...")
 	// Create and send request
 	data, err := ioutil.ReadFile(file_path)
 	if err != nil {
@@ -39,6 +44,10 @@ func RequestUpload(resp *http.Response) *http.Response {
 	resp, err = client.Do(req)
 	if err != nil {
 		panic(err)
+	}
+
+	if resp.StatusCode == 200 {
+		fmt.Println("Done!!!")
 	}
 
 	return resp
