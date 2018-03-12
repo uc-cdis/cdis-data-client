@@ -34,8 +34,8 @@ func RequestDownload(resp *http.Response) *http.Response {
 var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "download a file from a UUID",
-	Long: `Gets a presigned URL for a file from a UUID and then downloads the specified file. 
-Examples: ./cdis-data-client download --profile user1 --uuid f6923cf3-3836-4340-ad29-14ab3f84f9d6 --file=~/Documents/file_to_download.json 
+	Long: `Gets a presigned URL for a file from a UUID and then downloads the specified file.
+Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 

@@ -66,12 +66,16 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	resp, err := r.MakeARequest(client, "POST", apiEndpoint, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
-		return
+		panic(err)
+	}
+
+	if resp.StatusCode != 200 {
+		log.Fatalf("Could not get new access key. " + ResponseToString(resp))
 	}
 
 	err = DecodeJsonFromResponse(resp, &m)
 	if err != nil {
-		return
+		log.Fatalf("Could not get url from " + ResponseToString(resp))
 	}
 
 	cred.AccessKey = m.Access_token
@@ -80,7 +84,7 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 
 func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, config_file_type string, endpointPostPrefix string) *http.Response {
 	/*
-		Do request with signed header. User may have more than one profile and use a profile to
+		Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
 
 	cred := f.Config.ParseConfig(profile)
@@ -92,8 +96,6 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 	isExpiredToken := false
 
 	if cred.AccessKey != "" {
-		println("endpoint")
-		println(endpointPostPrefix)
 		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
 
 		// 401 code is general error code from fence. the error message is also not clear for the case
@@ -133,7 +135,7 @@ func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, acce
 		panic(err)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 401 {
-		log.Fatalf("User error %d\n", resp.StatusCode)
+		log.Fatalf("Unexpected error %d, %s\n", resp.StatusCode, ResponseToString(resp))
 	}
 
 	return resp

@@ -17,16 +17,14 @@ func RequestUpload(resp *http.Response) *http.Response {
 		Upload file with presigned url encoded in response's json
 	*/
 
-	//msg := jwt.JsonMessage{}
-	//println(jwt.ResponseToString(resp))
-	//jwt.DecodeJsonFromResponse(resp, &msg
-	//presignedUploadURL := msg.Url
-	presignedUploadURL := jwt.GetUrlFromResponse(resp)
+	msg := jwt.JsonMessage{}
+	jwt.DecodeJsonFromResponse(resp, &msg)
+	presignedUploadURL := msg.Url
+	//presignedUploadURL := jwt.GetUrlFromResponse(resp)
 
 	fmt.Println("Uploading data to URL: " + presignedUploadURL)
 	// Create and send request
 	data, err := ioutil.ReadFile(file_path)
-	println(file_path)
 	if err != nil {
 		log.Fatal(err)
 	}

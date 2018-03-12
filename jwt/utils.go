@@ -44,7 +44,6 @@ func GetUrlFromResponse(resp *http.Response) string {
 	first := strings.Index(data, "http")
 	last := strings.LastIndex(data, "\"")
 
-	println(data[first:last])
 	return data[first:last]
 
 }

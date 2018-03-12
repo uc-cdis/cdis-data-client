@@ -92,6 +92,9 @@ func (conf *Configure) ReadCredentials(filePath string) Credential {
 }
 
 func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
+	/*
+		Try to open config file. If not existed, create empty config file.
+	*/
 	usr, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -105,8 +108,10 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 }
 
 func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint string, profile string) ([]string, bool) {
+	/*
+		Search profile in config file. Update new credential if found.
+	*/
 	lines := strings.Split(string(configContent), "\n")
-	//println(string(configContent))
 	found := false
 	for i := 0; i < len(lines); i += 6 {
 		if lines[i] == "["+profile+"]" {
@@ -240,12 +245,13 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	}
 	if _, err := os.Stat(path.Join(homeDir + "/.cdis/")); os.IsNotExist(err) {
 		fmt.Println("No config file found in ~/.cdis/")
-		fmt.Println("Run configure command (with a profile if desired) to set up account credentials")
-		return cred
+		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
+			"Example: ./cdis-data-client configure --cred ~/Downloads/credentials.json")
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		fmt.Println("No config file found in ~/.cdis/")
-		fmt.Println("Run configure command (with a profile if desired) to set up account credentials")
+		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
+			"Example: ./cdis-data-client configure --cred ~/Downloads/credentials.json")
 		return cred
 	}
 	// If profile not in config file, prompt user to set up config first

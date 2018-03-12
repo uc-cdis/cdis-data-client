@@ -37,6 +37,6 @@ Examples: ./cdis-data-client configure
 }
 
 func init() {
-	configureCmd.Flags().StringVar(&credFile, "cred", "", "Specify the credential file that you could like to use")
+	configureCmd.Flags().StringVar(&credFile, "cred", "", "Specify the credential file that you want to use")
 	RootCmd.AddCommand(configureCmd)
 }
