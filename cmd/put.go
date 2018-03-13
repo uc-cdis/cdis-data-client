@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
 // putCmd represents the put command
@@ -21,15 +20,8 @@ Examples: ./cdis-data-client put --uri=/v0/submission/bpa/test --file=~/Document
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		request := new(jwt.Request)
-		configure := new(jwt.Configure)
-		function := new(jwt.Functions)
-
-		function.Config = configure
-		function.Request = request
-
-		fmt.Println(jwt.ResponseToString(
-			function.DoRequestWithSignedHeader(RequestUpload, profile, file_type, uri)))
+		fmt.Println("Use the command with upload option!!!")
+		fmt.Println("./cdis-data-client upload --profile=user1 --uuid 206dfaa6-xxxx-xxxx-xxxx-77179f0f48fc --file=~/Documents/file_to_upload.json")
 	},
 }
 

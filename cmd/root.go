@@ -20,9 +20,9 @@ var uuid string
 /* RootCmd represents the base command when called without any subcommands */
 var RootCmd = &cobra.Command{
 	Use:   "cdis-client",
-	Short: "CLI with HMAC verification to talk to GDCAPI",
-	Long: `Send GET, PUT, POST, DELETE HTTP requests to interact with the GDCAPI
-that are signed using HMAC protocol`,
+	Short: "CLI with JWT verification to talk to Fence",
+	Long: `Send GET, PUT, POST, DELETE HTTP requests to interact with the Fence
+that are signed using JWT protocol`,
 }
 
 /* Execute adds all child commands to the root command sets flags appropriately
@@ -40,7 +40,7 @@ func init() {
 	// Define flags and configuration settings.
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "Specify profile to add or edit with --profile user2")
 	RootCmd.PersistentFlags().StringVar(&credFile, "cred", "", "Specify cred file --cred credentials.json")
-	RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
+	//RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
 	RootCmd.PersistentFlags().StringVar(&file_path, "file", "", "Specify file to upload with --file=~/path/to/file")
 	RootCmd.PersistentFlags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")
 	RootCmd.PersistentFlags().StringVar(&uuid, "uuid", "", "Specify the uuid for the data you would like to work with")
