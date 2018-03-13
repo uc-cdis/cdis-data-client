@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/jwt"
@@ -18,8 +20,11 @@ func RequestUpload(resp *http.Response) *http.Response {
 	*/
 
 	msg := jwt.JsonMessage{}
-
 	str := jwt.ResponseToString(resp)
+	if strings.Contains(str, "Can't find a location for the data") {
+		log.Fatalf("The provided uuid is not found!!!")
+	}
+
 	jwt.DecodeJsonFromString(str, &msg)
 	if msg.Url == "" {
 		log.Fatalf("Can not get url from " + str)
@@ -46,10 +51,6 @@ func RequestUpload(resp *http.Response) *http.Response {
 		panic(err)
 	}
 
-	if resp.StatusCode == 200 {
-		fmt.Println("Done!!!")
-	}
-
 	return resp
 }
 
@@ -58,9 +59,21 @@ var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload a file to a UUID",
 	Long: `Gets a presigned URL for which to upload a file associated with a UUID and then uploads the specified file. 
-Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-3836-4340-ad29-14ab3f84f9d6 --file=~/Documents/file_to_upload
+Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		if file_path == "" {
+			log.Fatalf("Need to provide --file option !!!")
+		}
+
+		if uuid == "" {
+			log.Fatalf("Need to provide --uuid option !!!")
+		}
+
+		if _, err := os.Stat(file_path); os.IsNotExist(err) {
+			log.Fatalf("Uploading file is not existed !!!")
+		}
+
 		request := new(jwt.Request)
 		configure := new(jwt.Configure)
 		function := new(jwt.Functions)
@@ -72,6 +85,8 @@ Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-3836-4340-ad
 
 		fmt.Println(jwt.ResponseToString(
 			function.DoRequestWithSignedHeader(RequestUpload, profile, "", endPointPostfix)))
+
+		fmt.Println("Done!!!")
 	},
 }
 

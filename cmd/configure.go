@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/cdis-data-client/jwt"
 )
@@ -21,7 +23,7 @@ Examples: ./cdis-data-client configure
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if credFile == "" {
-			panic("You need to speficy the credentials file.\nRun command: ./cdis-data-client configure --profile=user1 --creds creds.json")
+			log.Fatal("You need to spefify the credentials file.\nRun command: ./cdis-data-client configure --profile user1 --cred credential.json")
 		}
 
 		cred := conf.ReadCredentials(credFile)

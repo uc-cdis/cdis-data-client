@@ -73,9 +73,10 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 		log.Fatalf("Could not get new access key. " + ResponseToString(resp))
 	}
 
-	err = DecodeJsonFromResponse(resp, &m)
-	if err != nil {
-		log.Fatalf("Could not get url from " + ResponseToString(resp))
+	str := ResponseToString(resp)
+	DecodeJsonFromString(str, &m)
+	if m.Access_token == "" {
+		log.Fatalf("Could not get new access key from " + str)
 	}
 
 	cred.AccessKey = m.Access_token
@@ -89,7 +90,7 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-		panic("No credential found")
+		log.Fatalf("No credential found !!!")
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
@@ -134,7 +135,7 @@ func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, acce
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 200 && resp.StatusCode != 401 {
+	if resp.StatusCode != 200 && resp.StatusCode != 401 && resp.StatusCode != 404 {
 		log.Fatalf("Unexpected error %d, %s\n", resp.StatusCode, ResponseToString(resp))
 	}
 

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -21,8 +22,11 @@ func RequestDownload(resp *http.Response) *http.Response {
 	msg := jwt.JsonMessage{}
 
 	str := jwt.ResponseToString(resp)
-	jwt.DecodeJsonFromString(str, &msg)
+	if strings.Contains(str, "Can't find a location for the data") {
+		log.Fatalf("The provided uuid is not found!!!")
+	}
 
+	jwt.DecodeJsonFromString(str, &msg)
 	if msg.Url == "" {
 		log.Fatalf("Can not get url from " + str)
 	}
@@ -33,10 +37,6 @@ func RequestDownload(resp *http.Response) *http.Response {
 	respDown, err := http.Get(presignedDownloadURL)
 	if err != nil {
 		panic(err)
-	}
-
-	if resp.StatusCode == 200 {
-		fmt.Println("Done!!!")
 	}
 
 	return respDown
@@ -51,6 +51,14 @@ Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
+		if file_path == "" {
+			log.Fatalf("Need to provide --file option !!!")
+		}
+
+		if uuid == "" {
+			log.Fatalf("Need to provide --uuid option !!!")
+		}
+
 		request := new(jwt.Request)
 		configure := new(jwt.Configure)
 		function := new(jwt.Functions)
@@ -64,15 +72,17 @@ Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-
 
 		out, err := os.Create(file_path)
 		if err != nil {
-			panic(err)
+			log.Fatalf(err.Error())
 		}
 		defer out.Close()
-
 		defer respDown.Body.Close()
 		_, err = io.Copy(out, respDown.Body)
 		if err != nil {
 			panic(err)
 		}
+
+		fmt.Println("Done!!!")
+
 	},
 }
 
