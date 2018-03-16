@@ -194,37 +194,22 @@ func (conf *Configure) ParseKeyValue(str string, expr string, errMsg string) str
 
 func (conf *Configure) ParseConfig(profile string) Credential {
 	/*
-		Look profile in config file. The config file is a text file located at ~/.cdis directory. It can
+		Looking profile in config file. The config file is a text file located at ~/.cdis directory. It can
 		contain more than 1 profile. If there is no profile found, the user is asked to run a command to
 		create the profile
 
 		The format of config file is described as following
 
 		[profile1]
-		key_id=b1c1f8c4-aa68-4dae-b58f-be19871f7d0c
-		api_key=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtleS0wMSJ9.eyJhdWQiOlsiZmVuY2UiLCJvcGVuaWQiXSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdCIsImp0aSI6ImIxYzFmOGM0LWFhNjgtNGRhZS1iNThmLWJlMTk4
-		NzFmN2QwYyIsImV4cCI6MTUyMTE3MDk5OCwiaWF0IjoxNTE4NTgyNTk4LCJwdXIiOiJhcGlfa2V5Iiwic3ViIjoiMTIxMCJ9.jhdi8j8Ngbouz
-		1qahlTgs_BQL5gvQyhLh3ilG2rjQYOFDEayOjXXqKD60VvD1Ln_jeiWrh9nATHoLPWExyFDaTslp9yD6nbh5UJthDWhx3yc3XV6csd_BSRcLqHea2220r_thHMtYd8mc-zp
-		k2EMsGVcJOZ7z3QrPk8zP9pLcGWx7FOZM-m6CqMj-quXJRJm7Q1X4SvpWzi8ZtMUHCO-a_y8BeENlj90nVSLqo5068n34OsDVsjAsdPFqexBz6BuMWHXzrO2xLi7BZfqFC87fqF
-		gY9Al1M03F1f-BhAjvlTNAgR4lXkJCpJ5vNh_rGx2j9z54_WzykXwGjCHc-d5bA
-		access_key=V4cCI6MTUyMTE3MDk5OCwiaWF0IjoxNTE4NTgyNTk4LCJwdXIiOiJhcGlfa2V5Iiwic3ViIjoiMTIxMCJ9.jhdi8j8Ngbouz
-		1qahlTgs_BQL5gvQyhLh3ilG2rjQYOFDEayOjXXqKD60VvD1Ln_jeiWrh9nATHoLPWExyFDaTslp9yD6nbh5UJthDWhx3yc3XV6csd_BSRcLqHea2220r_thHMtYd8mc-zp
-		k2EMsGVcJOZ7z3QrPk8zP9pLcGWx7FOZM-m6CqMj-quXJRJm7Q1X4SvpWzi8ZtMUHCO-a_1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtleS0wMSJ9.eyJhdWQiOlsiZmVuY2UiLCJvcGVuaWQiXSwiaXNzIjoi
-		aHR0cDovL2xvY2FsaG9zdCIsImp0aSI6ImIxYzFmOGM0LWFhNjgtNGRhZS1iNThmLWJlMTk4NzFmN2QwYyIsImV4cCI6MTUyMTE3MDk5OCwiaWF0IjoxNTE4NTgyNTk4LC
+		key_id=key_id_example_1
+		api_key=api_key_example_1
+		access_key=access_key_example_1
 		api_endpoint=http://localhost:8000
 
 		[profile2]
-		key_id=b267f8c4-44gr-4dae-b58f-be19871f7d0c
-		api_key=dfdf.eyJhdWQiOlsiZmVuY2UiLCJvcGVuaWQiXSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdCIsImp0aSI6ImIxYzFdfdfmOGM0LWFhNjgtNGRhZS1iNThmLWJlMTk4
-		NzFmN2QwYyIsImV4cCI6MTUyMTE3MDk5OCwiaWF0IjoxNTE4NTgyNTk4LCJwdXIiOiJhcGlfa2V5Iiwic3ViIjoiMTIxMCJ9.jhdi8j8Ngbouz
-		1qahlTgs_BQL5gvQyhLh3ilG2rjQYOFDEayOjXXqKD60VvD1Ln_jeiWrh9nATHoLPWExyFDaTslp9yD6nbh5UJthDWhx3yc3XV6csd_BSRcLqHea2220r_thHMtYd8mc-zp
-		k2EMsGVcJOZ7z3QrPk8zP9pLcGdfdfWx7FOZM-m6CqMj-quXJRJm7Q1X4SvpWzi8ZtMUHCO-a_y8BeENlj90nVSLqo5068n34OsDVsjAsdPFqexBz6BuMWHXzrO2xLi7BZfqFC87fqF
-		gY9Al1M03F1f-BhAjvlTNAgR4lXkJCpJ5vNh_rGx2j9z54_WzykXwGjCHc-d5bA
-		access_key=V4cCI6MTUyMTE3MDk5OCwiaWF0IjoxNTE4NTgyNTk4LCJwdXIiOiJhcGlfa2V5Iiwic3ViIjoiMTIxMCJ9.jhdi8j8Ngbouz
-		1qahlTgs_BQL5gvQyhLh3ilG2rjQYOFDEayOjXXqKD60VvD1Ln_jeiWrh9nATHoLPWExyFDaTslp9yD6nbh5UJthDWhx3yc3XV6csd_BSRcLqHea2220r_thHMtYd8mc-zp
-		k2EMsGVcJOZ7z3QrPk8zP9pLcGWx7FOZM-m6CqMj-quXJRJm7Q1X4SvpWzi8ZtMUHCO-a_1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtleS0wMSJ9.eyJhdWQiOlsiZmVuY2UiLCJvcGVuaWQiXSwiaXNzIjoi
-		aHR0cDovL2xvY2FsaG9zdCIsImp0aSI6ImIxYzFmOGM0LWFhNjgtNGRhZS1iNThmLWJlMTk4
-		NzFmN2QwYyIsImV4cCI6MTUyMTE3MDk5OCwiaWF0IjoxNTE4NTgyNTk4LC
+		key_id=key_id_example_2
+		api_key=api_key_example_2
+		access_key=access_key_example_2
 		api_endpoint=http://localhost:8000
 
 		Args:
