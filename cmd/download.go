@@ -19,6 +19,10 @@ func RequestDownload(resp *http.Response) *http.Response {
 		Download file from given url encoded in resp
 	*/
 
+	if resp == nil {
+		return nil
+	}
+
 	msg := jwt.JsonMessage{}
 
 	str := jwt.ResponseToString(resp)
@@ -70,18 +74,22 @@ Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-
 
 		respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, "", endPointPostfix)
 
-		out, err := os.Create(file_path)
-		if err != nil {
-			log.Fatalf(err.Error())
-		}
-		defer out.Close()
-		defer respDown.Body.Close()
-		_, err = io.Copy(out, respDown.Body)
-		if err != nil {
-			panic(err)
-		}
+		if respDown == nil {
+			fmt.Println("Error !!!")
+		} else {
+			out, err := os.Create(file_path)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+			defer out.Close()
+			defer respDown.Body.Close()
+			_, err = io.Copy(out, respDown.Body)
+			if err != nil {
+				panic(err)
+			}
 
-		fmt.Println("Done!!!")
+			fmt.Println("Done!!!")
+		}
 
 	},
 }

@@ -16,11 +16,6 @@ func Requesting(*http.Response) *http.Response {
 }
 
 func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
-		}
-	}()
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -32,8 +27,11 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 
 	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
 
-	testFunction.DoRequestWithSignedHeader(Requesting, "default", "not_json", "/user/data/download/test_uuid")
+	resp := testFunction.DoRequestWithSignedHeader(Requesting, "default", "not_json", "/user/data/download/test_uuid")
 
+	if resp != nil {
+		t.Fail()
+	}
 }
 
 func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {

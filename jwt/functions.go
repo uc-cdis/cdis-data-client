@@ -90,7 +90,8 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-		log.Fatalf("No credential found !!!")
+		log.Println("No credential found !!!")
+		return nil
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host

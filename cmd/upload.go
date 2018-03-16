@@ -19,6 +19,10 @@ func RequestUpload(resp *http.Response) *http.Response {
 		Upload file with presigned url encoded in response's json
 	*/
 
+	if resp == nil {
+		return nil
+	}
+
 	msg := jwt.JsonMessage{}
 	str := jwt.ResponseToString(resp)
 	if strings.Contains(str, "Can't find a location for the data") {
@@ -83,10 +87,13 @@ Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-xxxx-xxxx-xx
 
 		endPointPostfix := "/user/data/upload/" + uuid
 
-		fmt.Println(jwt.ResponseToString(
-			function.DoRequestWithSignedHeader(RequestUpload, profile, "", endPointPostfix)))
-
-		fmt.Println("Done!!!")
+		resp := function.DoRequestWithSignedHeader(RequestUpload, profile, "", endPointPostfix)
+		if resp == nil {
+			fmt.Println("Error !!!")
+		} else {
+			fmt.Println(jwt.ResponseToString(resp))
+			fmt.Println("Done!!!")
+		}
 	},
 }
 
