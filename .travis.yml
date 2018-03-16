@@ -4,8 +4,9 @@ go:
   - 1.8.x
 
 install:
-  - go get .
+  - go get -t -v ./...
 
 script:
-  - go test -v ./...
+  - go test -v tests/functions_test.go
+
 

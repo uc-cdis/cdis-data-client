@@ -32,6 +32,7 @@ func parse_config(profile string) (string, string, string) {
 	if err != nil {
 		panic(err)
 	}
+
 	lines := strings.Split(string(content), "\n")
 
 	profile_line := -1
@@ -43,7 +44,7 @@ func parse_config(profile string) (string, string, string) {
 	}
 
 	if profile_line == -1 {
-		fmt.Println("Profile not in config file. Need to run \"cdis-data-client configure --profile=" + profile + "\" first")
+		fmt.Println("Profile not in config file. Need to run \"cdis-data-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
 		return "", "", ""
 	} else {
 		// Read in access key, secret key, endpoint for given profile
@@ -81,32 +82,4 @@ func parse_config(profile string) (string, string, string) {
 		api_endpoint = match[1]
 		return access_key, secret_key, api_endpoint
 	}
-}
-
-func read_file(file_path, file_type string) string {
-	//Look in config file
-	var full_file_path string
-	if file_path[0] == '~' {
-		usr, _ := user.Current()
-		homeDir := usr.HomeDir
-		full_file_path = homeDir + file_path[1:]
-	} else {
-		full_file_path = file_path
-	}
-	if _, err := os.Stat(full_file_path); err != nil {
-		fmt.Println("File specified at " + full_file_path + " not found")
-		return ""
-	}
-
-	content, err := ioutil.ReadFile(full_file_path)
-	if err != nil {
-		panic(err)
-	}
-
-	content_str := string(content[:])
-
-	if file_type == "json" {
-		content_str = strings.Replace(content_str, "\n", "", -1)
-	}
-	return content_str
 }

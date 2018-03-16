@@ -49,12 +49,12 @@ func Sign(request *http.Request, credentials Credentials, service string) *http.
 }
 
 func Verify(service string, req *http.Request, secret_key string) bool {
-	signature := parse_signature(req)
-	accessKey := parse_accessKey(req)
-	SignedHeaders := parse_SignedHeaders(req)
+	signature := ParseSignature(req)
+	accessKey := ParseAccessKey(req)
+	SignedHeaders := ParseSignedHeaders(req)
 	credentials := Credentials{AccessKeyID: accessKey, SecretAccessKey: secret_key}
-	req_time := get_exact_request_time(req)
-	if check_expired_time(req_time) {
+	req_time := GetExactRequestTime(req)
+	if CheckExpiredTime(req_time) {
 		fmt.Println("Request expired")
 		return false
 	}
@@ -68,7 +68,7 @@ func Verify(service string, req *http.Request, secret_key string) bool {
 	}
 
 	sReq := Sign(original_req, credentials, service)
-	if parse_signature(sReq) == signature {
+	if ParseSignature(sReq) == signature {
 		return true
 	} else {
 		return false

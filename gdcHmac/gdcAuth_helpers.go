@@ -17,27 +17,27 @@ type metadata struct {
 	service         string
 }
 
-func parse_signature(req *http.Request) string {
+func ParseSignature(req *http.Request) string {
 	re, _ := regexp.Compile("Signature=(\\S*)")
 	return re.FindStringSubmatch(req.Header.Get("Authorization"))[1]
 }
 
-func parse_accessKey(req *http.Request) string {
+func ParseAccessKey(req *http.Request) string {
 	re, _ := regexp.Compile("Credential=(\\S*?)\\/")
 	return re.FindStringSubmatch(req.Header.Get("Authorization"))[1]
 }
 
-func parse_SignedHeaders(req *http.Request) []string {
+func ParseSignedHeaders(req *http.Request) []string {
 	re, _ := regexp.Compile("SignedHeaders=(\\S*?),")
 	return strings.Split(re.FindStringSubmatch(req.Header.Get("Authorization"))[1], ";")
 }
 
-func check_expired_time(req_date time.Time) bool {
+func CheckExpiredTime(req_date time.Time) bool {
 	end := req_date.Add(time.Minute * time.Duration(15))
 	return !req_date.Before(end)
 }
 
-func get_exact_request_time(req *http.Request) time.Time {
+func GetExactRequestTime(req *http.Request) time.Time {
 	layout1 := "20060102T150405Z"
 	layout2 := "20060102"
 	for key, _ := range req.Header {
@@ -64,8 +64,8 @@ func get_exact_request_time(req *http.Request) time.Time {
 	return time.Now()
 }
 
-func get_request_scope(req *http.Request, service string) string {
-	time := get_exact_request_time(req)
-	date := time.Format("20060102")
+func GetRequestScope(req *http.Request, service string) string {
+	requestTime := GetExactRequestTime(req)
+	date := requestTime.Format("20060102")
 	return fmt.Sprintf("%v/%v/%v", date, service, BIONIMBUS_REQUEST)
 }

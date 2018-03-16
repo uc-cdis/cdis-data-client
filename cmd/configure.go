@@ -1,18 +1,15 @@
 package cmd
 
 import (
-	"bufio"
-	"fmt"
-	"io/ioutil"
-	"net/url"
-	"os"
-	"os/user"
-	"path"
-	"strings"
+	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
+var conf jwt.Configure
+
+// configureCmd represents the command to configure profile
 var configureCmd = &cobra.Command{
 	Use:   "configure",
 	Short: "Add or modify a configuration profile to your config file",
@@ -21,109 +18,27 @@ Prompts for access_key, secret_key, and gdcapi endpoint
 If a field is left empty, the existing value (if it exists) will remain unchanged
 If no profile is specified, "default" profile is used
 
-Examples: ./cdis-data-client config
-	  ./cdis-data-client config --profile=user1`,
+Examples: ./cdis-data-client configure
+	  ./cdis-data-client configure --profile=user1 --creds creds.json`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Prompt user for info
-		scanner := bufio.NewScanner(os.Stdin)
-		fmt.Print("Access Key: ")
-		scanner.Scan()
-		accessKey := scanner.Text()
-		fmt.Print("Secret Key: ")
-		scanner.Scan()
-		secretKey := scanner.Text()
-		fmt.Print("API endpoint: ")
-		scanner.Scan()
-		api_endpoint := scanner.Text()
-		parsed_url, err := url.Parse(api_endpoint)
-		if err != nil {
-			panic(err)
+
+		if credFile == "" {
+			log.Fatal("You need to spefify the credentials file.\nRun command: ./cdis-data-client configure --profile user1 --cred credential.json")
 		}
-		if parsed_url.Host == "" {
-			fmt.Print("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
-			os.Exit(1)
-		}
+
+		cred := conf.ReadCredentials(credFile)
+		apiEndpoint := conf.ParseUrl()
 
 		// Store user info in ~/.cdis/config
-		usr, err := user.Current()
+		configPath, content, err := conf.TryReadConfigFile()
 		if err != nil {
 			panic(err)
 		}
-		homeDir := usr.HomeDir
-		configPath := path.Join(homeDir + "/.cdis/config")
-		if _, err := os.Stat(path.Join(homeDir + "/.cdis/")); os.IsNotExist(err) {
-			os.Mkdir(path.Join(homeDir+"/.cdis/"), os.FileMode(0777))
-			os.Create(configPath)
-		}
-		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			os.Create(configPath)
-		}
-
-		content, err := ioutil.ReadFile(configPath)
-		if err != nil {
-			panic(err)
-		}
-		lines := strings.Split(string(content), "\n")
-
-		found := false
-		for i := 0; i < len(lines); i += 5 {
-			if lines[i] == "["+profile+"]" {
-				if accessKey != "" {
-					lines[i+1] = "access_key=" + accessKey
-				}
-				if secretKey != "" {
-					lines[i+2] = "secret_key=" + secretKey
-				}
-				if api_endpoint != "" {
-					lines[i+3] = "api_endpoint=" + api_endpoint
-				}
-				found = true
-				break
-			}
-		}
-
-		if found {
-			f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
-			if err != nil {
-				panic(err)
-			}
-			defer func() {
-				if err := f.Close(); err != nil {
-					panic(err)
-				}
-			}()
-			for i := 0; i < len(lines)-1; i++ {
-				f.WriteString(lines[i] + "\n")
-			}
-		} else {
-			f, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-			if err != nil {
-				panic(err)
-			}
-			defer func() {
-				if err := f.Close(); err != nil {
-					panic(err)
-				}
-			}()
-
-			if _, err := f.WriteString("[" + profile + "]\n"); err != nil {
-				panic(err)
-			}
-
-			if _, err := f.WriteString("access_key=" + accessKey + "\n"); err != nil {
-				panic(err)
-			}
-			if _, err := f.WriteString("secret_key=" + secretKey + "\n"); err != nil {
-				panic(err)
-			}
-			if _, err := f.WriteString("api_endpoint=" + api_endpoint + "\n\n"); err != nil {
-				panic(err)
-			}
-		}
-
+		conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
 	},
 }
 
 func init() {
+	configureCmd.Flags().StringVar(&credFile, "cred", "", "Specify the credential file that you want to use")
 	RootCmd.AddCommand(configureCmd)
 }

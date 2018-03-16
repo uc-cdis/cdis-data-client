@@ -1,64 +1,96 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/gdcHmac"
+
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
+/* performing function of download data */
+func RequestDownload(resp *http.Response) *http.Response {
+	/*
+		Download file from given url encoded in resp
+	*/
+
+	if resp == nil {
+		return nil
+	}
+
+	msg := jwt.JsonMessage{}
+
+	str := jwt.ResponseToString(resp)
+	if strings.Contains(str, "Can't find a location for the data") {
+		log.Fatalf("The provided uuid is not found!!!")
+	}
+
+	jwt.DecodeJsonFromString(str, &msg)
+	if msg.Url == "" {
+		log.Fatalf("Can not get url from " + str)
+	}
+
+	presignedDownloadURL := msg.Url
+	fmt.Println("Downloading data ...")
+
+	respDown, err := http.Get(presignedDownloadURL)
+	if err != nil {
+		panic(err)
+	}
+
+	return respDown
+}
+
+// represent to download command
 var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "download a file from a UUID",
-	Long: `Gets a presigned URL for a file from a UUID and then downloads the specified file. 
-Examples: ./cdis-data-client download --uuid --file=~/Documents/file_to_download.json 
+	Long: `Gets a presigned URL for a file from a UUID and then downloads the specified file.
+Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, api_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && api_endpoint == "" {
-			return
+
+		if file_path == "" {
+			log.Fatalf("Need to provide --file option !!!")
 		}
 
-		out, err := os.Create(file_path)
-		if err != nil {
-			panic(err)
+		if uuid == "" {
+			log.Fatalf("Need to provide --uuid option !!!")
 		}
-		defer out.Close()
 
-		host, _ := url.Parse(api_endpoint)
-		content_type := "application/json"
+		request := new(jwt.Request)
+		configure := new(jwt.Configure)
+		function := new(jwt.Functions)
 
-		// Get the presigned url first
-		resp, err := gdcHmac.SignedRequest(
-			"GET", host.Scheme+"://"+host.Host+"/user/data/download/"+uuid, nil, content_type, "userapi", access_key, secret_key)
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
+		function.Config = configure
+		function.Request = request
 
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		presigned_download_url := buf.String()
-		if resp.StatusCode != 200 {
-			log.Fatalf("Got response code %i\n%s", resp.StatusCode, presigned_download_url)
-		}
-		fmt.Println("Downloading data from url: " + presigned_download_url)
+		endPointPostfix := "/user/data/download/" + uuid
 
-		respDown, err := http.Get(presigned_download_url)
-		if err != nil {
-			panic(err)
+		respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, "", endPointPostfix)
+
+		if respDown == nil {
+			fmt.Println("Error !!!")
+		} else {
+			out, err := os.Create(file_path)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+			defer out.Close()
+			defer respDown.Body.Close()
+			_, err = io.Copy(out, respDown.Body)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println("Done!!!")
 		}
-		defer respDown.Body.Close()
-		_, err = io.Copy(out, respDown.Body)
-		if err != nil {
-			panic(err)
-		}
+
 	},
 }
 

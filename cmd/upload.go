@@ -6,63 +6,94 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/gdcHmac"
+	"github.com/uc-cdis/cdis-data-client/jwt"
 )
 
+/* used to perform upload data */
+func RequestUpload(resp *http.Response) *http.Response {
+	/*
+		Upload file with presigned url encoded in response's json
+	*/
+
+	if resp == nil {
+		return nil
+	}
+
+	msg := jwt.JsonMessage{}
+	str := jwt.ResponseToString(resp)
+	if strings.Contains(str, "Can't find a location for the data") {
+		log.Fatalf("The provided uuid is not found!!!")
+	}
+
+	jwt.DecodeJsonFromString(str, &msg)
+	if msg.Url == "" {
+		log.Fatalf("Can not get url from " + str)
+	}
+
+	presignedUploadURL := msg.Url
+
+	fmt.Println("Uploading data ...")
+	// Create and send request
+	data, err := ioutil.ReadFile(file_path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body := bytes.NewBufferString(string(data[:]))
+	content_type := "application/json"
+	if file_type == "tsv" {
+		content_type = "text/tab-separated-values"
+	}
+	req, _ := http.NewRequest("PUT", presignedUploadURL, body)
+	req.Header.Set("content_type", content_type)
+	client := &http.Client{}
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
+	return resp
+}
+
+/* represent to download command */
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "Upload a file to a UUID",
 	Long: `Gets a presigned URL for which to upload a file associated with a UUID and then uploads the specified file. 
-Examples: ./cdis-data-client upload --uuid --file=~/Documents/file_to_upload.json 
+Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, api_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && api_endpoint == "" {
-			return
+		if file_path == "" {
+			log.Fatalf("Need to provide --file option !!!")
 		}
 
-		data, err := ioutil.ReadFile(file_path)
-		if err != nil {
-			log.Fatal(err)
-		}
-		body := bytes.NewBufferString(string(data[:]))
-
-		client := &http.Client{}
-		host, _ := url.Parse(api_endpoint)
-		content_type := "application/json"
-
-		// Get the presigned url first
-		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+"/user/data/upload/"+uuid, nil, content_type, "userapi", access_key, secret_key)
-		if err != nil {
-			panic(err)
-		}
-		defer resp.Body.Close()
-
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		presigned_upload_url := buf.String()
-		if resp.StatusCode != 200 {
-			log.Fatalf("Got response code %i\n%s", resp.StatusCode, presigned_upload_url)
-		}
-		fmt.Println("Uploading data from URL: " + presigned_upload_url)
-
-		// Create and send request
-		req, err := http.NewRequest("PUT", presigned_upload_url, body)
-		if err != nil {
-			panic(err)
+		if uuid == "" {
+			log.Fatalf("Need to provide --uuid option !!!")
 		}
 
-		resp, err = client.Do(req)
-		if err != nil {
-			panic(err)
+		if _, err := os.Stat(file_path); os.IsNotExist(err) {
+			log.Fatalf("Uploading file is not existed !!!")
 		}
-		buf = new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		s := buf.String()
-		fmt.Println(s)
+
+		request := new(jwt.Request)
+		configure := new(jwt.Configure)
+		function := new(jwt.Functions)
+
+		function.Config = configure
+		function.Request = request
+
+		endPointPostfix := "/user/data/upload/" + uuid
+
+		resp := function.DoRequestWithSignedHeader(RequestUpload, profile, "", endPointPostfix)
+		if resp == nil {
+			fmt.Println("Error !!!")
+		} else {
+			fmt.Println(jwt.ResponseToString(resp))
+			fmt.Println("Done!!!")
+		}
 	},
 }
 

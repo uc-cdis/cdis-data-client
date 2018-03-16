@@ -20,7 +20,9 @@ _cgo_gotypes.go
 _cgo_export.*
 
 _testmain.go
+_test.go
 
 *.exe
 *.test
 *.prof
+credentials.json

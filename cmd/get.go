@@ -1,13 +1,9 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"net/url"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/gdcHmac"
 )
 
 // getCmd represents the get command
@@ -17,27 +13,12 @@ var getCmd = &cobra.Command{
 	Long: `Gets a given URI from the database.
 If no profile is specified, "default" profile is used for authentication.
 
-Examples: ./cdis-data-client get --uri=v0/submission/bpa/test/entities/example_id
-	  ./cdis-data-client get --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
+Examples: ./cdis-data-client get --uri=/v0/submission/bpa/test/entities/example_id
+	  ./cdis-data-client get --profile=user1 --uuid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		access_key, secret_key, api_endpoint := parse_config(profile)
-		if access_key == "" && secret_key == "" && api_endpoint == "" {
-			return
-		}
-
-		host, _ := url.Parse(api_endpoint)
-		uri = "/api/" + strings.TrimPrefix(uri, "/")
-		content_type := "application/json"
-
-		resp, err := gdcHmac.SignedRequest("GET", host.Scheme+"://"+host.Host+uri, nil, content_type, "submission", access_key, secret_key)
-		if err != nil {
-			panic(err)
-		}
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		s := buf.String()
-		fmt.Println(s)
+		fmt.Println("Use the command with download option!!!")
+		fmt.Println("./cdis-data-client download --profile=user1 --uuid 206dfaa6-xxxx-xxxx-xxxx-77179f0f48fc --file=~/Documents/file_to_download.json")
 	},
 }
 

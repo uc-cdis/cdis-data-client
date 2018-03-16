@@ -21,9 +21,10 @@ type location struct {
 
 var loc *location
 
-// serviceAndRegion parsers a hostname to find out which ones it is.
+
+// ServiceAndRegion parsers a hostname to find out which ones it is.
 // http://docs.aws.amazon.com/general/latest/gr/rande.html
-func serviceAndRegion(host string) (service string, region string) {
+func ServiceAndRegion(host string) (service string, region string) {
 	// These are the defaults if the hostname doesn't suggest something else
 	region = "us-east-1"
 	service = "s3"
@@ -59,7 +60,7 @@ func serviceAndRegion(host string) (service string, region string) {
 	return
 }
 
-func augmentRequestQuery(request *http.Request, values url.Values) *http.Request {
+func AugmentRequestQuery(request *http.Request, values url.Values) *http.Request {
 	for key, array := range request.URL.Query() {
 		for _, value := range array {
 			values.Set(key, value)
@@ -71,31 +72,31 @@ func augmentRequestQuery(request *http.Request, values url.Values) *http.Request
 	return request
 }
 
-func hmacSHA256(key []byte, content string) []byte {
+func HmacSHA256(key []byte, content string) []byte {
 	mac := hmac.New(sha256.New, key)
 	mac.Write([]byte(content))
 	return mac.Sum(nil)
 }
 
-func hmacSHA1(key []byte, content string) []byte {
+func HmacSHA1(key []byte, content string) []byte {
 	mac := hmac.New(sha1.New, key)
 	mac.Write([]byte(content))
 	return mac.Sum(nil)
 }
 
-func hashSHA256(content []byte) string {
+func HashSHA256(content []byte) string {
 	h := sha256.New()
 	h.Write(content)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-func hashMD5(content []byte) string {
+func HashMD5(content []byte) string {
 	h := md5.New()
 	h.Write(content)
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
-func readAndReplaceBody(request *http.Request) []byte {
+func ReadAndReplaceBody(request *http.Request) []byte {
 	if request.Body == nil {
 		return []byte{}
 	}
@@ -107,23 +108,23 @@ func readAndReplaceBody(request *http.Request) []byte {
 	return payload
 }
 
-func concat(delim string, str ...string) string {
+func Concat(delim string, str ...string) string {
 	return strings.Join(str, delim)
 }
 
-func normuri(uri string) string {
+func NormUri(uri string) string {
 	parts := strings.Split(uri, "/")
 	for i := range parts {
-		parts[i] = encodePathFrag(parts[i])
+		parts[i] = EncodePathFrag(parts[i])
 	}
 	return strings.Join(parts, "/")
 }
 
-func encodePathFrag(s string) string {
+func EncodePathFrag(s string) string {
 	hexCount := 0
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		if shouldEscape(c) {
+		if ShouldEscape(c) {
 			hexCount++
 		}
 	}
@@ -131,7 +132,7 @@ func encodePathFrag(s string) string {
 	j := 0
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		if shouldEscape(c) {
+		if ShouldEscape(c) {
 			t[j] = '%'
 			t[j+1] = "0123456789ABCDEF"[c>>4]
 			t[j+2] = "0123456789ABCDEF"[c&15]
@@ -144,7 +145,7 @@ func encodePathFrag(s string) string {
 	return string(t)
 }
 
-func shouldEscape(c byte) bool {
+func ShouldEscape(c byte) bool {
 	if 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' {
 		return false
 	}
@@ -157,7 +158,7 @@ func shouldEscape(c byte) bool {
 	return true
 }
 
-func normquery(v url.Values) string {
+func NormQuery(v url.Values) string {
 	queryString := v.Encode()
 
 	// Go encodes a space as '+' but Amazon requires '%20'. Luckily any '+' in the
