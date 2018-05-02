@@ -37,6 +37,8 @@ jobs:
           tags: true
 
 before_install: |-
+  pip install --user awscli
+  export PATH=$PATH:$HOME/.local/bin
   mkdir -p ~/shared
   aws s3 sync s3://ef5-github-builds/shared ~/shared
   export GOOS=$WANTOS
