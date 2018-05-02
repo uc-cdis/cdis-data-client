@@ -1,12 +1,47 @@
+sudo: required
+dist: trusty
 language: go
-
+git:
+  depth: 1
 go:
   - 1.8.x
 
-install:
+jobs:
+  include:
+    - stage: test
+      os: linux
+      script: go test -v tests/functions_test.go 
+    - stage: build
+      os: linux
+      env: GOOS=linux GOARCH=amd64
+    - stage: build
+      os: linux
+      env: GOOS=darwin GOARCH=amd64
+    - stage: build
+      os: linux
+      env: GOOS=windows GOARCH=amd64
+    - stage: deploy
+      script: echo "Deploying to GitHub" && ls -al ~/shared
+      deploy:
+        skip_cleanup: true
+        provider: releases
+        api_key:
+          secure: secure_key...
+        file:
+          - /home/travis/shared/dataclient_win64.zip
+          - /home/travis/shared/dataclient_osx.zip
+          - /home/travis/shared/dataclient_linux.tar.gz
+        on:
+          repo: uc-cdis/cdis-data-client
+          branch: master
+          tags: true
+
+before_install:
   - go get -t -v ./...
 
-script:
-  - go test -v tests/functions_test.go
+script: |-
+  env
+  go build
+  ls -al
 
 
