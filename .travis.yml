@@ -13,13 +13,13 @@ jobs:
       script: go test -v tests/functions_test.go 
     - stage: build
       os: linux
-      env: GOOS=linux GOARCH=amd64
+      env: WANTOS=linux GOARCH=amd64
     - stage: build
       os: linux
-      env: GOOS=darwin GOARCH=amd64
+      env: WANTOS=darwin GOARCH=amd64
     - stage: build
       os: linux
-      env: GOOS=windows GOARCH=amd64
+      env: WANTOS=windows GOARCH=amd64
     - stage: deploy
       script: echo "Deploying to GitHub" && ls -al ~/shared
       deploy:
@@ -30,18 +30,42 @@ jobs:
         file:
           - /home/travis/shared/dataclient_win64.zip
           - /home/travis/shared/dataclient_osx.zip
-          - /home/travis/shared/dataclient_linux.tar.gz
+          - /home/travis/shared/dataclient_linux.zip
         on:
           repo: uc-cdis/cdis-data-client
           branch: master
           tags: true
 
-before_install:
-  - go get -t -v ./...
+before_install: |-
+  mkdir -p ~/shared
+  aws s3 sync s3://ef5-github-builds/shared ~/shared
+  export GOOS=$WANTOS
+  export GOARCH="amd64"
+  go get -t -v ./...
 
 script: |-
-  env
-  go build
-  ls -al
+  if [ "$GOOS" == "linux" ]
+  then
+    set -e
+    go build
+    zip dataclient_linux.zip cdis-data-client && mv dataclient_linux.zip ~/shared/.
+    aws s3 sync ~/shared s3://cdis-dc-builds/shared 
+    ls -al
+    set +e
+  elif [ "$GOOS" == "darwin" ]
+  then
+    set -e
+    go build
+    zip dataclient_osx.zip cdis-data-client && mv dataclient_osx.zip ~/shared/.
+    aws s3 sync ~/shared s3://cdis-dc-builds/shared
+    set +e
+  elif [ "$GOOS" == "windows" ]
+  then
+    set -e
+    go build
+    zip dataclient_win64.zip cdis-data-client && mv dataclient_win64.zip ~/shared/.
+    aws s3 sync ~/shared s3://cdis-dc-builds/shared
+    set +e
+  fi
 
 
