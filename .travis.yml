@@ -40,7 +40,7 @@ before_install: |-
   pip install --user awscli
   export PATH=$PATH:$HOME/.local/bin
   mkdir -p ~/shared
-  aws s3 sync s3://cdis-dc-builds/shared ~/shared
+  aws s3 sync s3://cdis-dc-builds/$TRAVIS_BRANCH ~/shared
   export GOOS=$WANTOS
   export GOARCH="amd64"
   go get -t -v ./...
@@ -51,21 +51,21 @@ script: |-
     set -e
     go build
     zip dataclient_linux.zip cdis-data-client && mv dataclient_linux.zip ~/shared/.
-    aws s3 sync ~/shared s3://cdis-dc-builds/shared 
+    aws s3 sync ~/shared s3://cdis-dc-builds/$TRAVIS_BRANCH
     set +e
   elif [ "$GOOS" == "darwin" ]
   then
     set -e
     go build
     zip dataclient_osx.zip cdis-data-client && mv dataclient_osx.zip ~/shared/.
-    aws s3 sync ~/shared s3://cdis-dc-builds/shared
+    aws s3 sync ~/shared s3://cdis-dc-builds/$TRAVIS_BRANCH
     set +e
   elif [ "$GOOS" == "windows" ]
   then
     set -e
     go build
     zip dataclient_win64.zip cdis-data-client.exe && mv dataclient_win64.zip ~/shared/.
-    aws s3 sync ~/shared s3://cdis-dc-builds/shared
+    aws s3 sync ~/shared s3://cdis-dc-builds/$TRAVIS_BRANCH
     ls -al
     set +e
   fi
