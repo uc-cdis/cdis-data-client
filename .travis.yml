@@ -1,12 +1,73 @@
+sudo: required
+dist: trusty
 language: go
-
+git:
+  depth: 1
 go:
   - 1.8.x
 
-install:
-  - go get -t -v ./...
+jobs:
+  include:
+    - stage: test
+      os: linux
+      script: go test -v tests/functions_test.go 
+    - stage: build
+      os: linux
+      env: WANTOS=linux GOARCH=amd64
+    - stage: build
+      os: linux
+      env: WANTOS=darwin GOARCH=amd64
+    - stage: build
+      os: linux
+      env: WANTOS=windows GOARCH=amd64
+    - stage: deploy
+      script: echo "Deploying to GitHub" && ls -al ~/shared
+      deploy:
+        skip_cleanup: true
+        provider: releases
+        api_key:
+          secure: lbmA6wzo6Z2CxZ3OqP1sFCkzFEMWSC9NVqcNVWHD4mYu7XwHTj2IRnd3E/fHRI1+gyrZ+iXIkgfLeI1QENVsGTVcWhgBCzq69qcVQbbciM6VBFo4y9RTZvAHl6yIZPhTy/cEblOfkRP48yNxBd5e1oJb5fYA4okf5q4LfAk14qwZCQpvBPE18u/F7zNYZJAD8b1/LGTy97lj1TWIjLx1GlvljqXOJ70qSIpInM3/LD/lDLSlOCuT0mpRo/3BR04dytS+ELYD3iWrcrTEIac5Ese4Ert14sT4aGpCn/+Q9VS+1U5D2gElv+WXbNbC2kRy8+A3mBvpTV3RBpjDgWRvvxk/8BGI4P0XWcshFtMssxQIwbIzMiM3lGrKx5s7AF/K8BGzszF/AvUbLTYRpBtU22SRDLZkQZbq348URK7Aiq7UVUW+GNV4uqZ975+drblXIsXs+mlMQ66AxRHPfVlPDvEJ6f0LcFEyIl+bbPdOmJzvz3hnxIsWmMOYS/szlGMOYolGRvILk6g9iuc3IEkaBk81DpjNdQN7Rv0bq9Tt1fYkDaE+MLBWUvxPZLfjPD8YxKVGlJzCwjU6cFT7+NiljSbg0PKQN6hS9M8Kuno7DG3TrSOFVulUkU7b0107Copm3Icd7Jaes8rEb7fuRr96EnygD5yNlhb62lwe1p6iQxY=
+        file:
+          - /home/travis/shared/dataclient_win64.zip
+          - /home/travis/shared/dataclient_osx.zip
+          - /home/travis/shared/dataclient_linux.zip
+        on:
+          repo: uc-cdis/cdis-data-client
+          branch: master
+          tags: true
 
-script:
-  - go test -v tests/functions_test.go
+before_install: |-
+  pip install --user awscli
+  export PATH=$PATH:$HOME/.local/bin
+  mkdir -p ~/shared
+  aws s3 sync s3://cdis-dc-builds/$TRAVIS_BRANCH ~/shared
+  export GOOS=$WANTOS
+  export GOARCH="amd64"
+  go get -t -v ./...
+
+script: |-
+  if [ "$GOOS" == "linux" ]
+  then
+    set -e
+    go build
+    zip dataclient_linux.zip cdis-data-client && mv dataclient_linux.zip ~/shared/.
+    aws s3 sync ~/shared s3://cdis-dc-builds/$TRAVIS_BRANCH
+    set +e
+  elif [ "$GOOS" == "darwin" ]
+  then
+    set -e
+    go build
+    zip dataclient_osx.zip cdis-data-client && mv dataclient_osx.zip ~/shared/.
+    aws s3 sync ~/shared s3://cdis-dc-builds/$TRAVIS_BRANCH
+    set +e
+  elif [ "$GOOS" == "windows" ]
+  then
+    set -e
+    go build
+    zip dataclient_win64.zip cdis-data-client.exe && mv dataclient_win64.zip ~/shared/.
+    aws s3 sync ~/shared s3://cdis-dc-builds/$TRAVIS_BRANCH
+    ls -al
+    set +e
+  fi
 
 
