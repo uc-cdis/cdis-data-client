@@ -5,9 +5,10 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	jwt "jwt"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	jwt "github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
 // MockConfigureInterface is a mock of ConfigureInterface interface

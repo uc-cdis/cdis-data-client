@@ -13,15 +13,13 @@ var cfgFile string
 var credFile string
 var profile string
 var uri string
-var file_path string
 var file_type string
-var uuid string
 
 /* RootCmd represents the base command when called without any subcommands */
 var RootCmd = &cobra.Command{
 	Use:   "gen3-client",
 	Short: "Use the gen3-client to interact with a Gen3 Data Commons",
-	Long: "Gen3 Client for downloading, uploading and submitting data to data commons.\ngen3-client version: " + gitversion + ", commit: " + gitcommit,
+	Long:  "Gen3 Client for downloading, uploading and submitting data to data commons.\ngen3-client version: " + gitversion + ", commit: " + gitcommit,
 }
 
 /* Execute adds all child commands to the root command sets flags appropriately
@@ -39,10 +37,7 @@ func init() {
 	// Define flags and configuration settings.
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "Specify profile to add or edit with --profile user2")
 	RootCmd.PersistentFlags().StringVar(&credFile, "cred", "", "Specify cred file --cred credentials.json")
-	//RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
-	RootCmd.PersistentFlags().StringVar(&file_path, "file", "", "Specify file to upload with --file=~/path/to/file")
 	RootCmd.PersistentFlags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")
-	RootCmd.PersistentFlags().StringVar(&uuid, "guid", "", "Specify the guid for the data you would like to work with")
 }
 
 // initConfig reads in config file and ENV variables if set.

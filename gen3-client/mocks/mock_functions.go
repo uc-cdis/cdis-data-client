@@ -5,10 +5,11 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
-	jwt "jwt"
 	http "net/http"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	jwt "github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
 // MockFunctionInterface is a mock of FunctionInterface interface
