@@ -1,4 +1,4 @@
-package cmd
+package g3cmd
 
 import (
 	"fmt"
@@ -14,8 +14,8 @@ var deleteCmd = &cobra.Command{
 	Long: `Deletes a given URI from the database. 
 If no profile is specified, "default" profile is used for authentication. 
 
-Examples: ./cdis-data-client delete --uri=v0/submission/bpa/test/entities/example_id
-	  ./cdis-data-client delete --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
+Examples: ./gen3-client delete --uri=v0/submission/bpa/test/entities/example_id
+	  ./gen3-client delete --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Not supported!!!")

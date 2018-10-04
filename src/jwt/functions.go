@@ -1,6 +1,6 @@
 package jwt
 
-//mockgen -destination=mocks/mock_functions.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt FunctionInterface
+//mockgen -destination=mocks/mock_functions.go -package=mocks jwt FunctionInterface
 
 import (
 	"bytes"
@@ -111,7 +111,7 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 	if cred.AccessKey == "" || isExpiredToken {
 		f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/cdis/access_token", &cred)
 		usr, _ := user.Current()
-		configPath := path.Join(usr.HomeDir + "/.cdis/config")
+		configPath := path.Join(usr.HomeDir + "/.gen3/config")
 		content := f.Config.ReadFile(configPath, config_file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)

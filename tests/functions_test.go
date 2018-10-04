@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/uc-cdis/cdis-data-client/jwt"
-	"github.com/uc-cdis/cdis-data-client/mocks"
+	"jwt"
+	"mocks"
 )
 
 func Requesting(*http.Response) *http.Response {

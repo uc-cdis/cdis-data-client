@@ -1,4 +1,4 @@
-package cmd
+package g3cmd
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/uc-cdis/cdis-data-client/jwt"
+	"jwt"
 )
 
 /* performing function of download data */
@@ -50,17 +50,17 @@ func RequestDownload(resp *http.Response) *http.Response {
 var downloadCmd = &cobra.Command{
 	Use:   "download",
 	Short: "download a file from a UUID",
-	Long: `Gets a presigned URL for a file from a UUID and then downloads the specified file.
-Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json 
+	Long: `Gets a presigned URL for a file from a GUID and then downloads the specified file.
+Examples: ./gen3-client download --profile user1 --guid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if file_path == "" {
-			log.Fatalf("Need to provide --file option !!!")
+			log.Fatalf("Need to provide the --file option for where to download the file.")
 		}
 
 		if uuid == "" {
-			log.Fatalf("Need to provide --uuid option !!!")
+			log.Fatalf("Need to provide --guid option for which GUID to download.")
 		}
 
 		request := new(jwt.Request)
@@ -75,7 +75,7 @@ Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-
 		respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, "", endPointPostfix)
 
 		if respDown == nil {
-			fmt.Println("Error !!!")
+			fmt.Println("Download error: %s", respDown)
 		} else {
 			out, err := os.Create(file_path)
 			if err != nil {
@@ -88,7 +88,7 @@ Examples: ./cdis-data-client download --profile user1 --uuid 206dfaa6-bcf1-4bc9-
 				panic(err)
 			}
 
-			fmt.Println("Done!!!")
+			fmt.Println("Successfully downloaded %s to %s!", uuid, file_path)
 		}
 
 	},

@@ -1,10 +1,10 @@
-package cmd
+package g3cmd
 
 import (
 	"log"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/jwt"
+	"jwt"
 )
 
 var conf jwt.Configure
@@ -13,23 +13,23 @@ var conf jwt.Configure
 var configureCmd = &cobra.Command{
 	Use:   "configure",
 	Short: "Add or modify a configuration profile to your config file",
-	Long: `Configuration file located at ~/.cdis/config
+	Long: `Configuration file located at ~/.gen3/config
 Prompts for access_key, secret_key, and gdcapi endpoint
 If a field is left empty, the existing value (if it exists) will remain unchanged
 If no profile is specified, "default" profile is used
 
-Examples: ./cdis-data-client configure
-	  ./cdis-data-client configure --profile=user1 --creds creds.json`,
+Examples: ./gen3-client configure
+	  ./gen3-client configure --profile=user1 --creds creds.json`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if credFile == "" {
-			log.Fatal("You need to spefify the credentials file.\nRun command: ./cdis-data-client configure --profile user1 --cred credential.json")
+			log.Fatal("You need to spefify the credentials file.\nRun command: ./gen3-client configure --profile user1 --cred credential.json")
 		}
 
 		cred := conf.ReadCredentials(credFile)
 		apiEndpoint := conf.ParseUrl()
 
-		// Store user info in ~/.cdis/config
+		// Store user info in ~/.gen3/config
 		configPath, content, err := conf.TryReadConfigFile()
 		if err != nil {
 			panic(err)

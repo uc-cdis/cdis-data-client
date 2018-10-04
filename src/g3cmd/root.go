@@ -1,4 +1,4 @@
-package cmd
+package g3cmd
 
 import (
 	"fmt"
@@ -19,10 +19,9 @@ var uuid string
 
 /* RootCmd represents the base command when called without any subcommands */
 var RootCmd = &cobra.Command{
-	Use:   "cdis-client",
-	Short: "CLI with JWT verification to talk to Fence",
-	Long: `Send GET, PUT, POST, DELETE HTTP requests to interact with the Fence
-that are signed using JWT protocol`,
+	Use:   "gen3-client",
+	Short: "Use the gen3-client to interact with a Gen3 Data Commons",
+	Long: "Gen3 Client for downloading, uploading and submitting data to data commons.\ngen3-client version: " + gitversion + ", commit: " + gitcommit,
 }
 
 /* Execute adds all child commands to the root command sets flags appropriately
@@ -43,7 +42,7 @@ func init() {
 	//RootCmd.PersistentFlags().StringVar(&uri, "uri", "", "Specify desired URI with --uri=exampleURI")
 	RootCmd.PersistentFlags().StringVar(&file_path, "file", "", "Specify file to upload with --file=~/path/to/file")
 	RootCmd.PersistentFlags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")
-	RootCmd.PersistentFlags().StringVar(&uuid, "uuid", "", "Specify the uuid for the data you would like to work with")
+	RootCmd.PersistentFlags().StringVar(&uuid, "guid", "", "Specify the guid for the data you would like to work with")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -59,9 +58,9 @@ func initConfig() {
 			os.Exit(1)
 		}
 
-		// Search config in home directory with name ".cdis-client" (without extension).
+		// Search config in home directory with name ".gen3" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".cdis-client")
+		viper.SetConfigName(".gen3")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

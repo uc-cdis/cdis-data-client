@@ -1,4 +1,4 @@
-package cmd
+package g3cmd
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/cdis-data-client/jwt"
+	"jwt"
 )
 
 /* used to perform upload data */
@@ -26,7 +26,7 @@ func RequestUpload(resp *http.Response) *http.Response {
 	msg := jwt.JsonMessage{}
 	str := jwt.ResponseToString(resp)
 	if strings.Contains(str, "Can't find a location for the data") {
-		log.Fatalf("The provided uuid is not found!!!")
+		log.Fatalf("The provided guid \"%s\" is not found.", uuid)
 	}
 
 	jwt.DecodeJsonFromString(str, &msg)
@@ -58,24 +58,23 @@ func RequestUpload(resp *http.Response) *http.Response {
 	return resp
 }
 
-/* represent to download command */
 var uploadCmd = &cobra.Command{
 	Use:   "upload",
-	Short: "Upload a file to a UUID",
-	Long: `Gets a presigned URL for which to upload a file associated with a UUID and then uploads the specified file. 
-Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload
+	Short: "Upload a file to a GUID",
+	Long: `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file. 
+Examples: ./gen3-client upload --profile user1 --guid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		if file_path == "" {
-			log.Fatalf("Need to provide --file option !!!")
+			log.Fatalf("Need to provide a file to upload using the --file option.")
 		}
 
 		if uuid == "" {
-			log.Fatalf("Need to provide --uuid option !!!")
+			log.Fatalf("Need to provide a guid to upload to using the --guid option.")
 		}
 
 		if _, err := os.Stat(file_path); os.IsNotExist(err) {
-			log.Fatalf("Uploading file is not existed !!!")
+			log.Fatalf("The file you specified \"%s\" does not exist locally.", file_path)
 		}
 
 		request := new(jwt.Request)
@@ -89,24 +88,14 @@ Examples: ./cdis-data-client upload --profile user1 --uuid f6923cf3-xxxx-xxxx-xx
 
 		resp := function.DoRequestWithSignedHeader(RequestUpload, profile, "", endPointPostfix)
 		if resp == nil {
-			fmt.Println("Error !!!")
+			fmt.Println("Upload error: %s!", jwt.ResponseToString(resp))
 		} else {
 			fmt.Println(jwt.ResponseToString(resp))
-			fmt.Println("Done!!!")
+			fmt.Println("Successfully uploaded file \"%s\" to GUID %s.", file_path, uuid)
 		}
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(uploadCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// putCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// putCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
