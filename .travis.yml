@@ -36,9 +36,7 @@ jobs:
 before_install: |-
   pip install --user awscli
   export PATH=$PATH:$HOME/.local/bin
-  ls -al
-  pwd
-  ln -s . $GOPATH/src/github.com/uc-cdis/gen3-client
+  ln -s $PWD $GOPATH/src/github.com/uc-cdis/gen3-client
   mkdir -p ~/shared
   aws s3 sync s3://cdis-dc-builds/$TRAVIS_BRANCH ~/shared
   export GOOS=$WANTOS
