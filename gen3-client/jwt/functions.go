@@ -90,6 +90,10 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (string, error) {
 		return "", nil
 	}
 
+	if resp.StatusCode == 404 {
+		return "", errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
+	}
+
 	msg := JsonMessage{}
 
 	str := ResponseToString(resp)
@@ -132,8 +136,12 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type s
 	}
 	if cred.AccessKey == "" || isExpiredToken {
 		f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/cdis/access_token", &cred)
-		usr, _ := user.Current()
-		configPath := path.Join(usr.HomeDir + "/.gen3/config")
+		usr, err := user.Current()
+		homeDir := ""
+		if err == nil {
+			homeDir = usr.HomeDir
+		}
+		configPath := path.Join(homeDir + "/.gen3/config")
 		content := f.Config.ReadFile(configPath, config_file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)

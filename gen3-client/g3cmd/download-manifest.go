@@ -1,16 +1,19 @@
 package g3cmd
 
 import (
-	"fmt"
-	"io"
+	"encoding/json"
+	"io/ioutil"
 	"log"
-	"net/http"
-	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
+
+type ManifestObject struct {
+	ObjectID  string `json:"object_id"`
+	SubjectID string `json:"subject_id"`
+}
 
 func init() {
 	var manifest string
@@ -31,29 +34,22 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			endPointPostfix := "/user/data/download/" + manifest
-
-			respUrl, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
-
+			var objects []ManifestObject
+			manifestBytes, err := ioutil.ReadFile(manifest)
 			if err != nil {
-				log.Fatalf("Download error: %s\n", err)
-			} else {
-				respDown, err := http.Get(respUrl)
+				log.Fatalf("Failed reading manifest %s, %v\n", manifest, err)
+			}
+			json.Unmarshal(manifestBytes, &objects)
+
+			for _, object := range objects {
+				endPointPostfix := "/user/data/download/" + object.ObjectID + "?protocol=s3"
+				respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+
 				if err != nil {
 					log.Fatalf("Download error: %s\n", err)
+				} else {
+					downloadFile(object.ObjectID, downloadPath+"/"+object.ObjectID, respURL)
 				}
-				out, err := os.Create(downloadPath)
-				if err != nil {
-					log.Fatalf(err.Error())
-				}
-				defer out.Close()
-				defer respDown.Body.Close()
-				_, err = io.Copy(out, respDown.Body)
-				if err != nil {
-					panic(err)
-				}
-
-				fmt.Printf("Successfully downloaded %s to %s!\n", manifest, downloadPath)
 			}
 
 		},

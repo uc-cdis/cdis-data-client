@@ -96,10 +96,10 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 		Try to open config file. If not existed, create empty config file.
 	*/
 	usr, err := user.Current()
-	if err != nil {
-		panic(err)
+	homeDir := ""
+	if err == nil {
+		homeDir = usr.HomeDir
 	}
-	homeDir := usr.HomeDir
 	configPath := path.Join(homeDir + "/.gen3/config")
 
 	content, err := conf.TryReadFile(configPath)
@@ -219,19 +219,17 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 
 
 	*/
-	usr, _ := user.Current()
-	homeDir := usr.HomeDir
+	usr, err := user.Current()
+	homeDir := ""
+	if err == nil {
+		homeDir = usr.HomeDir
+	}
 	configPath := path.Join(homeDir + "/.gen3/config")
 	cred := Credential{
 		KeyId:       "",
 		APIKey:      "",
 		AccessKey:   "",
 		APIEndpoint: "",
-	}
-	if _, err := os.Stat(path.Join(homeDir + "/.gen3/")); os.IsNotExist(err) {
-		fmt.Println("No config file found in ~/.gen3/")
-		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
-			"Example: ./gen3-client configure --cred ~/Downloads/credentials.json")
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		fmt.Println("No config file found in ~/.gen3/")

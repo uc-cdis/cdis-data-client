@@ -2,15 +2,51 @@ package g3cmd
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
+	"time"
 
+	"github.com/cavaliercoder/grab"
 	"github.com/spf13/cobra"
-
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
+
+func downloadFile(guid string, filePath string, signedURL string) {
+
+	client := grab.NewClient()
+	req, _ := grab.NewRequest(filePath, signedURL)
+
+	// start download
+	fmt.Printf("Downloading %v...\n", guid)
+	resp := client.Do(req)
+	fmt.Printf("  %v\n", resp.HTTPResponse.Status)
+
+	// start UI loop
+	t := time.NewTicker(500 * time.Millisecond)
+	defer t.Stop()
+
+Loop:
+	for {
+		select {
+		case <-t.C:
+			fmt.Printf("  transferred %v / %v bytes (%.2f%%)\n",
+				resp.BytesComplete(),
+				resp.Size,
+				100*resp.Progress())
+
+		case <-resp.Done:
+			// download is complete
+			break Loop
+		}
+	}
+
+	// check for errors
+	if err := resp.Err(); err != nil {
+		log.Fatalf("Download failed: %v\n", err)
+	}
+
+	fmt.Printf("Successfully downloaded %v \n", resp.Filename)
+
+}
 
 func init() {
 	var guid string
@@ -31,37 +67,22 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			endPointPostfix := "/user/data/download/" + guid
+			endPointPostfix := "/user/data/download/" + guid + "?protocol=s3"
 
-			respUrl, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+			respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
 			if err != nil {
 				log.Fatalf("Download error: %s\n", err)
 			} else {
-				respDown, err := http.Get(respUrl)
-				if err != nil {
-					log.Fatalf("Download error: %s\n", err)
-				}
-				out, err := os.Create(filePath)
-				if err != nil {
-					log.Fatalf(err.Error())
-				}
-				defer out.Close()
-				defer respDown.Body.Close()
-				_, err = io.Copy(out, respDown.Body)
-				if err != nil {
-					panic(err)
-				}
-
-				fmt.Printf("Successfully downloaded %s to %s!\n", guid, filePath)
+				downloadFile(guid, filePath, respURL)
 			}
 
 		},
 	}
 
 	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
-	downloadCmd.MarkFlagRequired("guid")
+	//downloadCmd.MarkFlagRequired("guid")
 	downloadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to download to with --file=~/path/to/file")
-	downloadCmd.MarkFlagRequired("file")
+	//downloadCmd.MarkFlagRequired("file")
 	RootCmd.AddCommand(downloadCmd)
 }
