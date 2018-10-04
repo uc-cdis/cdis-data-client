@@ -6,7 +6,7 @@ package mocks
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	jwt "github.com/uc-cdis/cdis-data-client/jwt"
+	jwt "jwt"
 	http "net/http"
 	reflect "reflect"
 )
