@@ -3,6 +3,7 @@ package g3cmd
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/cavaliercoder/grab"
@@ -15,6 +16,9 @@ func downloadFile(guid string, filePath string, signedURL string) {
 	client := grab.NewClient()
 	req, _ := grab.NewRequest(filePath, signedURL)
 
+	if strings.Contains(signedURL, "X-Amz-Signature") {
+		req.NoResume = true
+	}
 	// start download
 	fmt.Printf("Downloading %v...\n", guid)
 	resp := client.Do(req)
@@ -41,7 +45,12 @@ Loop:
 
 	// check for errors
 	if err := resp.Err(); err != nil {
-		log.Fatalf("Download failed: %v\n", err)
+		if resp != nil && resp.HTTPResponse.StatusCode >= 400 && resp.HTTPResponse.StatusCode < 500 {
+			log.Printf("Download failed: %v\n", err)
+			return
+		} else {
+			log.Fatalf("Fatal download failed: %v\n", err)
+		}
 	}
 
 	fmt.Printf("Successfully downloaded %v \n", resp.Filename)
@@ -72,7 +81,11 @@ func init() {
 			respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
 			if err != nil {
-				log.Fatalf("Download error: %s\n", err)
+				if strings.Contains(err.Error(), "The provided guid") {
+					log.Printf("Download error: %s\n", err)
+				} else {
+					log.Fatalf("Fatal download error: %s\n", err)
+				}
 			} else {
 				downloadFile(guid, filePath, respURL)
 			}

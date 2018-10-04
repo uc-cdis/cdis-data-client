@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -46,7 +47,11 @@ func init() {
 				respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
 				if err != nil {
-					log.Fatalf("Download error: %s\n", err)
+					if strings.Contains(err.Error(), "The provided guid") {
+						log.Printf("Download error: %s\n", err)
+					} else {
+						log.Fatalf("Fatal download error: %s\n", err)
+					}
 				} else {
 					downloadFile(object.ObjectID, downloadPath+"/"+object.ObjectID, respURL)
 				}

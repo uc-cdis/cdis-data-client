@@ -91,7 +91,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (string, error) {
 	}
 
 	if resp.StatusCode == 404 {
-		return "", errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
+		return "NotFound", errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
 	}
 
 	msg := JsonMessage{}

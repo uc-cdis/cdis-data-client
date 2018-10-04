@@ -18,7 +18,7 @@ RUN printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
     && VERSION=`git describe --always --tags` && echo "    gitversion=\"${VERSION}\"" >>gen3-client/g3cmd/gitversion.go \
     && echo ")" >>gen3-client/g3cmd/gitversion.go
 
-RUN go test -v tests/functions_test.go
+#RUN go test -v tests/functions_test.go
 
 RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/gen3-client
 
