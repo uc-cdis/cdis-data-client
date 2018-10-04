@@ -4,12 +4,14 @@ package jwt
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os/user"
 	"path"
+	"strings"
 )
 
 type Functions struct {
@@ -83,7 +85,27 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 
 }
 
-func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, config_file_type string, endpointPostPrefix string) *http.Response {
+func (f *Functions) ParseFenceURLResponse(resp *http.Response) (string, error) {
+	if resp == nil {
+		return "", nil
+	}
+
+	msg := JsonMessage{}
+
+	str := ResponseToString(resp)
+	if strings.Contains(str, "Can't find a location for the data") {
+		return "", errors.New("The provided guid is not found!")
+	}
+
+	DecodeJsonFromString(str, &msg)
+	if msg.Url == "" {
+		return "", errors.New("Can not get url from " + str)
+	}
+
+	return msg.Url, nil
+}
+
+func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type string, endpointPostPrefix string) (string, error) {
 	/*
 		Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
@@ -91,7 +113,7 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
 		log.Println("No credential found !!!")
-		return nil
+		return "", nil
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
@@ -105,7 +127,7 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 		if resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else {
-			return fn(resp)
+			return f.ParseFenceURLResponse(resp)
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
@@ -115,7 +137,7 @@ func (f *Functions) DoRequestWithSignedHeader(fn DoRequest, profile string, conf
 		content := f.Config.ReadFile(configPath, config_file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
-		return fn(resp)
+		return f.ParseFenceURLResponse(resp)
 	}
 	panic("Unexpected case")
 }

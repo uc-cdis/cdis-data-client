@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"jwt"
-	"mocks"
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
 )
 
 func Requesting(*http.Response) *http.Response {
@@ -27,9 +27,9 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 
 	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
 
-	resp := testFunction.DoRequestWithSignedHeader(Requesting, "default", "not_json", "/user/data/download/test_uuid")
+	resp, err := testFunction.DoRequestWithSignedHeader("default", "not_json", "/user/data/download/test_uuid")
 
-	if resp != nil {
+	if err != nil {
 		t.Fail()
 	}
 }

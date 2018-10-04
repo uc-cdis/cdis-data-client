@@ -14,10 +14,10 @@ RUN echo "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
     && VERSION=`git describe --always --tags` && echo "    gitversion=\"${VERSION}\"" >>gen3-client/g3cmd/gitversion.go \
     && echo ")" >>gen3-client/g3cmd/gitversion.go
 
-RUN go build -ldflags "-linkmode external -extldflags -static" -o gen3-client
+RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/gen3-client
 
 # Store only the resulting binary in the final image
 # Resulting in significantly smaller docker image size
 FROM scratch
-COPY --from=build-deps /gen3client/gen3-client /gen3-client
+COPY --from=build-deps /go/src/github.com/uc-cdis/gen3-client/bin/gen3-client /gen3-client
 CMD ["/gen3-client"]

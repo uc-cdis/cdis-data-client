@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -32,11 +33,15 @@ func init() {
 
 			endPointPostfix := "/user/data/download/" + manifest
 
-			respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, "", endPointPostfix)
+			respUrl, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
-			if respDown == nil {
-				fmt.Printf("Download error: %s\n", respDown)
+			if err != nil {
+				log.Fatalf("Download error: %s\n", err)
 			} else {
+				respDown, err := http.Get(respUrl)
+				if err != nil {
+					log.Fatalf("Download error: %s\n", err)
+				}
 				out, err := os.Create(downloadPath)
 				if err != nil {
 					log.Fatalf(err.Error())

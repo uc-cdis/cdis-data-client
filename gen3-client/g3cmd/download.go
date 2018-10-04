@@ -6,45 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
-
-/* performing function of download data */
-func RequestDownload(resp *http.Response) *http.Response {
-	/*
-		Download file from given url encoded in resp
-	*/
-
-	if resp == nil {
-		return nil
-	}
-
-	msg := jwt.JsonMessage{}
-
-	str := jwt.ResponseToString(resp)
-	if strings.Contains(str, "Can't find a location for the data") {
-		log.Fatalf("The provided uuid is not found!!!")
-	}
-
-	jwt.DecodeJsonFromString(str, &msg)
-	if msg.Url == "" {
-		log.Fatalf("Can not get url from " + str)
-	}
-
-	presignedDownloadURL := msg.Url
-	fmt.Println("Downloading data ...")
-
-	respDown, err := http.Get(presignedDownloadURL)
-	if err != nil {
-		panic(err)
-	}
-
-	return respDown
-}
 
 func init() {
 	var guid string
@@ -67,11 +33,15 @@ func init() {
 
 			endPointPostfix := "/user/data/download/" + guid
 
-			respDown := function.DoRequestWithSignedHeader(RequestDownload, profile, "", endPointPostfix)
+			respUrl, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
-			if respDown == nil {
-				fmt.Printf("Download error: %s\n", respDown)
+			if err != nil {
+				log.Fatalf("Download error: %s\n", err)
 			} else {
+				respDown, err := http.Get(respUrl)
+				if err != nil {
+					log.Fatalf("Download error: %s\n", err)
+				}
 				out, err := os.Create(filePath)
 				if err != nil {
 					log.Fatalf(err.Error())

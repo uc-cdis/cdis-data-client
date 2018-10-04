@@ -7,57 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 
 	"github.com/spf13/cobra"
 )
-
-/* used to perform upload data */
-func RequestUpload(resp *http.Response) *http.Response {
-	/*
-		Upload file with presigned url encoded in response's json
-	*/
-
-	if resp == nil {
-		return nil
-	}
-
-	msg := jwt.JsonMessage{}
-	str := jwt.ResponseToString(resp)
-	if strings.Contains(str, "Can't find a location for the data") {
-		log.Fatalf("The provided guid \"%s\" is not found.", guid)
-	}
-
-	jwt.DecodeJsonFromString(str, &msg)
-	if msg.Url == "" {
-		log.Fatalf("Can not get url from " + str)
-	}
-
-	presignedUploadURL := msg.Url
-
-	fmt.Println("Uploading data ...")
-	// Create and send request
-	data, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	body := bytes.NewBufferString(string(data[:]))
-	content_type := "application/json"
-	if file_type == "tsv" {
-		content_type = "text/tab-separated-values"
-	}
-	req, _ := http.NewRequest("PUT", presignedUploadURL, body)
-	req.Header.Set("content_type", content_type)
-	client := &http.Client{}
-	resp, err = client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	return resp
-}
 
 func init() {
 	var guid string
@@ -84,10 +38,29 @@ func init() {
 
 			endPointPostfix := "/user/data/upload/" + guid
 
-			resp := function.DoRequestWithSignedHeader(RequestUpload, profile, "", endPointPostfix)
-			if resp == nil {
-				fmt.Printf("Upload error: %s!\n", jwt.ResponseToString(resp))
+			respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+			if err != nil {
+				log.Fatalf("Upload error: %s!\n", err)
 			} else {
+				fmt.Println("Uploading data ...")
+				// Create and send request
+				data, err := ioutil.ReadFile(filePath)
+				if err != nil {
+					log.Fatal(err)
+				}
+				body := bytes.NewBufferString(string(data[:]))
+				content_type := "application/json"
+				if file_type == "tsv" {
+					content_type = "text/tab-separated-values"
+				}
+				req, _ := http.NewRequest("PUT", respURL, body)
+				req.Header.Set("content_type", content_type)
+				client := &http.Client{}
+				resp, err := client.Do(req)
+				if err != nil {
+					panic(err)
+				}
+
 				fmt.Println(jwt.ResponseToString(resp))
 				fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
 			}
