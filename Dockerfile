@@ -7,7 +7,8 @@ WORKDIR /go/src/github.com/uc-cdis/gen3-client
 RUN go get github.com/mitchellh/go-homedir \
     github.com/spf13/cobra \
     github.com/spf13/viper \
-    github.com/cavaliercoder/grab 
+    github.com/cavaliercoder/grab \
+    github.com/golang/mock/gomock
 
 COPY . .
 
@@ -16,6 +17,8 @@ RUN printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
     && COMMIT=`git rev-parse HEAD` && echo "    gitcommit=\"${COMMIT}\"" >>gen3-client/g3cmd/gitversion.go \
     && VERSION=`git describe --always --tags` && echo "    gitversion=\"${VERSION}\"" >>gen3-client/g3cmd/gitversion.go \
     && echo ")" >>gen3-client/g3cmd/gitversion.go
+
+RUN go test -v tests/functions_test.go
 
 RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/gen3-client
 

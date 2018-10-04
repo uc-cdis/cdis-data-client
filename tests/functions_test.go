@@ -27,7 +27,7 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 
 	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
 
-	resp, err := testFunction.DoRequestWithSignedHeader("default", "not_json", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "not_json", "/user/data/download/test_uuid")
 
 	if err != nil {
 		t.Fail()
@@ -51,9 +51,9 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), "/user/data/download/test_uuid", "non_exprired_token").Return(mockedResp).Times(1)
 
-	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
 
-	if res == nil {
+	if err != nil {
 		t.Fail()
 	}
 }
@@ -79,9 +79,9 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(1)
 
-	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
 
-	if res == nil {
+	if err == nil {
 		t.Fail()
 	}
 
@@ -109,9 +109,9 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(2)
 
-	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
 
-	if res == nil {
+	if err == nil {
 		t.Fail()
 	}
 
