@@ -22,7 +22,6 @@ func downloadFile(guid string, filePath string, signedURL string) {
 	// start download
 	fmt.Printf("Downloading %v...\n", guid)
 	resp := client.Do(req)
-	fmt.Printf("  %v\n", resp.HTTPResponse.Status)
 
 	// start UI loop
 	t := time.NewTicker(500 * time.Millisecond)
@@ -32,7 +31,7 @@ Loop:
 	for {
 		select {
 		case <-t.C:
-			fmt.Printf("  transferred %v / %v bytes (%.2f%%)\n",
+			fmt.Printf("\033[1A  transferred %v / %v bytes (%.2f%%)\033[K\n",
 				resp.BytesComplete(),
 				resp.Size,
 				100*resp.Progress())
@@ -42,10 +41,11 @@ Loop:
 			break Loop
 		}
 	}
+	fmt.Printf("\033[1A\033[K")
 
 	// check for errors
 	if err := resp.Err(); err != nil {
-		if resp != nil && resp.HTTPResponse.StatusCode >= 400 && resp.HTTPResponse.StatusCode < 500 {
+		if resp != nil && resp.HTTPResponse != nil && resp.HTTPResponse.StatusCode >= 400 && resp.HTTPResponse.StatusCode < 500 {
 			log.Printf("Download failed: %v\n", err)
 			return
 		} else {
@@ -60,6 +60,7 @@ Loop:
 func init() {
 	var guid string
 	var filePath string
+	var protocol string
 
 	var downloadCmd = &cobra.Command{
 		Use:   "download",
@@ -76,7 +77,12 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			endPointPostfix := "/user/data/download/" + guid + "?protocol=s3"
+			protocolText := ""
+			if protocol != "" {
+				protocolText = "?protocol=" + protocol
+			}
+
+			endPointPostfix := "/user/data/download/" + guid + protocolText
 
 			respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
@@ -97,5 +103,6 @@ func init() {
 	downloadCmd.MarkFlagRequired("guid")
 	downloadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to download to with --file=~/path/to/file")
 	downloadCmd.MarkFlagRequired("file")
+	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs")
 	RootCmd.AddCommand(downloadCmd)
 }

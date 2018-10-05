@@ -3,7 +3,6 @@ package jwt
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -28,8 +27,6 @@ func ResponseToString(resp *http.Response) string {
 }
 
 func DecodeJsonFromString(str string, msg Message) error {
-	fmt.Println("Decoding:")
-	fmt.Println(str)
 	err := json.Unmarshal([]byte(str), &msg)
 	if err != nil {
 		panic(err)
