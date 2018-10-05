@@ -1,4 +1,4 @@
-package cmd
+package g3cmd
 
 import (
 	"fmt"
@@ -15,14 +15,14 @@ func parse_config(profile string) (string, string, string) {
 	//Look in config file
 	usr, _ := user.Current()
 	homeDir := usr.HomeDir
-	configPath := path.Join(homeDir + "/.cdis/config")
-	if _, err := os.Stat(path.Join(homeDir + "/.cdis/")); os.IsNotExist(err) {
-		fmt.Println("No config file found in ~/.cdis/")
+	configPath := path.Join(homeDir + "/.gen3/config")
+	if _, err := os.Stat(path.Join(homeDir + "/.gen3/")); os.IsNotExist(err) {
+		fmt.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials")
 		return "", "", ""
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		fmt.Println("No config file found in ~/.cdis/")
+		fmt.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials")
 		return "", "", ""
 	}
@@ -44,7 +44,7 @@ func parse_config(profile string) (string, string, string) {
 	}
 
 	if profile_line == -1 {
-		fmt.Println("Profile not in config file. Need to run \"cdis-data-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
+		fmt.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
 		return "", "", ""
 	} else {
 		// Read in access key, secret key, endpoint for given profile

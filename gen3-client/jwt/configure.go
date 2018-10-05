@@ -1,6 +1,6 @@
 package jwt
 
-//go:generate mockgen -destination=mocks/mock_configure.go -package=mocks github.com/uc-cdis/cdis-data-client/jwt ConfigureInterface
+//go:generate mockgen -destination=mocks/mock_configure.go -package=mocks jwt ConfigureInterface
 
 import (
 	"bufio"
@@ -96,11 +96,11 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 		Try to open config file. If not existed, create empty config file.
 	*/
 	usr, err := user.Current()
-	if err != nil {
-		panic(err)
+	homeDir := ""
+	if err == nil {
+		homeDir = usr.HomeDir
 	}
-	homeDir := usr.HomeDir
-	configPath := path.Join(homeDir + "/.cdis/config")
+	configPath := path.Join(homeDir + "/.gen3/config")
 
 	content, err := conf.TryReadFile(configPath)
 
@@ -194,7 +194,7 @@ func (conf *Configure) ParseKeyValue(str string, expr string, errMsg string) str
 
 func (conf *Configure) ParseConfig(profile string) Credential {
 	/*
-		Looking profile in config file. The config file is a text file located at ~/.cdis directory. It can
+		Looking profile in config file. The config file is a text file located at ~/.gen3 directory. It can
 		contain more than 1 profile. If there is no profile found, the user is asked to run a command to
 		create the profile
 
@@ -219,24 +219,22 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 
 
 	*/
-	usr, _ := user.Current()
-	homeDir := usr.HomeDir
-	configPath := path.Join(homeDir + "/.cdis/config")
+	usr, err := user.Current()
+	homeDir := ""
+	if err == nil {
+		homeDir = usr.HomeDir
+	}
+	configPath := path.Join(homeDir + "/.gen3/config")
 	cred := Credential{
 		KeyId:       "",
 		APIKey:      "",
 		AccessKey:   "",
 		APIEndpoint: "",
 	}
-	if _, err := os.Stat(path.Join(homeDir + "/.cdis/")); os.IsNotExist(err) {
-		fmt.Println("No config file found in ~/.cdis/")
-		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
-			"Example: ./cdis-data-client configure --cred ~/Downloads/credentials.json")
-	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		fmt.Println("No config file found in ~/.cdis/")
+		fmt.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
-			"Example: ./cdis-data-client configure --cred ~/Downloads/credentials.json")
+			"Example: ./gen3-client configure --cred ~/Downloads/credentials.json")
 		return cred
 	}
 	// If profile not in config file, prompt user to set up config first
@@ -256,7 +254,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	}
 
 	if profile_line == -1 {
-		fmt.Println("Profile not in config file. Need to run \"cdis-data-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
+		fmt.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
 		return cred
 	} else {
 		// Read in access key, secret key, endpoint for given profile

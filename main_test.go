@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/uc-cdis/cdis-data-client/cmd"
+	"cmd"
 )
 
 func TestMain(t *testing.T) {

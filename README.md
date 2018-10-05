@@ -1,5 +1,7 @@
-# cdis-data-client
-data access client
+# gen3-client
+Gen3 client for downloading, uploading, and submitting data to Gen3 Data Commons.
+
+
 
 ## Installation
 *TODO: update after this is made public*

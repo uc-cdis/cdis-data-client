@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/uc-cdis/cdis-data-client/jwt"
-	"github.com/uc-cdis/cdis-data-client/mocks"
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
 )
 
 func Requesting(*http.Response) *http.Response {
@@ -27,9 +27,9 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 
 	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
 
-	resp := testFunction.DoRequestWithSignedHeader(Requesting, "default", "not_json", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "not_json", "/user/data/download/test_uuid")
 
-	if resp != nil {
+	if err == nil {
 		t.Fail()
 	}
 }
@@ -44,16 +44,16 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 
 	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{'url': 'http://www.test.com/user/data/download/test_uuid'}")),
+		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"http://www.test.com/user/data/download/test_uuid\"}")),
 		StatusCode: 200,
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), "/user/data/download/test_uuid", "non_exprired_token").Return(mockedResp).Times(1)
 
-	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
 
-	if res == nil {
+	if err != nil {
 		t.Fail()
 	}
 }
@@ -68,7 +68,7 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 
 	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{'url': 'www.test.com/user/data/download/'}")),
+		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
 		StatusCode: 200,
 	}
 
@@ -79,9 +79,9 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(1)
 
-	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
 
-	if res == nil {
+	if err != nil {
 		t.Fail()
 	}
 
@@ -98,7 +98,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 
 	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "expired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{'url': 'www.test.com/user/data/download/'}")),
+		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
 		StatusCode: 401,
 	}
 
@@ -109,9 +109,9 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(2)
 
-	res := testFunction.DoRequestWithSignedHeader(Requesting, "default", "", "/user/data/download/test_uuid")
+	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
 
-	if res == nil {
+	if err != nil {
 		t.Fail()
 	}
 

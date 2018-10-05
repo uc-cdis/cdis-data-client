@@ -27,7 +27,6 @@ func ResponseToString(resp *http.Response) string {
 }
 
 func DecodeJsonFromString(str string, msg Message) error {
-
 	err := json.Unmarshal([]byte(str), &msg)
 	if err != nil {
 		panic(err)

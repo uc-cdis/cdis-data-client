@@ -6,12 +6,13 @@ package mocks
 
 import (
 	bytes "bytes"
-	gomock "github.com/golang/mock/gomock"
-	jwt "github.com/uc-cdis/cdis-data-client/jwt"
 	io "io"
 	http "net/http"
 	url "net/url"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
+	jwt "github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
 // MockRequestInterface is a mock of RequestInterface interface
