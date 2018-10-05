@@ -12,11 +12,9 @@ var postCmd = &cobra.Command{
 	Short: "Send POST HTTP Request to the gdcapi",
 	Long: `Sends a POST HTTP Request to make graphql queries stored in 
 local json files to the gdcapi. 
-If no profile is specified, "default" profile is used for authentication. 
-
-Examples: ./gen3-client put --uri=/v0/submission/graphql --file=~/Documents/my_grqphql_query.json
-	  ./gen3-client put --profile=user1 --uri=/v0/submission/graphql --file=~/Documents/my_grqphql_query.json
-`,
+If no profile is specified, "default" profile is used for authentication.`,
+	Example: `./gen3-client put --uri=/v0/submission/graphql --file=~/Documents/my_grqphql_query.json
+	  ./gen3-client put --profile=user1 --uri=/v0/submission/graphql --file=~/Documents/my_grqphql_query.json`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		fmt.Println("Use the command with upload option!!!")

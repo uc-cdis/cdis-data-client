@@ -16,13 +16,13 @@ import (
 func init() {
 	var guid string
 	var filePath string
+	var file_type string
 
 	var uploadCmd = &cobra.Command{
-		Use:   "upload",
-		Short: "Upload a file to a GUID",
-		Long: `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file. 
-	Examples: ./gen3-client upload --profile user1 --guid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload
-	`,
+		Use:     "upload",
+		Short:   "Upload a file to a GUID",
+		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
+		Example: `./gen3-client upload --profile user1 --guid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -71,5 +71,6 @@ func init() {
 	uploadCmd.MarkFlagRequired("guid")
 	uploadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
 	uploadCmd.MarkFlagRequired("file")
+	uploadCmd.Flags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")
 	RootCmd.AddCommand(uploadCmd)
 }

@@ -31,11 +31,11 @@ func init() {
 	var output string
 
 	var generateTSVCmd = &cobra.Command{
-		Use:   "generate-tsv",
-		Short: "Generate a file upload tsv from a template",
-		Long: `Fills in a Gen3 data file template with information from a directory of files.
-	Examples: ./gen3-client generate-tsv --from-template=image_file.tsv files*.dcm 
-	`,
+		Use:     "generate-tsv",
+		Short:   "Generate a file upload tsv from a template",
+		Long:    `Fills in a Gen3 data file template with information from a directory of files.`,
+		Example: `./gen3-client generate-tsv --from-template=image_file.tsv files*.dcm`,
+		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			outFile, err := os.Create(output)
 			if err != nil {

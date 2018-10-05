@@ -12,9 +12,8 @@ var putCmd = &cobra.Command{
 	Short: "Send PUT HTTP Request to the gdcapi",
 	Long: `Sends a PUT HTTP Request to upload files to the database.
 Specify file type as json or tsv with --file_type (default json).
-If no profile is specified, "default" profile is used for authentication.
-
-Examples: ./gen3-client put --uri=/v0/submission/bpa/test --file=~/Documents/file_to_upload.json
+If no profile is specified, "default" profile is used for authentication.`,
+	Example: `./gen3-client put --uri=/v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 	  ./gen3-client put --uri=/v0/submission/bpa/test --file=~/Documents/file_to_upload.tsv --file_type=tsv
 	  ./gen3-client put --profile=user1 --uri=/v0/submission/bpa/test --file=~/Documents/file_to_upload.json
 `,

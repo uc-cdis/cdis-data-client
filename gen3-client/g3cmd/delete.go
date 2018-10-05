@@ -1,7 +1,7 @@
 package g3cmd
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -12,13 +12,11 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Send DELETE HTTP Request for given URI",
 	Long: `Deletes a given URI from the database. 
-If no profile is specified, "default" profile is used for authentication. 
-
-Examples: ./gen3-client delete --uri=v0/submission/bpa/test/entities/example_id
-	  ./gen3-client delete --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64
-`,
+If no profile is specified, "default" profile is used for authentication.`,
+	Example: `./gen3-client delete --uri=v0/submission/bpa/test/entities/example_id
+	  ./gen3-client delete --profile=user1 --uri=v0/submission/bpa/test/entities/1af1d0ab-efec-4049-98f0-ae0f4bb1bc64`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Not supported!!!")
+		log.Fatalf("Not supported!")
 		// request := new(jwt.Request)
 		// configure := new(jwt.Configure)
 		// function := new(jwt.Functions)
@@ -32,5 +30,5 @@ Examples: ./gen3-client delete --uri=v0/submission/bpa/test/entities/example_id
 }
 
 func init() {
-	RootCmd.AddCommand(deleteCmd)
+	//RootCmd.AddCommand(deleteCmd)
 }

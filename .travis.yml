@@ -8,6 +8,9 @@ go:
 
 jobs:
   include:
+    - stage: test
+      os: linux
+      script: go test -v github.com/uc-cdis/gen3-client/tests
     - stage: build
       os: linux
       env: WANTOS=linux GOARCH=amd64
