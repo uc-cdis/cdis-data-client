@@ -16,7 +16,7 @@ func init() {
 	Prompts for access_key, secret_key, and gdcapi endpoint
 	If a field is left empty, the existing value (if it exists) will remain unchanged
 	If no profile is specified, "default" profile is used`,
-		Example: `./gen3-client configure --profile=user1 --creds creds.json`,
+		Example: `./gen3-client configure --profile=user1 --cred cred.json`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cred := conf.ReadCredentials(credFile)

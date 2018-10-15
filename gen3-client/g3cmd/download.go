@@ -102,7 +102,7 @@ func init() {
 	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	downloadCmd.MarkFlagRequired("guid")
 	downloadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to download to with --file=~/path/to/file")
-	downloadCmd.MarkFlagRequired("file")
+	// downloadCmd.MarkFlagRequired("file")
 	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs")
 	RootCmd.AddCommand(downloadCmd)
 }
