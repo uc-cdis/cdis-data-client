@@ -13,10 +13,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func uploadFile(guid string, filePath string, fileType string, signedURL string) {
+	fmt.Println("Uploading data ...")
+	// Create and send request
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	body := bytes.NewBufferString(string(data[:]))
+	contentType := "application/json"
+	if fileType == "tsv" {
+		contentType = "text/tab-separated-values"
+	}
+	req, _ := http.NewRequest(http.MethodPut, signedURL, body)
+	req.Header.Set("content_type", contentType)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(jwt.ResponseToString(resp))
+	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
+}
+
 func init() {
 	var guid string
 	var filePath string
-	var file_type string
+	var fileType string
 
 	var uploadCmd = &cobra.Command{
 		Use:     "upload",
@@ -38,31 +63,11 @@ func init() {
 
 			endPointPostfix := "/user/data/upload/" + guid
 
-			respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+			signedURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 			if err != nil {
 				log.Fatalf("Upload error: %s!\n", err)
 			} else {
-				fmt.Println("Uploading data ...")
-				// Create and send request
-				data, err := ioutil.ReadFile(filePath)
-				if err != nil {
-					log.Fatal(err)
-				}
-				body := bytes.NewBufferString(string(data[:]))
-				content_type := "application/json"
-				if file_type == "tsv" {
-					content_type = "text/tab-separated-values"
-				}
-				req, _ := http.NewRequest("PUT", respURL, body)
-				req.Header.Set("content_type", content_type)
-				client := &http.Client{}
-				resp, err := client.Do(req)
-				if err != nil {
-					panic(err)
-				}
-
-				fmt.Println(jwt.ResponseToString(resp))
-				fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
+				uploadFile(guid, filePath, fileType, signedURL)
 			}
 		},
 	}
@@ -71,6 +76,6 @@ func init() {
 	uploadCmd.MarkFlagRequired("guid")
 	uploadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
 	uploadCmd.MarkFlagRequired("file")
-	uploadCmd.Flags().StringVar(&file_type, "file_type", "json", "Specify file_type you're uploading with --file_type={json|tsv} (defaults to json)")
+	uploadCmd.Flags().StringVar(&fileType, "file-type", "json", "Specify file-type you're uploading with --file-type={json|tsv} (defaults to json)")
 	RootCmd.AddCommand(uploadCmd)
 }
