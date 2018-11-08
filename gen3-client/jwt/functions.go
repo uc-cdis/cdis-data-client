@@ -85,38 +85,43 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 
 }
 
-func (f *Functions) ParseFenceURLResponse(resp *http.Response) (string, error) {
+func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, error) {
+	msg := JsonMessage{}
+
 	if resp == nil {
-		return "", nil
+		return msg, nil
 	}
 
 	if resp.StatusCode == 404 {
-		return "NotFound", errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
+		return msg, errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
 	}
-
-	msg := JsonMessage{}
 
 	str := ResponseToString(resp)
 	if strings.Contains(str, "Can't find a location for the data") {
-		return "", errors.New("The provided guid is not found!")
+		return msg, errors.New("The provided guid is not found!")
 	}
 
 	DecodeJsonFromString(str, &msg)
 	if msg.Url == "" {
-		return "", errors.New("Can not get url from " + str)
+		return msg, errors.New("Can not get url from " + str)
 	}
 
-	return msg.Url, nil
+	var err error
+	if msg.UUID == "" {
+		err = errors.New("No UUID found in " + str)
+	}
+
+	return msg, err
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type string, endpointPostPrefix string) (string, error) {
+func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type string, endpointPostPrefix string) (string, string, error) {
 	/*
 		Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-		return "", errors.New("No credential found!")
+		return "", "", errors.New("No credential found!")
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
@@ -130,7 +135,8 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type s
 		if resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else {
-			return f.ParseFenceURLResponse(resp)
+			msg, err := f.ParseFenceURLResponse(resp)
+			return msg.Url, msg.UUID, err
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
@@ -144,7 +150,8 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type s
 		content := f.Config.ReadFile(configPath, config_file_type)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 		resp := f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
-		return f.ParseFenceURLResponse(resp)
+		msg, err := f.ParseFenceURLResponse(resp)
+		return msg.Url, msg.UUID, err
 	}
 	panic("Unexpected case")
 }

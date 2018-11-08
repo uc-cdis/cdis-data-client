@@ -8,7 +8,8 @@ RUN go get github.com/mitchellh/go-homedir \
     github.com/spf13/cobra \
     github.com/spf13/viper \
     github.com/cavaliercoder/grab \
-    github.com/golang/mock/gomock
+    github.com/golang/mock/gomock \
+    gopkg.in/cheggaaa/pb.v1
 
 COPY . .
 

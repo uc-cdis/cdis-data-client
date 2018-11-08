@@ -1,39 +1,37 @@
 package g3cmd
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
 func uploadFile(guid string, filePath string, fileType string, signedURL string) {
-	fmt.Println("Uploading data ...")
-	// Create and send request
-	data, err := ioutil.ReadFile(filePath)
+	file, err := os.Open(filePath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("File Error")
 	}
-	body := bytes.NewBufferString(string(data[:]))
-	contentType := "application/json"
-	if fileType == "tsv" {
-		contentType = "text/tab-separated-values"
+	defer file.Close()
+
+	req, bar, err := GenerateUploadRequest(file, fileType, signedURL)
+	if err != nil {
+		log.Fatalf("Error occured during request generation: %s", err.Error())
+		return
 	}
-	req, _ := http.NewRequest(http.MethodPut, signedURL, body)
-	req.Header.Set("content_type", contentType)
+	fmt.Println("Uploading data ...")
+	bar.Start()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
-
 	fmt.Println(jwt.ResponseToString(resp))
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
 }
@@ -63,8 +61,8 @@ func init() {
 
 			endPointPostfix := "/user/data/upload/" + guid
 
-			signedURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
-			if err != nil {
+			signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+			if err != nil && !strings.Contains(err.Error(), "No UUID found") {
 				log.Fatalf("Upload error: %s!\n", err)
 			} else {
 				uploadFile(guid, filePath, fileType, signedURL)

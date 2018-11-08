@@ -1,7 +1,6 @@
 package g3cmd
 
 import (
-	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -13,7 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
+
+	"gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
 
@@ -57,50 +57,72 @@ func doBatchHTTPClient(client *http.Client, workers int, requests ...*http.Reque
 	return respch, errch
 }
 
-func batchUpload(numParallel int, reqs []*http.Request) {
+func batchUpload(numParallel int, reqs []*http.Request, bars []*pb.ProgressBar) {
+	pool, err := pb.StartPool(bars...)
+	if err != nil {
+		panic(err)
+	}
+
 	client := &http.Client{}
-	respch, errch := doBatchHTTPClient(client, numParallel, reqs...)
+	_, errch := doBatchHTTPClient(client, numParallel, reqs...)
+	// doBatchHTTPClient(client, numParallel, reqs...)
 
-	t := time.NewTicker(200 * time.Millisecond)
-
-	completed := 0
-	responses := make([]*http.Response, 0)
-	errors := make([]error, 0)
-	for completed < len(reqs) {
-		select {
-		case resp := <-respch:
-			if resp != nil {
-				responses = append(responses, resp)
+	wg := new(sync.WaitGroup)
+	for _, bar := range bars {
+		wg.Add(1)
+		bar.Start()
+		go func(cb *pb.ProgressBar) {
+			for cb.Get() < cb.Total {
 			}
-		case err := <-errch:
+			wg.Done()
+		}(bar)
+	}
+	wg.Wait()
+
+	// t := time.NewTicker(200 * time.Millisecond)
+
+	// completed := 0
+	// responses := make([]*http.Response, 0)
+	// errors := make([]error, 0)
+	// for completed < len(reqs) {
+	// 	select {
+	// 	case resp := <-respch:
+	// 		if resp != nil {
+	// 			responses = append(responses, resp)
+	// 		}
+	// 	case err := <-errch:
+	// 		if err != nil {
+	// 			errors = append(errors, err)
+	// 		}
+
+	// 	case <-t.C:
+	// 		for i, resp := range responses {
+	// 			if resp != nil {
+	// 				responses[i] = nil
+	// 				completed++
+	// 			}
+	// 		}
+
+	// 		for i, err := range errors {
+	// 			if err != nil {
+	// 				fmt.Printf("Error: %s\n", err.Error())
+	// 				errors[i] = nil
+	// 				completed++
+	// 			}
+	// 		}
+	// 		fmt.Println(completed)
+	// 	}
+	// }
+
+	if len(errch) > 0 {
+		for err := range errch {
 			if err != nil {
-				errors = append(errors, err)
-			}
-
-		case <-t.C:
-			for i, resp := range responses {
-				if resp != nil {
-					if resp.StatusCode == http.StatusOK {
-						fmt.Printf("Finished\n")
-					} else {
-						fmt.Printf("%d %s %d\n", resp.StatusCode, resp.Status, i)
-					}
-					responses[i] = nil
-					completed++
-				}
-			}
-
-			for i, err := range errors {
-				if err != nil {
-					fmt.Printf("Error\n")
-					errors[i] = nil
-					completed++
-				}
+				fmt.Printf("Error: %s\n", err.Error())
 			}
 		}
 	}
 
-	t.Stop()
+	pool.Stop()
 	fmt.Printf("%d files uploaded.\n", len(reqs))
 }
 
@@ -160,29 +182,32 @@ func init() {
 
 			if batch {
 				reqs := make([]*http.Request, 0)
+				bars := make([]*pb.ProgressBar, 0)
 				for _, object := range objects {
 					endPointPostfix := "/user/data/upload/" + object.ObjectID
-					respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
-					data, err := ioutil.ReadFile(uploadPath + "/" + object.SubjectID)
+					file, err := os.Open(uploadPath + "/" + object.SubjectID)
+					if err != nil {
+						log.Fatal("File Error")
+					}
+					defer file.Close()
+
+					req, bar, err := GenerateUploadRequest(file, fileType, respURL)
+
 					if err != nil {
 						fmt.Println(err.Error())
 						break
 					}
-					body := bytes.NewBufferString(string(data[:]))
-					contentType := "application/json"
-					if fileType == "tsv" {
-						contentType = "text/tab-separated-values"
-					}
-					req, _ := http.NewRequest(http.MethodPut, respURL, body)
-					req.Header.Set("content_type", contentType)
+
 					reqs = append(reqs, req)
+					bars = append(bars, bar)
 				}
-				batchUpload(numParallel, reqs)
+				batchUpload(numParallel, reqs, bars)
 			} else {
 				for _, object := range objects {
 					endPointPostfix := "/user/data/upload/" + object.ObjectID
-					respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {
@@ -191,7 +216,8 @@ func init() {
 							log.Fatalf("Fatal upload error: %s\n", err)
 						}
 					} else {
-						uploadFile(object.ObjectID, uploadPath+"/"+object.SubjectID, fileType, respURL)
+						filePath := uploadPath + "/" + object.SubjectID
+						uploadFile(object.ObjectID, filePath, fileType, respURL)
 					}
 				}
 			}
