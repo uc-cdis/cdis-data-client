@@ -109,7 +109,7 @@ func init() {
 				reqs := make([]*grab.Request, 0)
 				for _, object := range objects {
 					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {
@@ -131,7 +131,7 @@ func init() {
 			} else {
 				for _, object := range objects {
 					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {

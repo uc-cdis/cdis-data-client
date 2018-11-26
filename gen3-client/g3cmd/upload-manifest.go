@@ -185,7 +185,7 @@ func init() {
 				bars := make([]*pb.ProgressBar, 0)
 				for _, object := range objects {
 					endPointPostfix := "/user/data/upload/" + object.ObjectID
-					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 
 					file, err := os.Open(uploadPath + "/" + object.SubjectID)
 					if err != nil {
@@ -207,7 +207,7 @@ func init() {
 			} else {
 				for _, object := range objects {
 					endPointPostfix := "/user/data/upload/" + object.ObjectID
-					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {
@@ -230,6 +230,6 @@ func init() {
 	uploadManifestCmd.MarkFlagRequired("upload-path")
 	uploadManifestCmd.Flags().StringVar(&fileType, "file-type", "json", "Specify file type you're uploading with --file-type={json|tsv} (defaults to json)")
 	uploadManifestCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
-	uploadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
+	uploadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 2, "Number of uploads to run in parallel")
 	RootCmd.AddCommand(uploadManifestCmd)
 }

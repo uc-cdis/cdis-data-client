@@ -61,7 +61,7 @@ func init() {
 
 			endPointPostfix := "/user/data/upload/" + guid
 
-			signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+			signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 			if err != nil && !strings.Contains(err.Error(), "No UUID found") {
 				log.Fatalf("Upload error: %s!\n", err)
 			} else {
