@@ -4,12 +4,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/user"
 	"path"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
+
+type ManifestObject struct {
+	ObjectID  string `json:"object_id"`
+	SubjectID string `json:"subject_id"`
+}
 
 func parse_config(profile string) (string, string, string) {
 	//Look in config file
@@ -82,4 +92,31 @@ func parse_config(profile string) (string, string, string) {
 		api_endpoint = match[1]
 		return access_key, secret_key, api_endpoint
 	}
+}
+
+func GenerateUploadRequest(guid string, file *os.File, fileType string) (*http.Request, *pb.ProgressBar, error) {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	endPointPostfix := "/user/data/upload/" + guid
+	signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
+	if err != nil && !strings.Contains(err.Error(), "No GUID found") {
+		log.Fatalf("Upload error: %s!\n", err)
+		return nil, nil, err
+	}
+
+	fi, err := file.Stat()
+	if err != nil {
+		log.Fatal("File Stat Error")
+	}
+
+	bar := pb.New(int(fi.Size())).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond).Prefix(fi.Name() + " ")
+	req, err := http.NewRequest(http.MethodPut, signedURL, bar.NewProxyReader(file))
+	req.ContentLength = fi.Size()
+
+	return req, bar, err
 }

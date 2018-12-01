@@ -1,41 +1,29 @@
 package g3cmd
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
-
 	"github.com/spf13/cobra"
+	pb "gopkg.in/cheggaaa/pb.v1"
+
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func uploadFile(guid string, filePath string, fileType string, signedURL string) {
+func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath string) {
 	fmt.Println("Uploading data ...")
-	// Create and send request
-	data, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	body := bytes.NewBufferString(string(data[:]))
-	contentType := "application/json"
-	if fileType == "tsv" {
-		contentType = "text/tab-separated-values"
-	}
-	req, _ := http.NewRequest(http.MethodPut, signedURL, body)
-	req.Header.Set("content_type", contentType)
+	bar.Start()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error occured during upload: %s", err.Error())
+		return
 	}
-
 	fmt.Println(jwt.ResponseToString(resp))
-	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
+	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n\n", filePath, guid)
 }
 
 func init() {
@@ -49,26 +37,22 @@ func init() {
 		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
 		Example: `./gen3-client upload --profile user1 --guid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
 				log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
 			}
 
-			request := new(jwt.Request)
-			configure := new(jwt.Configure)
-			function := new(jwt.Functions)
-
-			function.Config = configure
-			function.Request = request
-
-			endPointPostfix := "/user/data/upload/" + guid
-
-			signedURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+			file, err := os.Open(filePath)
 			if err != nil {
-				log.Fatalf("Upload error: %s!\n", err)
-			} else {
-				uploadFile(guid, filePath, fileType, signedURL)
+				log.Fatal("File Error")
 			}
+			defer file.Close()
+
+			req, bar, err := GenerateUploadRequest(guid, file, fileType)
+			if err != nil {
+				log.Fatalf("Error occured during request generation: %s", err.Error())
+				return
+			}
+			uploadFile(req, bar, guid, filePath)
 		},
 	}
 
