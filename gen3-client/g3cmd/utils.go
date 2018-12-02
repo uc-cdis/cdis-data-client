@@ -103,7 +103,7 @@ func GenerateUploadRequest(guid string, file *os.File, fileType string) (*http.R
 	function.Request = request
 
 	endPointPostfix := "/user/data/upload/" + guid
-	signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
+	signedURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 	if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 		log.Fatalf("Upload error: %s!\n", err)
 		return nil, nil, err

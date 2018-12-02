@@ -15,8 +15,7 @@ type AccessTokenStruct struct {
 }
 
 type JsonMessage struct {
-	Url  string
-	GUID string
+	Url string
 }
 
 type DoRequest func(*http.Response) *http.Response

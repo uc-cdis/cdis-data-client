@@ -172,6 +172,7 @@ func init() {
 					bars = append(bars, bar)
 				} else {
 					uploadFile(req, bar, guid, filePath)
+					file.Close()
 				}
 			}
 			if batch {

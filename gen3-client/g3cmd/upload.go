@@ -20,10 +20,12 @@ func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath st
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("Error occured during upload: %s", err.Error())
+		bar.Finish()
 		return
 	}
+	bar.Finish()
 	fmt.Println(jwt.ResponseToString(resp))
-	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n\n", filePath, guid)
+	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
 }
 
 func init() {

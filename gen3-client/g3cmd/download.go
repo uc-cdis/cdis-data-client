@@ -83,7 +83,7 @@ func init() {
 
 			endPointPostfix := "/user/data/download/" + guid + protocolText
 
-			respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
+			respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
 
 			if err != nil {
 				if strings.Contains(err.Error(), "The provided guid") {
