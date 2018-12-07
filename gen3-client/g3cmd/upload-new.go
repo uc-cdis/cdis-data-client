@@ -24,7 +24,6 @@ func init() {
 	var fileType string
 	var batch bool
 	var numParallel int
-	var filePaths []string
 
 	var uploadNewCmd = &cobra.Command{
 		Use:     "upload-new",
@@ -41,20 +40,12 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			fi, err := os.Stat(uploadPath)
+			filePaths, err := filepath.Glob(uploadPath)
 			if err != nil {
-				panic(err)
+				log.Fatalf(err.Error())
 			}
-			if fi.IsDir() {
-				dirFiles, err := ioutil.ReadDir(uploadPath)
-				if err != nil {
-					log.Fatal(err)
-				}
-				for _, file := range dirFiles {
-					filePaths = append(filePaths, filepath.Join(uploadPath, file.Name()))
-				}
-			} else {
-				filePaths = append(filePaths, uploadPath)
+			if len(filePaths) == 0 {
+				log.Fatalf("Error when parsing file paths.")
 			}
 
 			reqs := make([]*http.Request, 0)
@@ -68,7 +59,7 @@ func init() {
 				endPointPostfix := "/user/data/upload"
 				object := NewFlowRequestObject{Filename: filepath.Base(filePath)}
 				objectBytes, err := json.Marshal(object)
-				fmt.Println(string(objectBytes))
+
 				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, objectBytes)
 
 				if respURL == "" || guid == "" {
@@ -136,7 +127,6 @@ func initHistory() {
 	}
 
 	historyFile = home + "/.gen3/" + profile + "_history.json"
-	fmt.Println(historyFile)
 
 	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0666)
 	fi, err := file.Stat()

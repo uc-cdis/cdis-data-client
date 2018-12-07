@@ -5,7 +5,6 @@ package jwt
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -45,7 +44,6 @@ func (r *Request) MakeARequest(client *http.Client, method string, apiEndpoint s
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
-	fmt.Println(body)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -219,9 +217,6 @@ func (r *Request) GetPresignedURLPost(host *url.URL, endpointPostPrefix string, 
 	headers["Content-Type"] = "application/json"
 	headers["Authorization"] = "Bearer " + accessKey
 	client := &http.Client{}
-	fmt.Println(apiEndPoint)
-	fmt.Println(headers)
-	fmt.Println(body)
 	resp, err := r.MakeARequest(client, "POST", apiEndPoint, headers, body)
 	if err != nil {
 		panic(err)
@@ -252,7 +247,6 @@ func (r *Request) SignedRequest(method string, url_string string, body io.Reader
 		return nil, err
 	}
 	req.Header.Add("Authorization", "Bearer "+access_key)
-	fmt.Println(req.Header)
 
 	return client.Do(req)
 }
