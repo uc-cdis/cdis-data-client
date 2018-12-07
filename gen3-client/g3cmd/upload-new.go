@@ -17,7 +17,7 @@ import (
 )
 
 var historyFile string
-var historyFileMap map[string]interface{}
+var historyFileMap map[string]string
 
 func init() {
 	var uploadPath string
@@ -97,7 +97,7 @@ func init() {
 					uploadFile(req, bar, guid, filePath)
 					file.Close()
 				}
-				historyFileMap[filePath] = "guid"
+				historyFileMap[filePath] = guid
 			}
 
 			if batch {
@@ -116,7 +116,7 @@ func init() {
 
 			jsonFile.Write(jsonData)
 			jsonFile.Close()
-			fmt.Println("Local history data updated in %s", jsonFile.Name())
+			fmt.Println("Local history data updated in ", jsonFile.Name())
 		},
 	}
 
@@ -144,7 +144,7 @@ func initHistory() {
 		panic(err)
 	}
 
-	historyFileMap = make(map[string]interface{})
+	historyFileMap = make(map[string]string)
 	if fi.Size() > 0 {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
