@@ -100,10 +100,6 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		return msg, errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
 	}
 
-	if resp.StatusCode == 401 {
-		return msg, errors.New("You don't have premission to access url \"" + resp.Request.URL.String() + "\"!")
-	}
-
 	str := ResponseToString(resp)
 	if strings.Contains(str, "Can't find a location for the data") {
 		return msg, errors.New("The provided guid is not found!")
