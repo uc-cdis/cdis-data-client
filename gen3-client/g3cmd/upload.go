@@ -5,33 +5,25 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
+	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func uploadFile(guid string, filePath string, fileType string, signedURL string) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Fatal("File Error")
-	}
-	defer file.Close()
-
-	req, bar, err := GenerateUploadRequest(file, fileType, signedURL)
-	if err != nil {
-		log.Fatalf("Error occured during request generation: %s", err.Error())
-		return
-	}
+func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath string) {
 	fmt.Println("Uploading data ...")
 	bar.Start()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error occured during upload: %s", err.Error())
+		bar.Finish()
+		return
 	}
+	bar.Finish()
 	fmt.Println(jwt.ResponseToString(resp))
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
 }
@@ -47,26 +39,22 @@ func init() {
 		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
 		Example: `./gen3-client upload --profile user1 --guid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
 				log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
 			}
 
-			request := new(jwt.Request)
-			configure := new(jwt.Configure)
-			function := new(jwt.Functions)
-
-			function.Config = configure
-			function.Request = request
-
-			endPointPostfix := "/user/data/upload/" + guid
-
-			signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
-			if err != nil && !strings.Contains(err.Error(), "No UUID found") {
-				log.Fatalf("Upload error: %s!\n", err)
-			} else {
-				uploadFile(guid, filePath, fileType, signedURL)
+			file, err := os.Open(filePath)
+			if err != nil {
+				log.Fatal("File Error")
 			}
+			defer file.Close()
+
+			req, bar, err := GenerateUploadRequest(guid, "", file, fileType)
+			if err != nil {
+				log.Fatalf("Error occured during request generation: %s", err.Error())
+				return
+			}
+			uploadFile(req, bar, guid, filePath)
 		},
 	}
 

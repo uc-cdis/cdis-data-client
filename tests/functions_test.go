@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -27,7 +28,7 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 
 	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
 
-	_, err := testFunction.DoRequestWithSignedHeader("default", "not_json", "/user/data/download/test_uuid")
+	_, _, err := testFunction.DoRequestWithSignedHeader("default", "not_json", "/user/data/download/test_uuid", nil)
 
 	if err == nil {
 		t.Fail()
@@ -51,9 +52,9 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), "/user/data/download/test_uuid", "non_exprired_token").Return(mockedResp).Times(1)
 
-	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
+	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", nil)
 
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "No GUID found in ") {
 		t.Fail()
 	}
 }
@@ -76,15 +77,14 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
 	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
-	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
+	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(1)
 
-	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
+	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", nil)
 
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "No GUID found in ") {
 		t.Fail()
 	}
-
 }
 
 func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
@@ -106,12 +106,12 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
 	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), "http://www.test.com", gomock.Any(), "default").Times(1)
 
-	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/cdis/access_token", &cred).Times(1)
+	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Times(1)
 	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(2)
 
-	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid")
+	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", nil)
 
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "No GUID found in ") {
 		t.Fail()
 	}
 

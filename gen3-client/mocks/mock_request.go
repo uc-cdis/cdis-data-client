@@ -45,9 +45,19 @@ func (m *MockRequestInterface) GetPresignedURL(arg0 *url.URL, arg1, arg2 string)
 	return ret0
 }
 
+func (m *MockRequestInterface) GetPresignedURLPost(arg0 *url.URL, arg1, arg2 string, arg3 *bytes.Buffer) *http.Response {
+	ret := m.ctrl.Call(m, "GetPresignedURLPost", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*http.Response)
+	return ret0
+}
+
 // GetPresignedURL indicates an expected call of GetPresignedURL
 func (mr *MockRequestInterfaceMockRecorder) GetPresignedURL(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPresignedURL", reflect.TypeOf((*MockRequestInterface)(nil).GetPresignedURL), arg0, arg1, arg2)
+}
+
+func (mr *MockRequestInterfaceMockRecorder) GetPresignedURLPost(arg0, arg1, arg2, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPresignedURLPost", reflect.TypeOf((*MockRequestInterface)(nil).GetPresignedURLPost), arg0, arg1, arg2)
 }
 
 // MakeARequest mocks base method

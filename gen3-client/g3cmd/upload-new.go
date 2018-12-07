@@ -1,7 +1,6 @@
 package g3cmd
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -28,11 +27,10 @@ func init() {
 	var filePaths []string
 
 	var uploadNewCmd = &cobra.Command{
-		Use:   "upload-new",
-		Short: "upload file(s) with a new flow.",
-		Long: `Gets a presigned URL for a file and then uploads the specified file.
-	Examples: ./gen3-client upload-new --profile user1 --upload-path=files/ 
-	`,
+		Use:     "upload-new",
+		Short:   "upload file(s) with a new flow.",
+		Long:    `Gets a presigned URL for a file and then uploads the specified file.`,
+		Example: `./gen3-client upload-new --profile user1 --upload-path=files/`,
 		Run: func(cmd *cobra.Command, args []string) {
 			initHistory()
 
@@ -68,38 +66,42 @@ func init() {
 					continue
 				}
 				endPointPostfix := "/user/data/upload"
-				dataBody := bytes.NewBufferString("{\"filename\": \"" + filepath.Base(filePath) + "\"}")
-				respURL, GUID, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, dataBody)
+				object := NewFlowRequestObject{Filename: filepath.Base(filePath)}
+				objectBytes, err := json.Marshal(object)
+				fmt.Println(string(objectBytes))
+				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, objectBytes)
 
+				if respURL == "" || guid == "" {
+					log.Fatalf("Error has occured during presigned URL or GUID generation.")
+				}
+
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
+					log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
+				}
+
+				file, err := os.Open(filePath)
+				if err != nil {
+					log.Fatal("File Error")
+				}
+				defer file.Close()
+
+				req, bar, err := GenerateUploadRequest("", respURL, file, fileType)
+				if err != nil {
+					log.Fatalf("Error occured during request generation: %s", err.Error())
+					continue
+				}
 				if batch {
-					file, err := os.Open(filePath)
-					if err != nil {
-						log.Fatal("File Error")
-					}
-					defer file.Close()
-
-					req, bar, err := GenerateUploadRequest(file, fileType, respURL)
-
-					if err != nil {
-						fmt.Println(err.Error())
-						break
-					}
-
 					reqs = append(reqs, req)
 					bars = append(bars, bar)
-					fmt.Println(GUID)
 				} else {
-					if err != nil {
-						log.Fatalf("Fatal upload error: %s\n", err)
-					} else {
-						uploadFile(GUID, filePath, fileType, respURL)
-					}
+					uploadFile(req, bar, guid, filePath)
+					file.Close()
 				}
-				historyFileMap[filePath] = GUID
+				historyFileMap[filePath] = "guid"
 			}
 
 			if batch {
-				batchUpload(numParallel, reqs, nil)
+				batchUpload(numParallel, reqs, bars)
 			}
 
 			jsonData, err := json.Marshal(historyFileMap)
@@ -114,7 +116,7 @@ func init() {
 
 			jsonFile.Write(jsonData)
 			jsonFile.Close()
-			fmt.Println("Local history data updated in ", jsonFile.Name())
+			fmt.Println("Local history data updated in %s", jsonFile.Name())
 		},
 	}
 
@@ -142,9 +144,8 @@ func initHistory() {
 		panic(err)
 	}
 
+	historyFileMap = make(map[string]interface{})
 	if fi.Size() > 0 {
-		historyFileMap = make(map[string]interface{})
-
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
 			log.Fatal(err)

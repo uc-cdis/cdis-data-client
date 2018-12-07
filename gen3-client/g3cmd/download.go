@@ -63,11 +63,10 @@ func init() {
 	var protocol string
 
 	var downloadCmd = &cobra.Command{
-		Use:   "download",
-		Short: "download a file from a UUID",
-		Long: `Gets a presigned URL for a file from a GUID and then downloads the specified file.
-	Examples: ./gen3-client download --profile user1 --guid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json 
-	`,
+		Use:     "download",
+		Short:   "download a file from a GUID",
+		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
+		Example: `./gen3-client download --profile user1 --guid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)

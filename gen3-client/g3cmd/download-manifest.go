@@ -15,11 +15,6 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-type ManifestObject struct {
-	ObjectID  string `json:"object_id"`
-	SubjectID string `json:"subject_id"`
-}
-
 func batchDownload(numParallel int, reqs []*grab.Request) {
 
 	client := grab.NewClient()
