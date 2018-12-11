@@ -3,7 +3,6 @@ package jwt
 //go:generate mockgen -destination=mocks/mock_configure.go -package=mocks jwt ConfigureInterface
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,7 +26,7 @@ type Configure struct{}
 
 type ConfigureInterface interface {
 	ReadFile(string, string) string
-	ParseUrl() string
+	ValidateUrl(string)
 	ReadLines(Credential, []byte, string, string) ([]string, bool)
 	UpdateConfigFile(Credential, []byte, string, string, string)
 	ParseKeyValue(str string, expr string, errMsg string) string
@@ -62,11 +61,7 @@ func (conf *Configure) ReadFile(file_path string, file_type string) string {
 	return string(content[:])
 }
 
-func (conf *Configure) ParseUrl() string {
-	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Print("API endpoint: ")
-	scanner.Scan()
-	apiEndpoint := scanner.Text()
+func (conf *Configure) ValidateUrl(apiEndpoint string) {
 	parsed_url, err := url.Parse(apiEndpoint)
 	if err != nil {
 		panic(err)
@@ -75,7 +70,6 @@ func (conf *Configure) ParseUrl() string {
 		fmt.Print("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
 		os.Exit(1)
 	}
-	return apiEndpoint
 }
 
 func (conf *Configure) ReadCredentials(filePath string) Credential {
