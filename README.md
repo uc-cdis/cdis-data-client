@@ -30,5 +30,3 @@ cd gen3-client
 go get -d ./...
 go install .
 ```
-
-If installing locally and not in a docker container, go to `gen3-cmd/root.go` and comment out the two lines that have `gitversion` and `gitcommit`. 
