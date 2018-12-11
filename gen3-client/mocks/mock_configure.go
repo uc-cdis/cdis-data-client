@@ -58,16 +58,14 @@ func (mr *MockConfigureInterfaceMockRecorder) ParseKeyValue(arg0, arg1, arg2 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseKeyValue", reflect.TypeOf((*MockConfigureInterface)(nil).ParseKeyValue), arg0, arg1, arg2)
 }
 
-// ParseUrl mocks base method
-func (m *MockConfigureInterface) ParseUrl() string {
-	ret := m.ctrl.Call(m, "ParseUrl")
-	ret0, _ := ret[0].(string)
-	return ret0
+// ValidateUrl mocks base method
+func (m *MockConfigureInterface) ValidateUrl(arg0 string) {
+	m.ctrl.Call(m, "ValidateUrl")
 }
 
-// ParseUrl indicates an expected call of ParseUrl
-func (mr *MockConfigureInterfaceMockRecorder) ParseUrl() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseUrl", reflect.TypeOf((*MockConfigureInterface)(nil).ParseUrl))
+// ValidateUrl indicates an expected call of ValidateUrl
+func (mr *MockConfigureInterfaceMockRecorder) ValidateUrl() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateUrl", reflect.TypeOf((*MockConfigureInterface)(nil).ValidateUrl))
 }
 
 // ReadFile mocks base method
