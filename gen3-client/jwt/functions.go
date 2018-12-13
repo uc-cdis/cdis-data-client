@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os/user"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -96,6 +97,10 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		return msg, nil
 	}
 
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " error has occured for url \"" + resp.Request.URL.String())
+	}
+
 	if resp.StatusCode == 404 {
 		return msg, errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
 	}
@@ -109,15 +114,6 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	if err != nil {
 		return msg, errors.New(str)
 	}
-
-	if msg.Url == "" {
-		return msg, errors.New("Can not get url from " + str)
-	}
-
-	if msg.GUID == "" {
-		return msg, errors.New("No GUID found in " + str)
-	}
-
 	return msg, nil
 }
 

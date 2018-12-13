@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -54,7 +53,7 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", nil)
 
-	if err != nil && !strings.Contains(err.Error(), "No GUID found in ") {
+	if err != nil {
 		t.Fail()
 	}
 }
@@ -82,7 +81,7 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", nil)
 
-	if err != nil && !strings.Contains(err.Error(), "No GUID found in ") {
+	if err != nil {
 		t.Fail()
 	}
 }
@@ -111,7 +110,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", nil)
 
-	if err != nil && !strings.Contains(err.Error(), "No GUID found in ") {
+	if err != nil {
 		t.Fail()
 	}
 

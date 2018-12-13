@@ -21,7 +21,6 @@ var historyFileMap map[string]string
 
 func init() {
 	var uploadPath string
-	var fileType string
 	var batch bool
 	var numParallel int
 
@@ -76,7 +75,7 @@ func init() {
 				}
 				defer file.Close()
 
-				req, bar, err := GenerateUploadRequest("", respURL, file, fileType)
+				req, bar, err := GenerateUploadRequest("", respURL, file)
 				if err != nil {
 					log.Fatalf("Error occured during request generation: %s", err.Error())
 					continue
@@ -113,7 +112,6 @@ func init() {
 
 	uploadNewCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
 	uploadNewCmd.MarkFlagRequired("upload-path")
-	uploadNewCmd.Flags().StringVar(&fileType, "file-type", "json", "Specify file type you're uploading with --file-type={json|tsv} (defaults to json)")
 	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
 	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	RootCmd.AddCommand(uploadNewCmd)

@@ -111,7 +111,6 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 func init() {
 	var manifestPath string
 	var uploadPath string
-	var fileType string
 	var batch bool
 	var numParallel int
 
@@ -119,7 +118,7 @@ func init() {
 		Use:        "upload-manifest",
 		Short:      "upload files from a specified manifest",
 		Long:       `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
-		Example:    `./gen3-client upload-manifest --profile user1 --manifest manifest.tsv --upload-path=files/`,
+		Example:    `./gen3-client upload-manifest --profile user1 --manifest manifest.json --upload-path=files/`,
 		Deprecated: `use "./gen3-client upload" instead.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var objects []ManifestObject
@@ -164,7 +163,7 @@ func init() {
 				}
 				defer file.Close()
 
-				req, bar, err := GenerateUploadRequest(guid, "", file, fileType)
+				req, bar, err := GenerateUploadRequest(guid, "", file)
 				if err != nil {
 					log.Fatalf("Error occured during request generation: %s", err.Error())
 					continue
@@ -188,7 +187,6 @@ func init() {
 	uploadManifestCmd.MarkFlagRequired("manifest")
 	uploadManifestCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
 	uploadManifestCmd.MarkFlagRequired("upload-path")
-	uploadManifestCmd.Flags().StringVar(&fileType, "file-type", "json", "Specify file type you're uploading with --file-type={json|tsv} (defaults to json)")
 	uploadManifestCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
 	uploadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 2, "Number of uploads to run in parallel")
 	RootCmd.AddCommand(uploadManifestCmd)
