@@ -1,5 +1,6 @@
 package g3cmd
 
+// Deprecated: Use upload instead.
 import (
 	"encoding/json"
 	"errors"
@@ -115,10 +116,11 @@ func init() {
 	var numParallel int
 
 	var uploadManifestCmd = &cobra.Command{
-		Use:     "upload-manifest",
-		Short:   "upload files from a specified manifest",
-		Long:    `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
-		Example: `./gen3-client upload-manifest --profile user1 --manifest manifest.tsv --upload-path=files/`,
+		Use:        "upload-manifest",
+		Short:      "upload files from a specified manifest",
+		Long:       `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
+		Example:    `./gen3-client upload-manifest --profile user1 --manifest manifest.tsv --upload-path=files/`,
+		Deprecated: `use "./gen3-client upload" instead.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var objects []ManifestObject
 

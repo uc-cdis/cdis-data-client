@@ -1,67 +1,149 @@
 package g3cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath string) {
-	fmt.Println("Uploading data ...")
-	bar.Start()
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("Error occured during upload: %s", err.Error())
-		bar.Finish()
-		return
-	}
-	bar.Finish()
-	fmt.Println(jwt.ResponseToString(resp))
-	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
-}
+var historyFile string
+var historyFileMap map[string]string
 
 func init() {
-	var guid string
-	var filePath string
+	var uploadPath string
 	var fileType string
+	var batch bool
+	var numParallel int
 
-	var uploadCmd = &cobra.Command{
+	var uploadNewCmd = &cobra.Command{
 		Use:     "upload",
-		Short:   "Upload a file to a GUID",
-		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
-		Example: `./gen3-client upload --profile user1 --guid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload`,
+		Short:   "upload file(s) to object storage.",
+		Long:    `Gets a presigned URL for each file and then uploads the specified file(s).`,
+		Example: `./gen3-client upload --profile user1 --upload-path=files/`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
+			initHistory()
+
+			request := new(jwt.Request)
+			configure := new(jwt.Configure)
+			function := new(jwt.Functions)
+
+			function.Config = configure
+			function.Request = request
+
+			filePaths, err := filepath.Glob(uploadPath)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+			if len(filePaths) == 0 {
+				log.Fatalf("Error when parsing file paths.")
 			}
 
-			file, err := os.Open(filePath)
-			if err != nil {
-				log.Fatal("File Error")
-			}
-			defer file.Close()
+			reqs := make([]*http.Request, 0)
+			bars := make([]*pb.ProgressBar, 0)
+			for _, filePath := range filePaths {
+				_, present := historyFileMap[filePath]
+				if present {
+					fmt.Printf("File %s has been found in local submission history and has be skipped for preventing duplicated submissions.\n", filePath)
+					continue
+				}
+				endPointPostfix := "/user/data/upload"
+				object := NewFlowRequestObject{Filename: filepath.Base(filePath)}
+				objectBytes, err := json.Marshal(object)
 
-			req, bar, err := GenerateUploadRequest(guid, "", file, fileType)
-			if err != nil {
-				log.Fatalf("Error occured during request generation: %s", err.Error())
-				return
+				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, objectBytes)
+
+				if respURL == "" || guid == "" {
+					log.Fatalf("Error has occured during presigned URL or GUID generation.")
+				}
+
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
+					log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
+				}
+
+				file, err := os.Open(filePath)
+				if err != nil {
+					log.Fatal("File Error")
+				}
+				defer file.Close()
+
+				req, bar, err := GenerateUploadRequest("", respURL, file, fileType)
+				if err != nil {
+					log.Fatalf("Error occured during request generation: %s", err.Error())
+					continue
+				}
+				if batch {
+					reqs = append(reqs, req)
+					bars = append(bars, bar)
+				} else {
+					uploadFile(req, bar, guid, filePath)
+					file.Close()
+				}
+				historyFileMap[filePath] = guid
 			}
-			uploadFile(req, bar, guid, filePath)
+
+			if batch {
+				batchUpload(numParallel, reqs, bars)
+			}
+
+			jsonData, err := json.Marshal(historyFileMap)
+			if err != nil {
+				panic(err)
+			}
+			jsonFile, err := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0666)
+			if err != nil {
+				panic(err)
+			}
+			defer jsonFile.Close()
+
+			jsonFile.Write(jsonData)
+			jsonFile.Close()
+			fmt.Println("Local history data updated in ", jsonFile.Name())
 		},
 	}
 
-	uploadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
-	uploadCmd.MarkFlagRequired("guid")
-	uploadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
-	uploadCmd.MarkFlagRequired("file")
-	uploadCmd.Flags().StringVar(&fileType, "file-type", "json", "Specify file-type you're uploading with --file-type={json|tsv} (defaults to json)")
-	RootCmd.AddCommand(uploadCmd)
+	uploadNewCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
+	uploadNewCmd.MarkFlagRequired("upload-path")
+	uploadNewCmd.Flags().StringVar(&fileType, "file-type", "json", "Specify file type you're uploading with --file-type={json|tsv} (defaults to json)")
+	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
+	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
+	RootCmd.AddCommand(uploadNewCmd)
+}
+
+func initHistory() {
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	historyFile = home + "/.gen3/" + profile + "_history.json"
+
+	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0666)
+	fi, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+
+	historyFileMap = make(map[string]string)
+	if fi.Size() > 0 {
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = json.Unmarshal(data, &historyFileMap)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
