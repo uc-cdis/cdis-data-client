@@ -12,8 +12,6 @@ import (
 var cfgFile string
 var profile string
 var uri string
-var gitversion = "N/A"
-var gitcommit = "N/A"
 
 /* RootCmd represents the base command when called without any subcommands */
 var RootCmd = &cobra.Command{
