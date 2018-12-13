@@ -5,6 +5,7 @@ package jwt
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -98,7 +99,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	}
 
 	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " error has occured for url \"" + resp.Request.URL.String())
+		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " error has occured!")
 	}
 
 	if resp.StatusCode == 404 {
@@ -235,10 +236,9 @@ func (r *Request) SignedRequest(method string, url_string string, body io.Reader
 
 	req, err := http.NewRequest(method, url_string, body)
 	if err != nil {
-		println("error", err)
+		fmt.Println("error", err)
 		return nil, err
 	}
 	req.Header.Add("Authorization", "Bearer "+access_key)
-
 	return client.Do(req)
 }

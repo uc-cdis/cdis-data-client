@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -110,7 +111,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", nil)
 
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "401") {
 		t.Fail()
 	}
 
