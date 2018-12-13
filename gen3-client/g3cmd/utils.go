@@ -94,7 +94,7 @@ func parse_config(profile string) (string, string, string) {
 	}
 }
 
-func GenerateUploadRequest(guid string, file *os.File, fileType string) (*http.Request, *pb.ProgressBar, error) {
+func GenerateUploadRequest(guid string, file *os.File) (*http.Request, *pb.ProgressBar, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)

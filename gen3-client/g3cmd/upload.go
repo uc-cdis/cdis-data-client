@@ -31,7 +31,6 @@ func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath st
 func init() {
 	var guid string
 	var filePath string
-	var fileType string
 
 	var uploadCmd = &cobra.Command{
 		Use:     "upload",
@@ -49,7 +48,7 @@ func init() {
 			}
 			defer file.Close()
 
-			req, bar, err := GenerateUploadRequest(guid, file, fileType)
+			req, bar, err := GenerateUploadRequest(guid, file)
 			if err != nil {
 				log.Fatalf("Error occured during request generation: %s", err.Error())
 				return
@@ -62,6 +61,5 @@ func init() {
 	uploadCmd.MarkFlagRequired("guid")
 	uploadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
 	uploadCmd.MarkFlagRequired("file")
-	uploadCmd.Flags().StringVar(&fileType, "file-type", "json", "Specify file-type you're uploading with --file-type={json|tsv} (defaults to json)")
 	RootCmd.AddCommand(uploadCmd)
 }

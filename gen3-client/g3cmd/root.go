@@ -15,10 +15,10 @@ var uri string
 
 /* RootCmd represents the base command when called without any subcommands */
 var RootCmd = &cobra.Command{
-	Use:   "gen3-client",
-	Short: "Use the gen3-client to interact with a Gen3 Data Commons",
-	// Long:    "Gen3 Client for downloading, uploading and submitting data to data commons.\ngen3-client version: " + gitversion + ", commit: " + gitcommit,
-	// Version: gitversion,
+	Use:     "gen3-client",
+	Short:   "Use the gen3-client to interact with a Gen3 Data Commons",
+	Long:    "Gen3 Client for downloading, uploading and submitting data to data commons.\ngen3-client version: " + gitversion + ", commit: " + gitcommit,
+	Version: gitversion,
 }
 
 /* Execute adds all child commands to the root command sets flags appropriately

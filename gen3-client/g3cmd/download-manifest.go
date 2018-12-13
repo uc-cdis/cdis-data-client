@@ -77,7 +77,7 @@ func init() {
 		Use:     "download-manifest",
 		Short:   "download files from a specified manifest",
 		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
-		Example: `./gen3-client download-manifest --profile user1 --manifest manifest.tsv --download-path=files/`,
+		Example: `./gen3-client download-manifest --profile user1 --manifest manifest.json --download-path=files/`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
