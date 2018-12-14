@@ -11,9 +11,8 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	pb "gopkg.in/cheggaaa/pb.v1"
-
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 var historyFile string

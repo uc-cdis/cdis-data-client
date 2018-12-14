@@ -98,8 +98,12 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		return msg, nil
 	}
 
-	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " error has occured!")
+	if resp.StatusCode == 401 {
+		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
+	}
+
+	if resp.StatusCode == 403 {
+		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " Forbidden error has occured! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
 	}
 
 	if resp.StatusCode == 404 {
@@ -186,7 +190,7 @@ func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, acce
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 200 && resp.StatusCode != 401 && resp.StatusCode != 404 {
+	if resp.StatusCode != 200 && resp.StatusCode != 401 && resp.StatusCode != 403 && resp.StatusCode != 404 {
 		log.Fatalf("Unexpected error %d, %s\n", resp.StatusCode, ResponseToString(resp))
 	}
 
@@ -214,7 +218,7 @@ func (r *Request) GetPresignedURLPost(host *url.URL, endpointPostPrefix string, 
 	if err != nil {
 		panic(err)
 	}
-	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 401 && resp.StatusCode != 404 {
+	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 401 && resp.StatusCode != 403 && resp.StatusCode != 404 {
 		log.Fatalf("Unexpected error %d, %s\n", resp.StatusCode, ResponseToString(resp))
 	}
 

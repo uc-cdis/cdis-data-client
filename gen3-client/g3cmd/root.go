@@ -34,7 +34,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Define flags and configuration settings.
-	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "Specify profile to add or edit with --profile user2")
+	RootCmd.PersistentFlags().StringVar(&profile, "profile", "default", "Specify profile to add or edit with --profile=<profile-name>")
 }
 
 // initConfig reads in config file and ENV variables if set.
