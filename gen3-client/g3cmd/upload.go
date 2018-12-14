@@ -61,6 +61,7 @@ func init() {
 				}
 				file.Close()
 			}
+
 			if err != nil {
 				log.Fatalf(err.Error())
 			}

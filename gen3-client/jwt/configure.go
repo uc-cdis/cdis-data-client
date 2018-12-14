@@ -34,29 +34,29 @@ type ConfigureInterface interface {
 	ParseConfig(profile string) Credential
 }
 
-func (conf *Configure) ReadFile(file_path string, file_type string) string {
+func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	//Look in config file
-	var full_file_path string
-	if file_path[0] == '~' {
+	var fullFilePath string
+	if filePath[0] == '~' {
 		usr, _ := user.Current()
 		homeDir := usr.HomeDir
-		full_file_path = homeDir + file_path[1:]
+		fullFilePath = homeDir + filePath[1:]
 	} else {
-		full_file_path = file_path
+		fullFilePath = filePath
 	}
-	if _, err := os.Stat(full_file_path); err != nil {
-		fmt.Println("File specified at " + full_file_path + " not found")
+	if _, err := os.Stat(fullFilePath); err != nil {
+		fmt.Println("File specified at " + fullFilePath + " not found")
 		return ""
 	}
 
-	content, err := ioutil.ReadFile(full_file_path)
+	content, err := ioutil.ReadFile(fullFilePath)
 	if err != nil {
 		panic(err)
 	}
 
 	content_str := string(content[:])
 
-	if file_type == "json" {
+	if fileType == "json" {
 		content_str = strings.Replace(content_str, "\n", "", -1)
 	}
 	return string(content[:])
@@ -216,8 +216,6 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 			profile: the specific profile in config file
 		Returns:
 			An instance of Credential
-
-
 	*/
 	usr, err := user.Current()
 	homeDir := ""
