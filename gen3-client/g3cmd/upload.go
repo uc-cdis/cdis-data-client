@@ -76,7 +76,7 @@ func init() {
 				log.Fatalf(err.Error())
 			}
 			if len(filePaths) == 0 {
-				log.Fatalf("Error when parsing file paths.")
+				log.Fatalf("Error when parsing file paths, no file has been found in the provided location \"" + uploadPath + "\"")
 			}
 
 			reqs := make([]*http.Request, 0)
