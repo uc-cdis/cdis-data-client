@@ -26,24 +26,34 @@ func initHistory() {
 		os.Exit(1)
 	}
 
+	if _, err := os.Stat(home + "/.gen3/"); os.IsNotExist(err) { // path to ~/.gen3 does not exist
+		err = os.Mkdir(home+"/.gen3/", 0644)
+		if err != nil {
+			log.Fatal("Cannot create folder \"" + home + "/.gen3/\"")
+			os.Exit(1)
+		}
+		fmt.Println("Created folder \"" + home + "/.gen3/\"")
+	}
+
 	historyFile = home + "/.gen3/" + profile + "_history.json"
 
-	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0666)
+	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0644)
 	fi, err := file.Stat()
 	if err != nil {
-		panic(err)
+		log.Fatal("Error occured when opening file \"" + historyFile + "\": " + err.Error())
 	}
+	fmt.Println("Local history file \"" + historyFile + "\" has opened")
 
 	historyFileMap = make(map[string]string)
 	if fi.Size() > 0 {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error occured when reading from file \"" + historyFile + "\": " + err.Error())
 		}
 
 		err = json.Unmarshal(data, &historyFileMap)
 		if err != nil {
-			panic(err)
+			log.Fatal("Error occured when unmarshaling JSON objects: " + err.Error())
 		}
 	}
 }
@@ -78,6 +88,15 @@ func init() {
 			if len(filePaths) == 0 {
 				log.Fatalf("Error when parsing file paths, no file has been found in the provided location \"" + uploadPath + "\"")
 			}
+			fmt.Println("\nThe following file(s) has been founded in path \"" + uploadPath + "\" and will be uploaded:")
+			for _, filePath := range filePaths {
+				file, _ := os.Open(filePath)
+				if fi, _ := file.Stat(); !fi.IsDir() {
+					fmt.Println("\t" + filePath)
+				}
+				file.Close()
+			}
+			fmt.Println()
 
 			reqs := make([]*http.Request, 0)
 			bars := make([]*pb.ProgressBar, 0)

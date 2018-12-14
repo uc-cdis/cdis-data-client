@@ -1,6 +1,7 @@
 package commonUtils
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -8,6 +9,7 @@ import (
 )
 
 func ParseFilePaths(filePath string) ([]string, error) {
+	fmt.Println("\nBegin parsing all file paths for \"" + filePath + "\"")
 	var fullFilePath string
 	if filePath[0] == '~' {
 		usr, _ := user.Current()
@@ -37,5 +39,6 @@ func ParseFilePaths(filePath string) ([]string, error) {
 		}
 		file.Close()
 	}
+	fmt.Println("Finish parsing all file paths for \"" + filePath + "\"")
 	return filePaths, err
 }
