@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os/user"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -77,7 +78,8 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 		if resp.StatusCode == 401 {
 			fmt.Println("401 Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
 		}
-		log.Fatalf("Could not get new access key. " + ResponseToString(resp))
+		log.Fatalf("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check fence log for more details.")
+		return
 	}
 
 	str := ResponseToString(resp)
@@ -87,7 +89,7 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	}
 
 	if m.Access_token == "" {
-		log.Fatalf("Could not get new access key from " + str)
+		log.Fatalf("Could not get new access key from response string: " + str)
 	}
 	cred.AccessKey = m.Access_token
 
@@ -119,7 +121,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 
 	err := DecodeJsonFromString(str, &msg)
 	if err != nil {
-		return msg, errors.New(str)
+		return msg, err
 	}
 	return msg, nil
 }
@@ -193,7 +195,7 @@ func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, acce
 		panic(err)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 401 && resp.StatusCode != 403 && resp.StatusCode != 404 {
-		log.Fatalf("Unexpected error %d, %s\n", resp.StatusCode, ResponseToString(resp))
+		log.Fatalf("Unexpected error %d\n", resp.StatusCode)
 	}
 
 	return resp
@@ -221,30 +223,30 @@ func (r *Request) GetPresignedURLPost(host *url.URL, endpointPostPrefix string, 
 		panic(err)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 401 && resp.StatusCode != 403 && resp.StatusCode != 404 {
-		log.Fatalf("Unexpected error %d, %s\n", resp.StatusCode, ResponseToString(resp))
+		log.Fatalf("Unexpected error %d\n", resp.StatusCode)
 	}
 
 	return resp
 }
 
-func (r *Request) SignedRequest(method string, url_string string, body io.Reader, access_key string) (*http.Response, error) {
+func (r *Request) SignedRequest(method string, urlString string, body io.Reader, accessKey string) (*http.Response, error) {
 	/*
 		Make a request to server with signed url
 		Args:
 			method: POST or GET
-			url_string: api service endpoint
+			urlString: api service endpoint
 			body: request body
-			access_key: access_key in profile
+			accessKey: accessKey in profile
 		Returns:
 			http response
 	*/
 	client := &http.Client{}
 
-	req, err := http.NewRequest(method, url_string, body)
+	req, err := http.NewRequest(method, urlString, body)
 	if err != nil {
 		fmt.Println("error", err)
 		return nil, err
 	}
-	req.Header.Add("Authorization", "Bearer "+access_key)
+	req.Header.Add("Authorization", "Bearer "+accessKey)
 	return client.Do(req)
 }

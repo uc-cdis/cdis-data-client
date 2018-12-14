@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
@@ -18,14 +17,13 @@ func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath st
 	bar.Start()
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	_, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("Error occured during upload: %s", err.Error())
 		bar.Finish()
 		return
 	}
 	bar.Finish()
-	fmt.Println(jwt.ResponseToString(resp))
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
 }
 
