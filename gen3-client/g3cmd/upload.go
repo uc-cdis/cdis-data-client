@@ -38,8 +38,26 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			fmt.Println(uploadPath)
-			filePaths, err := filepath.Glob(uploadPath)
+			filePaths, err := filepath.Glob(uploadPath) // Generating all possible file paths
+			for _, filePath := range filePaths {
+				file, err := os.Open(filePath)
+				if err != nil {
+					log.Fatal("File Error")
+				}
+
+				if fi, _ := file.Stat(); fi.IsDir() {
+					err = filepath.Walk(filePath, func(path string, fileInfo os.FileInfo, err error) error {
+						if err != nil {
+							return err
+						}
+						if !fileInfo.IsDir() {
+							filePaths = append(filePaths, path)
+						}
+						return nil
+					})
+				}
+				file.Close()
+			}
 			if err != nil {
 				log.Fatalf(err.Error())
 			}
@@ -57,12 +75,12 @@ func init() {
 				defer file.Close()
 
 				if fi, _ := file.Stat(); fi.IsDir() {
-					fmt.Println("\"" + filePath + "\" is a directory. Please use \"\"")
+					continue
 				}
 
 				_, present := historyFileMap[filePath]
 				if present {
-					fmt.Printf("File %s has been found in local submission history and has be skipped for preventing duplicated submissions.\n", filePath)
+					fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 					continue
 				}
 				endPointPostfix := "/user/data/upload"
