@@ -48,9 +48,8 @@ Loop:
 		if resp != nil && resp.HTTPResponse != nil && resp.HTTPResponse.StatusCode >= 400 && resp.HTTPResponse.StatusCode < 500 {
 			log.Printf("Download failed: %v\n", err)
 			return
-		} else {
-			log.Fatalf("Fatal download failed: %v\n", err)
 		}
+		log.Fatalf("Fatal download failed: %v\n", err)
 	}
 
 	fmt.Printf("Successfully downloaded %v \n", resp.Filename)

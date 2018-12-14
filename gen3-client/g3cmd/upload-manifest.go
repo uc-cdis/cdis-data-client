@@ -98,9 +98,8 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	case mode.IsDir():
 		if strings.HasSuffix(filePath, "/") {
 			return filePath + filename, nil
-		} else {
-			return filePath + "/" + filename, nil
 		}
+		return filePath + "/" + filename, nil
 	case mode.IsRegular():
 		return "", errors.New("in manifest upload mode filePath must be a dir")
 	default:
@@ -118,7 +117,7 @@ func init() {
 		Use:        "upload-manifest",
 		Short:      "upload files from a specified manifest",
 		Long:       `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
-		Example:    `./gen3-client upload-manifest --profile user1 --manifest manifest.json --upload-path=files/`,
+		Example:    `./gen3-client upload-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
 		Deprecated: `use "./gen3-client upload" instead.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			var objects []ManifestObject

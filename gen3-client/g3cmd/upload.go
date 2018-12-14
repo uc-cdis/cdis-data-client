@@ -28,7 +28,7 @@ func init() {
 		Use:     "upload",
 		Short:   "upload file(s) to object storage.",
 		Long:    `Gets a presigned URL for each file and then uploads the specified file(s).`,
-		Example: `./gen3-client upload --profile user1 --upload-path=files/`,
+		Example: "./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/data.bam>\nor\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*.bam>\nor\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*>",
 		Run: func(cmd *cobra.Command, args []string) {
 			initHistory()
 
@@ -39,6 +39,7 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
+			fmt.Println(uploadPath)
 			filePaths, err := filepath.Glob(uploadPath)
 			if err != nil {
 				log.Fatalf(err.Error())
@@ -50,6 +51,16 @@ func init() {
 			reqs := make([]*http.Request, 0)
 			bars := make([]*pb.ProgressBar, 0)
 			for _, filePath := range filePaths {
+				file, err := os.Open(filePath)
+				if err != nil {
+					log.Fatal("File Error")
+				}
+				defer file.Close()
+
+				if fi, _ := file.Stat(); fi.IsDir() {
+					fmt.Println("\"" + filePath + "\" is a directory. Please use \"\"")
+				}
+
 				_, present := historyFileMap[filePath]
 				if present {
 					fmt.Printf("File %s has been found in local submission history and has be skipped for preventing duplicated submissions.\n", filePath)
@@ -68,12 +79,6 @@ func init() {
 				if _, err := os.Stat(filePath); os.IsNotExist(err) {
 					log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
 				}
-
-				file, err := os.Open(filePath)
-				if err != nil {
-					log.Fatal("File Error")
-				}
-				defer file.Close()
 
 				req, bar, err := GenerateUploadRequest("", respURL, file)
 				if err != nil {

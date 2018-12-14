@@ -37,7 +37,7 @@ func init() {
 		Use:        "upload-old",
 		Short:      "Upload a file to a GUID",
 		Long:       `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
-		Example:    `./gen3-client upload-old --profile user1 --guid f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=~/Documents/file_to_upload`,
+		Example:    `./gen3-client upload-old --profile=<profile-name> --guid=f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=<path-to-file>,`,
 		Deprecated: `use "./gen3-client upload" instead.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
