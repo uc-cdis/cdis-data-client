@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os/user"
 	"path"
-	"strconv"
 	"strings"
 )
 
@@ -71,17 +70,20 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	resp, err := r.MakeARequest(client, "POST", apiEndpoint, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error occured in RequestNewAccessKey: " + err.Error())
 	}
 
 	if resp.StatusCode != 200 {
+		if resp.StatusCode == 401 {
+			fmt.Println("401 Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
+		}
 		log.Fatalf("Could not get new access key. " + ResponseToString(resp))
 	}
 
 	str := ResponseToString(resp)
 	err = DecodeJsonFromString(str, &m)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error occured in RequestNewAccessKey: " + err.Error())
 	}
 
 	if m.Access_token == "" {
@@ -99,11 +101,11 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	}
 
 	if resp.StatusCode == 401 {
-		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
+		return msg, errors.New("401 Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
 	}
 
 	if resp.StatusCode == 403 {
-		return msg, errors.New(strconv.Itoa(resp.StatusCode) + " Forbidden error has occured! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
+		return msg, errors.New("403 Forbidden error has occured! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
 	}
 
 	if resp.StatusCode == 404 {
