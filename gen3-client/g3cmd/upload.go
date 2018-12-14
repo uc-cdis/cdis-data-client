@@ -11,12 +11,42 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 var historyFile string
 var historyFileMap map[string]string
+
+func initHistory() {
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	historyFile = home + "/.gen3/" + profile + "_history.json"
+
+	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0666)
+	fi, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+
+	historyFileMap = make(map[string]string)
+	if fi.Size() > 0 {
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = json.Unmarshal(data, &historyFileMap)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
 
 func init() {
 	var uploadPath string
@@ -41,27 +71,7 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			filePaths, err := filepath.Glob(uploadPath) // Generating all possible file paths
-			for _, filePath := range filePaths {
-				file, err := os.Open(filePath)
-				if err != nil {
-					log.Fatal("File Error")
-				}
-
-				if fi, _ := file.Stat(); fi.IsDir() {
-					err = filepath.Walk(filePath, func(path string, fileInfo os.FileInfo, err error) error {
-						if err != nil {
-							return err
-						}
-						if !fileInfo.IsDir() {
-							filePaths = append(filePaths, path)
-						}
-						return nil
-					})
-				}
-				file.Close()
-			}
-
+			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
 			if err != nil {
 				log.Fatalf(err.Error())
 			}
@@ -74,7 +84,7 @@ func init() {
 			for _, filePath := range filePaths {
 				file, err := os.Open(filePath)
 				if err != nil {
-					log.Fatal("File Error")
+					log.Fatal("File open error")
 				}
 				defer file.Close()
 
@@ -141,33 +151,4 @@ func init() {
 	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
 	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	RootCmd.AddCommand(uploadNewCmd)
-}
-
-func initHistory() {
-	home, err := homedir.Dir()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	historyFile = home + "/.gen3/" + profile + "_history.json"
-
-	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0666)
-	fi, err := file.Stat()
-	if err != nil {
-		panic(err)
-	}
-
-	historyFileMap = make(map[string]string)
-	if fi.Size() > 0 {
-		data, err := ioutil.ReadAll(file)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = json.Unmarshal(data, &historyFileMap)
-		if err != nil {
-			panic(err)
-		}
-	}
 }
