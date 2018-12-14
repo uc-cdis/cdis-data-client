@@ -68,7 +68,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 }
 
 func (conf *Configure) ValidateUrl(apiEndpoint string) {
-	parsed_url, err := url.Parse(apiEndpoint)
+	parsedUrl, err := url.Parse(apiEndpoint)
 	if err != nil {
 		panic(err)
 	}
