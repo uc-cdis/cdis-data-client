@@ -15,11 +15,6 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-type ManifestObject struct {
-	ObjectID  string `json:"object_id"`
-	SubjectID string `json:"subject_id"`
-}
-
 func batchDownload(numParallel int, reqs []*grab.Request) {
 
 	client := grab.NewClient()
@@ -79,11 +74,10 @@ func init() {
 	var numParallel int
 
 	var downloadManifestCmd = &cobra.Command{
-		Use:   "download-manifest",
-		Short: "download files from a specified manifest",
-		Long: `Gets a presigned URL for a file from a GUID and then downloads the specified file.
-	Examples: ./gen3-client download-manifest --profile user1 --manifest manifest.tsv --download-path=files/ 
-	`,
+		Use:     "download-manifest",
+		Short:   "download files from a specified manifest",
+		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
+		Example: `./gen3-client download-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
@@ -109,7 +103,7 @@ func init() {
 				reqs := make([]*grab.Request, 0)
 				for _, object := range objects {
 					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {
@@ -131,7 +125,7 @@ func init() {
 			} else {
 				for _, object := range objects {
 					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {

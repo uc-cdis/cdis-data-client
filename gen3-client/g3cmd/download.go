@@ -48,9 +48,8 @@ Loop:
 		if resp != nil && resp.HTTPResponse != nil && resp.HTTPResponse.StatusCode >= 400 && resp.HTTPResponse.StatusCode < 500 {
 			log.Printf("Download failed: %v\n", err)
 			return
-		} else {
-			log.Fatalf("Fatal download failed: %v\n", err)
 		}
+		log.Fatalf("Fatal download failed: %v\n", err)
 	}
 
 	fmt.Printf("Successfully downloaded %v \n", resp.Filename)
@@ -63,11 +62,10 @@ func init() {
 	var protocol string
 
 	var downloadCmd = &cobra.Command{
-		Use:   "download",
-		Short: "download a file from a UUID",
-		Long: `Gets a presigned URL for a file from a GUID and then downloads the specified file.
-	Examples: ./gen3-client download --profile user1 --guid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json 
-	`,
+		Use:     "download",
+		Short:   "download a file from a GUID",
+		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
+		Example: `./gen3-client download --profile user1 --guid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
@@ -84,7 +82,7 @@ func init() {
 
 			endPointPostfix := "/user/data/download/" + guid + protocolText
 
-			respURL, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix)
+			respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, nil)
 
 			if err != nil {
 				if strings.Contains(err.Error(), "The provided guid") {
@@ -102,7 +100,7 @@ func init() {
 	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	downloadCmd.MarkFlagRequired("guid")
 	downloadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to download to with --file=~/path/to/file")
-	downloadCmd.MarkFlagRequired("file")
+	// downloadCmd.MarkFlagRequired("file")
 	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs")
 	RootCmd.AddCommand(downloadCmd)
 }

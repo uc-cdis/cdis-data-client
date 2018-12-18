@@ -26,3 +26,7 @@ _test.go
 *.test
 *.prof
 credentials.json
+
+# Mac
+.DS_Store
+.vscode

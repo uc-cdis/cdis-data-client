@@ -15,7 +15,8 @@ type AccessTokenStruct struct {
 }
 
 type JsonMessage struct {
-	Url string
+	Url  string
+	GUID string
 }
 
 type DoRequest func(*http.Response) *http.Response
@@ -28,8 +29,5 @@ func ResponseToString(resp *http.Response) string {
 
 func DecodeJsonFromString(str string, msg Message) error {
 	err := json.Unmarshal([]byte(str), &msg)
-	if err != nil {
-		panic(err)
-	}
 	return err
 }

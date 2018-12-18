@@ -13,6 +13,8 @@ import (
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 type Credential struct {
@@ -33,40 +35,44 @@ type ConfigureInterface interface {
 	ParseConfig(profile string) Credential
 }
 
-func (conf *Configure) ReadFile(file_path string, file_type string) string {
+func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	//Look in config file
-	var full_file_path string
-	if file_path[0] == '~' {
-		usr, _ := user.Current()
-		homeDir := usr.HomeDir
-		full_file_path = homeDir + file_path[1:]
-	} else {
-		full_file_path = file_path
+	fullFilePaths, err := commonUtils.ParseFilePaths(filePath)
+	if len(fullFilePaths) > 1 {
+		fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
+		return ""
 	}
-	if _, err := os.Stat(full_file_path); err != nil {
-		fmt.Println("File specified at " + full_file_path + " not found")
+	if err != nil {
+		panic(err)
+	}
+	var fullFilePath = filePath
+	if len(fullFilePaths) == 1 {
+		fullFilePath = fullFilePaths[0]
+	}
+	if _, err := os.Stat(fullFilePath); err != nil {
+		fmt.Println("File specified at " + fullFilePath + " not found")
 		return ""
 	}
 
-	content, err := ioutil.ReadFile(full_file_path)
+	content, err := ioutil.ReadFile(fullFilePath)
 	if err != nil {
 		panic(err)
 	}
 
-	content_str := string(content[:])
+	contentStr := string(content[:])
 
-	if file_type == "json" {
-		content_str = strings.Replace(content_str, "\n", "", -1)
+	if fileType == "json" {
+		contentStr = strings.Replace(contentStr, "\n", "", -1)
 	}
 	return string(content[:])
 }
 
 func (conf *Configure) ValidateUrl(apiEndpoint string) {
-	parsed_url, err := url.Parse(apiEndpoint)
+	parsedUrl, err := url.Parse(apiEndpoint)
 	if err != nil {
 		panic(err)
 	}
-	if parsed_url.Host == "" {
+	if parsedUrl.Host == "" {
 		fmt.Print("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
 		os.Exit(1)
 	}
@@ -210,8 +216,6 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 			profile: the specific profile in config file
 		Returns:
 			An instance of Credential
-
-
 	*/
 	usr, err := user.Current()
 	homeDir := ""
@@ -239,23 +243,23 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	}
 	lines := strings.Split(string(content), "\n")
 
-	profile_line := -1
+	profileLine := -1
 	for i := 0; i < len(lines); i += 6 {
 		if lines[i] == "["+profile+"]" {
-			profile_line = i
+			profileLine = i
 			break
 		}
 	}
 
-	if profile_line == -1 {
+	if profileLine == -1 {
 		fmt.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
 		return cred
 	} else {
 		// Read in access key, secret key, endpoint for given profile
-		cred.KeyId = conf.ParseKeyValue(lines[profile_line+1], "^key_id=(\\S*)", "key_id not found in profile")
-		cred.APIKey = conf.ParseKeyValue(lines[profile_line+2], "^api_key=(\\S*)", "api_key not found in profile")
-		cred.AccessKey = conf.ParseKeyValue(lines[profile_line+3], "^access_key=(\\S*)", "access_key not found in profile")
-		cred.APIEndpoint = conf.ParseKeyValue(lines[profile_line+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
+		cred.KeyId = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)", "key_id not found in profile")
+		cred.APIKey = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)", "api_key not found in profile")
+		cred.AccessKey = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)", "access_key not found in profile")
+		cred.APIEndpoint = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
 		return cred
 	}
 }
