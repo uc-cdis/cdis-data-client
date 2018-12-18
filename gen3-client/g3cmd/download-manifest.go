@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+
 	"github.com/cavaliercoder/grab"
 	"github.com/spf13/cobra"
 
@@ -91,6 +93,8 @@ func init() {
 			if protocol != "" {
 				protocolText = "?protocol=" + protocol
 			}
+
+			downloadPath = commonUtils.ParseRootPath(downloadPath)
 
 			var objects []ManifestObject
 			manifestBytes, err := ioutil.ReadFile(manifest)
