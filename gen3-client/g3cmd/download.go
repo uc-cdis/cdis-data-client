@@ -8,11 +8,12 @@ import (
 
 	"github.com/cavaliercoder/grab"
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
 func downloadFile(guid string, filePath string, signedURL string) {
-
+	filePath = commonUtils.ParseRootPath(filePath)
 	client := grab.NewClient()
 	req, _ := grab.NewRequest(filePath, signedURL)
 
@@ -53,7 +54,6 @@ Loop:
 	}
 
 	fmt.Printf("Successfully downloaded %v \n", resp.Filename)
-
 }
 
 func init() {
@@ -65,7 +65,7 @@ func init() {
 		Use:     "download",
 		Short:   "download a file from a GUID",
 		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
-		Example: `./gen3-client download --profile user1 --guid 206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json`,
+		Example: `./gen3-client download --profile=<profile-name> --guid=206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
@@ -93,14 +93,12 @@ func init() {
 			} else {
 				downloadFile(guid, filePath, respURL)
 			}
-
 		},
 	}
 
 	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	downloadCmd.MarkFlagRequired("guid")
 	downloadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to download to with --file=~/path/to/file")
-	// downloadCmd.MarkFlagRequired("file")
 	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs")
 	RootCmd.AddCommand(downloadCmd)
 }
