@@ -8,22 +8,23 @@ import (
 	"path/filepath"
 )
 
-func ParseFilePaths(filePath string) ([]string, error) {
-	fmt.Println("\nBegin parsing all file paths for \"" + filePath + "\"")
-	var fullFilePath string
-	if filePath[0] == '~' {
+func ParseRootPath(filePath string) string {
+	if filePath != "" && filePath[0] == '~' {
 		usr, _ := user.Current()
 		homeDir := usr.HomeDir
-		fullFilePath = homeDir + filePath[1:]
-	} else {
-		fullFilePath = filePath
+		return homeDir + filePath[1:]
 	}
+	return filePath
+}
 
+func ParseFilePaths(filePath string) ([]string, error) {
+	fmt.Println("\nBegin parsing all file paths for \"" + filePath + "\"")
+	fullFilePath := ParseRootPath(filePath)
 	filePaths, err := filepath.Glob(fullFilePath) // Generating all possible file paths
 	for _, filePath := range filePaths {
 		file, err := os.Open(filePath)
 		if err != nil {
-			log.Fatal("File Error")
+			log.Fatal("File error for " + filePath)
 		}
 
 		if fi, _ := file.Stat(); fi.IsDir() {
