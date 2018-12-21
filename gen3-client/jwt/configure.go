@@ -232,7 +232,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		fmt.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
-			"Example: ./gen3-client configure --cred ~/Downloads/credentials.json")
+			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
 		return cred
 	}
 	// If profile not in config file, prompt user to set up config first
@@ -252,7 +252,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	}
 
 	if profileLine == -1 {
-		fmt.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred path_to_credential.json\" first")
+		fmt.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 		return cred
 	} else {
 		// Read in access key, secret key, endpoint for given profile
