@@ -114,12 +114,13 @@ func init() {
 	var numParallel int
 
 	var uploadManifestCmd = &cobra.Command{
-		Use:        "upload-manifest",
-		Short:      "upload files from a specified manifest",
-		Long:       `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
-		Example:    `./gen3-client upload-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
-		Deprecated: `use "./gen3-client upload" instead.`,
+		Use:     "upload-manifest",
+		Short:   "upload files from a specified manifest",
+		Long:    `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
+		Example: `./gen3-client upload-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Notice: this is the old upload flow which requires the user to provide GUIDs. If your common supports the new upload flow, consider to use \"./gen3-client upload\" instead.")
+
 			var objects []ManifestObject
 
 			manifestFile, err := os.Open(manifestPath)
