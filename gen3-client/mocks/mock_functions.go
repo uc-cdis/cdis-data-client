@@ -36,13 +36,13 @@ func (m *MockFunctionInterface) EXPECT() *MockFunctionInterfaceMockRecorder {
 }
 
 // DoRequestWithSignedHeader mocks base method
-func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1, arg2, arg3 string) *http.Response {
-	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3)
+func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 jwt.DoRequest, arg1, arg2, arg3, arg4 string, arg5 []byte) *http.Response {
+	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(*http.Response)
 	return ret0
 }
 
 // DoRequestWithSignedHeader indicates an expected call of DoRequestWithSignedHeader
-func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3)
+func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3, arg4, arg5)
 }

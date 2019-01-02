@@ -50,7 +50,7 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().GetPresignedURL("GET", gomock.Any(), "/user/data/download/test_uuid", "non_exprired_token", "", nil).Return(mockedResp).Times(1)
+	mockRequest.EXPECT().GetPresignedURL("GET", gomock.Any(), "/user/data/download/test_uuid", "non_exprired_token", "", gomock.Any()).Return(mockedResp).Times(1)
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
 
