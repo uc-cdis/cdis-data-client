@@ -120,7 +120,7 @@ func init() {
 				object := NewFlowRequestObject{Filename: filepath.Base(filePath)}
 				objectBytes, err := json.Marshal(object)
 
-				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, objectBytes)
+				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 				if respURL == "" || guid == "" {
 					log.Fatalf("Error has occured during presigned URL or GUID generation.")
