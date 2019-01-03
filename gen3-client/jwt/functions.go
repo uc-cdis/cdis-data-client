@@ -102,11 +102,11 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	}
 
 	if resp.StatusCode == 401 {
-		return msg, errors.New("401 Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials")
+		return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials")
 	}
 
 	if resp.StatusCode == 403 {
-		return msg, errors.New("403 Forbidden error has occured! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
+		return msg, errors.New("403 Forbidden error has occurred! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
 	}
 
 	if resp.StatusCode == 404 {
@@ -133,7 +133,7 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-		return "", "", errors.New("No credential found")
+		return "", "", errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
