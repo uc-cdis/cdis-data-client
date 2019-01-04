@@ -70,12 +70,12 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	resp, err := r.MakeARequest(client, "POST", apiEndpoint, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
-		log.Fatalf("Error occured in RequestNewAccessKey: " + err.Error())
+		log.Fatalf("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
 	if resp.StatusCode != 200 {
 		if resp.StatusCode == 401 {
-			fmt.Println("401 Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
+			fmt.Println("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials.")
 		}
 		log.Fatalf("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check fence log for more details.")
 		return
@@ -84,7 +84,7 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	str := ResponseToString(resp)
 	err = DecodeJsonFromString(str, &m)
 	if err != nil {
-		log.Fatalf("Error occured in RequestNewAccessKey: " + err.Error())
+		log.Fatalf("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
 	if m.Access_token == "" {

@@ -19,7 +19,7 @@ func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath st
 	client := &http.Client{}
 	_, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error occured during upload: %s", err.Error())
+		log.Fatalf("Error occurred during upload: %s", err.Error())
 		bar.Finish()
 		return
 	}
@@ -62,7 +62,7 @@ func init() {
 
 			req, bar, err := GenerateUploadRequest(guid, "", file)
 			if err != nil {
-				log.Fatalf("Error occured during request generation: %s", err.Error())
+				log.Fatalf("Error occurred during request generation: %s", err.Error())
 				return
 			}
 			uploadFile(req, bar, guid, filePath)

@@ -165,7 +165,7 @@ func init() {
 
 				req, bar, err := GenerateUploadRequest(guid, "", file)
 				if err != nil {
-					log.Fatalf("Error occured during request generation: %s", err.Error())
+					log.Fatalf("Error occurred during request generation: %s", err.Error())
 					continue
 				}
 				if batch {
