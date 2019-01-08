@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -22,17 +21,17 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	DoRequestWithSignedHeader(DoRequest, string, string, string, []byte) *http.Response
+	DoRequestWithSignedHeader(DoRequest, string, string, string, string, []byte) *http.Response
+	ParseFenceURLResponse(*http.Response)
 }
 
 type Request struct {
 }
+
 type RequestInterface interface {
 	MakeARequest(*http.Client, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
 	RequestNewAccessKey(string, *Credential)
-	SignedRequest(string, string, io.Reader, string) (*http.Response, error)
-	GetPresignedURL(host *url.URL, endpointPostPrefix string, accessKey string) *http.Response
-	GetPresignedURLPost(host *url.URL, endpointPostPrefix string, accessKey string, body *bytes.Buffer) *http.Response
+	GetPresignedURL(method string, host *url.URL, endpointPostPrefix string, accessKey string, contentType string, body *bytes.Buffer) *http.Response
 }
 
 func (r *Request) MakeARequest(client *http.Client, method string, apiEndpoint string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
@@ -71,12 +70,12 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	resp, err := r.MakeARequest(client, "POST", apiEndpoint, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
-		log.Fatalf("Error occured in RequestNewAccessKey: " + err.Error())
+		log.Fatalf("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
 	if resp.StatusCode != 200 {
 		if resp.StatusCode == 401 {
-			fmt.Println("401 Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
+			fmt.Println("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials.")
 		}
 		log.Fatalf("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check fence log for more details.")
 		return
@@ -85,7 +84,7 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	str := ResponseToString(resp)
 	err = DecodeJsonFromString(str, &m)
 	if err != nil {
-		log.Fatalf("Error occured in RequestNewAccessKey: " + err.Error())
+		log.Fatalf("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
 	if m.Access_token == "" {
@@ -99,24 +98,24 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	msg := JsonMessage{}
 
 	if resp == nil {
-		return msg, nil
+		return msg, errors.New("Nil response received")
 	}
 
 	if resp.StatusCode == 401 {
-		return msg, errors.New("401 Unauthorized error has occured! Something went wrong during authentication, please check your configuration and/or credentials.")
+		return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials")
 	}
 
 	if resp.StatusCode == 403 {
-		return msg, errors.New("403 Forbidden error has occured! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
+		return msg, errors.New("403 Forbidden error has occurred! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
 	}
 
 	if resp.StatusCode == 404 {
-		return msg, errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found!")
+		return msg, errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found")
 	}
 
 	str := ResponseToString(resp)
 	if strings.Contains(str, "Can't find a location for the data") {
-		return msg, errors.New("The provided guid is not found!")
+		return msg, errors.New("The provided guid is not found")
 	}
 
 	err := DecodeJsonFromString(str, &msg)
@@ -126,7 +125,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	return msg, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type string, endpointPostPrefix string, bodyBytes []byte) (string, string, error) {
+func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, string, error) {
 	/*
 		Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
@@ -134,18 +133,18 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type s
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-		return "", "", errors.New("No credential found!")
+		return "", "", errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
 	isExpiredToken := false
+	method := "GET"
+	if bodyBytes != nil {
+		method = "POST"
+	}
 
 	if cred.AccessKey != "" {
-		if bodyBytes == nil {
-			resp = f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
-		} else {
-			resp = f.Request.GetPresignedURLPost(host, endpointPostPrefix, cred.AccessKey, bytes.NewBuffer(bodyBytes))
-		}
+		resp = f.Request.GetPresignedURL(method, host, endpointPostPrefix, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
 
 		// 401 code is general error code from fence. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.
@@ -164,61 +163,38 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, config_file_type s
 			homeDir = usr.HomeDir
 		}
 		configPath := path.Join(homeDir + "/.gen3/config")
-		content := f.Config.ReadFile(configPath, config_file_type)
+		content := f.Config.ReadFile(configPath, configFileType)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 
-		if bodyBytes == nil {
-			resp = f.Request.GetPresignedURL(host, endpointPostPrefix, cred.AccessKey)
-		} else {
-			resp = f.Request.GetPresignedURLPost(host, endpointPostPrefix, cred.AccessKey, bytes.NewBuffer(bodyBytes))
-		}
+		resp = f.Request.GetPresignedURL(method, host, endpointPostPrefix, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
 		msg, err := f.ParseFenceURLResponse(resp)
 		return msg.Url, msg.GUID, err
 	}
 	panic("Unexpected case")
 }
 
-func (r *Request) GetPresignedURL(host *url.URL, endpointPostPrefix string, accessKey string) *http.Response {
+func (r *Request) GetPresignedURL(method string, host *url.URL, endpointPostPrefix string, accessKey string, contentType string, body *bytes.Buffer) *http.Response {
 	/*
 		Get the presigned url
 		Args:
+			method: either "GET" or "POST"
 			host: host endpoint
 			endpointPostPrefix: prefix url which is different for download/upload
 			accessKey: access key for authZ
+			contentType: value of "content-type" HTTP request header
+			body: data payload body
 		Returns:
 			Http response containing presigned url for download and upload
 	*/
 
 	apiEndPoint := host.Scheme + "://" + host.Host + endpointPostPrefix
-	resp, err := r.SignedRequest("GET", apiEndPoint, nil, accessKey)
-	if err != nil {
-		panic(err)
-	}
-	if resp.StatusCode != 200 && resp.StatusCode != 401 && resp.StatusCode != 403 && resp.StatusCode != 404 {
-		log.Fatalf("Unexpected error %d\n", resp.StatusCode)
-	}
-
-	return resp
-}
-
-func (r *Request) GetPresignedURLPost(host *url.URL, endpointPostPrefix string, accessKey string, body *bytes.Buffer) *http.Response {
-	/*
-		Get the presigned url
-		Args:
-			host: host endpoint
-			endpointPostPrefix: prefix url which is different for upload
-			accessKey: access key for authZ
-			body: the message body (filename) for the endpoint API
-		Returns:
-			Http response containing presigned url for new upload flow
-	*/
-
-	apiEndPoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	headers := make(map[string]string)
-	headers["Content-Type"] = "application/json"
 	headers["Authorization"] = "Bearer " + accessKey
+	if contentType != "" {
+		headers["Content-Type"] = contentType
+	}
 	client := &http.Client{}
-	resp, err := r.MakeARequest(client, "POST", apiEndPoint, headers, body)
+	resp, err := r.MakeARequest(client, method, apiEndPoint, headers, body)
 	if err != nil {
 		panic(err)
 	}
@@ -227,26 +203,4 @@ func (r *Request) GetPresignedURLPost(host *url.URL, endpointPostPrefix string, 
 	}
 
 	return resp
-}
-
-func (r *Request) SignedRequest(method string, urlString string, body io.Reader, accessKey string) (*http.Response, error) {
-	/*
-		Make a request to server with signed url
-		Args:
-			method: POST or GET
-			urlString: api service endpoint
-			body: request body
-			accessKey: accessKey in profile
-		Returns:
-			http response
-	*/
-	client := &http.Client{}
-
-	req, err := http.NewRequest(method, urlString, body)
-	if err != nil {
-		fmt.Println("error", err)
-		return nil, err
-	}
-	req.Header.Add("Authorization", "Bearer "+accessKey)
-	return client.Do(req)
 }

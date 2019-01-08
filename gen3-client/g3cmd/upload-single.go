@@ -19,7 +19,7 @@ func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath st
 	client := &http.Client{}
 	_, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error occured during upload: %s", err.Error())
+		log.Fatalf("Error occurred during upload: %s", err.Error())
 		bar.Finish()
 		return
 	}
@@ -32,12 +32,13 @@ func init() {
 	var filePath string
 
 	var uploadCmd = &cobra.Command{
-		Use:        "upload-old",
-		Short:      "Upload a file to a GUID",
-		Long:       `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
-		Example:    `./gen3-client upload-old --profile=<profile-name> --guid=f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=<path-to-file>,`,
-		Deprecated: `use "./gen3-client upload" instead.`,
+		Use:     "upload-single",
+		Short:   "Upload a single file to a GUID",
+		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
+		Example: `./gen3-client upload-single --profile=<profile-name> --guid=f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=<path-to-file>`,
 		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./gen3-client upload\" instead.\n")
+
 			filePaths, err := commonUtils.ParseFilePaths(filePath)
 			if len(filePaths) > 1 {
 				fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
@@ -61,7 +62,7 @@ func init() {
 
 			req, bar, err := GenerateUploadRequest(guid, "", file)
 			if err != nil {
-				log.Fatalf("Error occured during request generation: %s", err.Error())
+				log.Fatalf("Error occurred during request generation: %s", err.Error())
 				return
 			}
 			uploadFile(req, bar, guid, filePath)

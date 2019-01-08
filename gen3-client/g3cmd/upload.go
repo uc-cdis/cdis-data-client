@@ -40,7 +40,7 @@ func initHistory() {
 	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0644)
 	fi, err := file.Stat()
 	if err != nil {
-		log.Fatal("Error occured when opening file \"" + historyFile + "\": " + err.Error())
+		log.Fatal("Error occurred when opening file \"" + historyFile + "\": " + err.Error())
 	}
 	fmt.Println("Local history file \"" + historyFile + "\" has opened")
 
@@ -48,12 +48,12 @@ func initHistory() {
 	if fi.Size() > 0 {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			log.Fatal("Error occured when reading from file \"" + historyFile + "\": " + err.Error())
+			log.Fatal("Error occurred when reading from file \"" + historyFile + "\": " + err.Error())
 		}
 
 		err = json.Unmarshal(data, &historyFileMap)
 		if err != nil {
-			log.Fatal("Error occured when unmarshaling JSON objects: " + err.Error())
+			log.Fatal("Error occurred when unmarshaling JSON objects: " + err.Error())
 		}
 	}
 }
@@ -120,10 +120,10 @@ func init() {
 				object := NewFlowRequestObject{Filename: filepath.Base(filePath)}
 				objectBytes, err := json.Marshal(object)
 
-				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, objectBytes)
+				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 				if respURL == "" || guid == "" {
-					log.Fatalf("Error has occured during presigned URL or GUID generation.")
+					log.Fatalf("Error has occurred during presigned URL or GUID generation.")
 				}
 
 				if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -132,7 +132,7 @@ func init() {
 
 				req, bar, err := GenerateUploadRequest("", respURL, file)
 				if err != nil {
-					log.Fatalf("Error occured during request generation: %s", err.Error())
+					log.Fatalf("Error occurred during request generation: %s", err.Error())
 					continue
 				}
 				if batch {
