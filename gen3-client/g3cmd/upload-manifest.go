@@ -119,7 +119,7 @@ func init() {
 		Long:    `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
 		Example: `./gen3-client upload-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Notice: this is the old upload flow which requires the user to provide GUIDs. If your common supports the new upload flow, consider to use \"./gen3-client upload\" instead.")
+			fmt.Println("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n")
 
 			var objects []ManifestObject
 

@@ -67,10 +67,10 @@ func init() {
 		Use:   "upload",
 		Short: "upload file(s) to object storage.",
 		Long:  `Gets a presigned URL for each file and then uploads the specified file(s).`,
-		Example: "For uploading a single file:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/data.bam>\n" +
-			"For uploading all files within an folder:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/>\n" +
-			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
-			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
+		Example: "For uploading a single file:\n./gen3-client upload --profile=<profile-name> --uploadpath=<path-to-files/data.bam>\n" +
+			"For uploading all files within an folder:\n./gen3-client upload --profile=<profile-name> --uploadpath=<path-to-files/folder/>\n" +
+			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --uploadpath=<path-to-files/folder/*>\n" +
+			"Or:\n./gen3-client upload --profile=<profile-name> --uploadpath=<path-to-files/*/folder/*.bam>",
 		Run: func(cmd *cobra.Command, args []string) {
 			initHistory()
 
@@ -165,8 +165,8 @@ func init() {
 		},
 	}
 
-	uploadNewCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
-	uploadNewCmd.MarkFlagRequired("upload-path")
+	uploadNewCmd.Flags().StringVar(&uploadPath, "uploadpath", "", "The directory or file in which contains file(s) to be uploaded")
+	uploadNewCmd.MarkFlagRequired("uploadpath")
 	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
 	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	RootCmd.AddCommand(uploadNewCmd)
