@@ -168,6 +168,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			}
 		}()
 
+		apiEndpoint = strings.TrimSpace(apiEndpoint)
+		if apiEndpoint[len(apiEndpoint)-1:] == "\\" {
+			apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
+		}
+
 		_, err = f.WriteString("[" + profile + "]\n" +
 			"key_id=" + cred.KeyId + "\n" +
 			"api_key=" + cred.APIKey + "\n" +
