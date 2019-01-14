@@ -88,7 +88,7 @@ func init() {
 			if len(filePaths) == 0 {
 				log.Fatalf("Error when parsing file paths, no file has been found in the provided location \"" + uploadPath + "\"")
 			}
-			fmt.Println("\nThe following file(s) has been founded in path \"" + uploadPath + "\" and will be uploaded:")
+			fmt.Println("\nThe following file(s) has been found in path \"" + uploadPath + "\" and will be uploaded:")
 			for _, filePath := range filePaths {
 				file, _ := os.Open(filePath)
 				if fi, _ := file.Stat(); !fi.IsDir() {
