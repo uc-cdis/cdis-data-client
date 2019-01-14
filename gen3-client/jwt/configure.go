@@ -143,6 +143,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			profile: profile name
 
 	*/
+	apiEndpoint = strings.TrimSpace(apiEndpoint)
+	if apiEndpoint[len(apiEndpoint)-1:] == "/" {
+		apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
+	}
+
 	lines, found := conf.ReadLines(cred, configContent, apiEndpoint, profile)
 	if found {
 		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
@@ -167,11 +172,6 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 				panic(err)
 			}
 		}()
-
-		apiEndpoint = strings.TrimSpace(apiEndpoint)
-		if apiEndpoint[len(apiEndpoint)-1:] == "\\" {
-			apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
-		}
 
 		_, err = f.WriteString("[" + profile + "]\n" +
 			"key_id=" + cred.KeyId + "\n" +
