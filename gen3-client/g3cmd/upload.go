@@ -123,7 +123,7 @@ func init() {
 				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 				if respURL == "" || guid == "" {
-					log.Fatalf("Error has occurred during presigned URL or GUID generation.")
+					log.Fatalf("Error has occurred during presigned URL or GUID generation: " + err.Error())
 				}
 
 				if _, err := os.Stat(filePath); os.IsNotExist(err) {
