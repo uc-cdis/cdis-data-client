@@ -124,7 +124,7 @@ func init() {
 
 				if respURL == "" || guid == "" {
 					if err != nil {
-						fmt.Println("You don't have permission to upload data, detailed error message: " + err.Error())
+						log.Fatalf("You don't have permission to upload data, detailed error message: " + err.Error())
 					} else {
 						log.Fatalf("Unknown error has occurred during presigned URL or GUID generation")
 					}
