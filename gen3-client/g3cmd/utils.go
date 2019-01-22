@@ -1,6 +1,7 @@
 package g3cmd
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -43,8 +44,24 @@ func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Reques
 		log.Fatal("File Stat Error")
 	}
 
-	bar := pb.New(int(fi.Size())).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond).Prefix(fi.Name() + " ")
-	req, err := http.NewRequest(http.MethodPut, url, bar.NewProxyReader(file))
+	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fi.Name() + " ")
+	r, w := io.Pipe()
+
+	go func() {
+		var part io.Writer
+		defer w.Close()
+		defer file.Close()
+
+		part = io.MultiWriter(w, bar)
+		if _, err = io.Copy(part, file); err != nil {
+			log.Fatal(err)
+		}
+		if err = w.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	req, err := http.NewRequest(http.MethodPut, url, r)
 	req.ContentLength = fi.Size()
 
 	return req, bar, err
