@@ -33,7 +33,7 @@ func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Reques
 		endPointPostfix := "/user/data/upload/" + guid
 		signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
-			log.Fatalf("Upload error: %s!\n", err)
+			log.Fatalf("Upload error: %s\n", err)
 			return nil, nil, err
 		}
 		url = signedURL
@@ -41,27 +41,27 @@ func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Reques
 
 	fi, err := file.Stat()
 	if err != nil {
-		log.Fatal("File Stat Error")
+		log.Fatal("File stat error\n")
 	}
 
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fi.Name() + " ")
-	r, w := io.Pipe()
+	pr, pw := io.Pipe()
 
 	go func() {
-		var part io.Writer
-		defer w.Close()
+		var writer io.Writer
+		defer pw.Close()
 		defer file.Close()
 
-		part = io.MultiWriter(w, bar)
-		if _, err = io.Copy(part, file); err != nil {
-			log.Fatal(err)
+		writer = io.MultiWriter(pw, bar)
+		if _, err = io.Copy(writer, file); err != nil {
+			log.Fatalf("io.Copy error: %s\n", err)
 		}
-		if err = w.Close(); err != nil {
-			log.Fatal(err)
+		if err = pw.Close(); err != nil {
+			log.Fatalf("Pipe writer close error: %s\n", err)
 		}
 	}()
 
-	req, err := http.NewRequest(http.MethodPut, url, r)
+	req, err := http.NewRequest(http.MethodPut, url, pr)
 	req.ContentLength = fi.Size()
 
 	return req, bar, err
