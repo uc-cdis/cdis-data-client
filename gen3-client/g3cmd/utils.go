@@ -41,7 +41,7 @@ func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Reques
 
 	fi, err := file.Stat()
 	if err != nil {
-		log.Fatal("File stat error\n")
+		log.Fatalf("File stat error for file %s, file may be missing or unreadable because of permissions\n", fi.Name())
 	}
 
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fi.Name() + " ")
