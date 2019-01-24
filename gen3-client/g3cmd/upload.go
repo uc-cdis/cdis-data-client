@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -18,6 +19,7 @@ import (
 
 var historyFile string
 var historyFileMap map[string]string
+var pathSeparator = string(os.PathSeparator)
 
 func initHistory() {
 	home, err := homedir.Dir()
@@ -26,16 +28,18 @@ func initHistory() {
 		os.Exit(1)
 	}
 
-	if _, err := os.Stat(home + "/.gen3/"); os.IsNotExist(err) { // path to ~/.gen3 does not exist
-		err = os.Mkdir(home+"/.gen3/", 0644)
+	historyPath := home + pathSeparator + ".gen3" + pathSeparator
+
+	if _, err := os.Stat(historyPath); os.IsNotExist(err) { // path to ~/.gen3 does not exist
+		err = os.Mkdir(historyPath, 0644)
 		if err != nil {
-			log.Fatal("Cannot create folder \"" + home + "/.gen3/\"")
+			log.Fatal("Cannot create folder \"" + historyPath + "\"")
 			os.Exit(1)
 		}
-		fmt.Println("Created folder \"" + home + "/.gen3/\"")
+		fmt.Println("Created folder \"" + historyPath + "\"")
 	}
 
-	historyFile = home + "/.gen3/" + profile + "_history.json"
+	historyFile = historyPath + profile + "_history.json"
 
 	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0644)
 	fi, err := file.Stat()
@@ -62,6 +66,7 @@ func init() {
 	var uploadPath string
 	var batch bool
 	var numParallel int
+	var includeSubDirName bool
 
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
@@ -81,6 +86,7 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
+			uploadPath = filepath.Clean(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
 			if err != nil {
 				log.Fatalf(err.Error())
@@ -100,6 +106,7 @@ func init() {
 
 			reqs := make([]*http.Request, 0)
 			bars := make([]*pb.ProgressBar, 0)
+
 			for _, filePath := range filePaths {
 				file, err := os.Open(filePath)
 				if err != nil {
@@ -116,8 +123,22 @@ func init() {
 					fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 					continue
 				}
+
+				filename := filepath.Base(filePath)
+				if includeSubDirName {
+					presentDirname := strings.TrimSuffix(commonUtils.ParseRootPath(uploadPath), pathSeparator+"*")
+					subFilename := strings.TrimPrefix(filePath, presentDirname)
+					dir, _ := filepath.Split(subFilename)
+					if dir != "" && dir != string(pathSeparator) {
+						filename = strings.TrimPrefix(subFilename, pathSeparator)
+						filename = strings.Replace(filename, pathSeparator, ".", -1)
+					} else {
+						fmt.Println("Include subdirectory names will only works if the file is under at least one subdirectory.")
+					}
+				}
+
 				endPointPostfix := "/user/data/upload"
-				object := NewFlowRequestObject{Filename: filepath.Base(filePath)}
+				object := NewFlowRequestObject{Filename: filename}
 				objectBytes, err := json.Marshal(object)
 
 				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
@@ -169,5 +190,6 @@ func init() {
 	uploadNewCmd.MarkFlagRequired("upload-path")
 	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
 	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
+	uploadNewCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	RootCmd.AddCommand(uploadNewCmd)
 }
