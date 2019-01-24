@@ -126,12 +126,12 @@ func init() {
 					if err != nil {
 						log.Fatalf("You don't have permission to upload data, detailed error message: " + err.Error())
 					} else {
-						log.Fatalf("Unknown error has occurred during presigned URL or GUID generation")
+						log.Fatalf("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
 					}
 				}
 
 				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
+					log.Fatalf("The file you specified \"%s\" does not exist locally", filePath)
 				}
 
 				req, bar, err := GenerateUploadRequest("", respURL, file)
