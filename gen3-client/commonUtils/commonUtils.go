@@ -21,6 +21,7 @@ func ParseFilePaths(filePath string) ([]string, error) {
 	fmt.Println("\nBegin parsing all file paths for \"" + filePath + "\"")
 	fullFilePath := ParseRootPath(filePath)
 	filePaths, err := filepath.Glob(fullFilePath) // Generating all possible file paths
+
 	for _, filePath := range filePaths {
 		file, err := os.Open(filePath)
 		if err != nil {
