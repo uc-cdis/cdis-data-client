@@ -77,11 +77,11 @@ func init() {
 						addTab = "\t"
 					}
 					outputString := ""
-					if header == "file_name" {
+					if header == "*file_name" {
 						outputString = filepath.Base(file)
-					} else if header == "md5sum" {
+					} else if header == "*md5sum" {
 						outputString = computeMD5(file)
-					} else if header == "file_size" {
+					} else if header == "*file_size" {
 						fileInfo, err := os.Stat(file)
 						if err != nil {
 							log.Fatalf(err.Error())
