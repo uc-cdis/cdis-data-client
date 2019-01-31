@@ -94,7 +94,7 @@ func init() {
 			if len(filePaths) == 0 {
 				log.Fatalf("Error when parsing file paths, no file has been found in the provided location \"" + uploadPath + "\"")
 			}
-			fmt.Println("\nThe following file(s) has been founded in path \"" + uploadPath + "\" and will be uploaded:")
+			fmt.Println("\nThe following file(s) has been found in path \"" + uploadPath + "\" and will be uploaded:")
 			for _, filePath := range filePaths {
 				file, _ := os.Open(filePath)
 				if fi, _ := file.Stat(); !fi.IsDir() {
@@ -144,11 +144,15 @@ func init() {
 				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 				if respURL == "" || guid == "" {
-					log.Fatalf("Error has occurred during presigned URL or GUID generation.")
+					if err != nil {
+						log.Fatalf("You don't have permission to upload data, detailed error message: " + err.Error())
+					} else {
+						log.Fatalf("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
+					}
 				}
 
 				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
+					log.Fatalf("The file you specified \"%s\" does not exist locally", filePath)
 				}
 
 				req, bar, err := GenerateUploadRequest("", respURL, file)
