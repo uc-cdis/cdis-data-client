@@ -108,6 +108,10 @@ func init() {
 			bars := make([]*pb.ProgressBar, 0)
 
 			for _, filePath := range filePaths {
+				if _, err := os.Stat(filePath); os.IsNotExist(err) {
+					log.Fatalf("The file you specified \"%s\" does not exist locally", filePath)
+				}
+
 				file, err := os.Open(filePath)
 				if err != nil {
 					log.Fatal("File open error")
@@ -151,13 +155,9 @@ func init() {
 					}
 				}
 
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					log.Fatalf("The file you specified \"%s\" does not exist locally", filePath)
-				}
-
 				req, bar, err := GenerateUploadRequest("", respURL, file)
 				if err != nil {
-					log.Fatalf("Error occurred during request generation: %s", err.Error())
+					log.Printf("Error occurred during request generation: %s", err.Error())
 					continue
 				}
 				if batch {
