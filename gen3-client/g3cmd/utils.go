@@ -1,6 +1,7 @@
 package g3cmd
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -20,6 +21,8 @@ type ManifestObject struct {
 type NewFlowRequestObject struct {
 	Filename string `json:"file_name"`
 }
+
+const FileSizeLimit = 5 * 1024 * 1024 * 1024
 
 func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Request, *pb.ProgressBar, error) {
 	request := new(jwt.Request)
@@ -42,6 +45,10 @@ func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Reques
 	fi, err := file.Stat()
 	if err != nil {
 		log.Fatalf("File stat error for file %s, file may be missing or unreadable because of permissions\n", fi.Name())
+	}
+
+	if fi.Size() > FileSizeLimit {
+		return nil, nil, errors.New("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5GB.\n")
 	}
 
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fi.Name() + " ")
