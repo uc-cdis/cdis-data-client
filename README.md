@@ -8,6 +8,8 @@ Read more about what it does and how to use it in the `gen3-client` [user guide]
 
 ## Installation
 
+(The following instruction is for compiling and installing the `gen3-client` from source code. There are also binary executables can be found at [here](https://github.com/uc-cdis/cdis-data-client/releases))
+
 First, [install Go and the Go tools](https://golang.org/doc/install) if you have not already done so. [Set up your workspace and your GOPATH.](https://golang.org/doc/code.html)
 
 
@@ -25,8 +27,10 @@ go install
 mkdir -p $GOPATH/src/github.com/uc-cdis
 cd $GOPATH/src/github.com/uc-cdis
 git clone git@github.com:uc-cdis/cdis-data-client.git
-mv /cdis-data-client /gen3-client
+mv cdis-data-client gen3-client
 cd gen3-client
 go get -d ./...
 go install .
 ```
+
+Now you should have `gen3-client` successfully installed. For a comprehensive instruction on how to configure and use `gen3-client` for uploading / downloading object files, please refer to the `gen3-client` [user guide](https://gen3.org/resources/user/gen3-client/).
