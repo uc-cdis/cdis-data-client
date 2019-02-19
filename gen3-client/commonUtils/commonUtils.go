@@ -33,7 +33,11 @@ func ParseFilePaths(filePath string) ([]string, error) {
 				if err != nil {
 					return err
 				}
-				if !fileInfo.IsDir() {
+				isHidden, err := IsHidden(filepath.Base(path))
+				if err != nil {
+					return err
+				}
+				if !fileInfo.IsDir() && !isHidden {
 					filePaths = append(filePaths, path)
 				}
 				return nil
