@@ -4,11 +4,12 @@ package commonUtils
 
 import (
 	"errors"
+	"path/filepath"
 	"runtime"
 )
 
 func IsHidden(filename string) (bool, error) {
-	filename = commonUtils.IsHidden(filepath.Base(filename))
+	filename = filepath.Base(filename)
 	if runtime.GOOS != "windows" {
 		if filename[0:1] == "." {
 			return true, nil
