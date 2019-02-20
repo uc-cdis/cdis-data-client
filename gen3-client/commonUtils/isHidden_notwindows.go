@@ -8,6 +8,7 @@ import (
 )
 
 func IsHidden(filename string) (bool, error) {
+	filename = commonUtils.IsHidden(filepath.Base(filename))
 	if runtime.GOOS != "windows" {
 		if filename[0:1] == "." {
 			return true, nil
