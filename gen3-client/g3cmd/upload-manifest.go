@@ -71,10 +71,12 @@ func batchUpload(numParallel int, reqs []*http.Request, bars []*pb.ProgressBar) 
 		go func(cb *pb.ProgressBar) {
 			for cb.Get() < cb.Total {
 			}
+			cb.Finish()
 			wg.Done()
 		}(bar)
 	}
 	wg.Wait()
+	pool.Stop()
 
 	if len(errch) > 0 {
 		for err := range errch {
@@ -84,7 +86,6 @@ func batchUpload(numParallel int, reqs []*http.Request, bars []*pb.ProgressBar) 
 		}
 	}
 
-	pool.Stop()
 	fmt.Printf("%d files uploaded.\n", len(reqs))
 }
 
