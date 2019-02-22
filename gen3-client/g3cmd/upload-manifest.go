@@ -65,17 +65,6 @@ func batchUpload(numParallel int, reqs []*http.Request, bars []*pb.ProgressBar) 
 	client := &http.Client{}
 	_, errch := doBatchHTTPClient(client, numParallel, reqs...)
 
-	wg := new(sync.WaitGroup)
-	for _, bar := range bars {
-		wg.Add(1)
-		bar.Start()
-		go func(cb *pb.ProgressBar) {
-			for cb.Get() < cb.Total {
-			}
-			wg.Done()
-		}(bar)
-	}
-	wg.Wait()
 	pool.Stop()
 
 	if len(errch) > 0 {
