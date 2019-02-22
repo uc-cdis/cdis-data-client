@@ -2,6 +2,7 @@ package g3cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -20,6 +21,11 @@ import (
 var historyFile string
 var historyFileMap map[string]string
 var pathSeparator = string(os.PathSeparator)
+
+type fileInfo struct {
+	filepath string
+	filename string
+}
 
 func initHistory() {
 	home, err := homedir.Dir()
@@ -60,6 +66,72 @@ func initHistory() {
 			log.Fatal("Error occurred when unmarshaling JSON objects: " + err.Error())
 		}
 	}
+}
+
+func validateFilePath(filePaths []string) []string {
+	validatedFilePaths := make([]string, 0)
+	for _, filePath := range filePaths {
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			log.Printf("The file you specified \"%s\" does not exist locally", filePath)
+			continue
+		}
+
+		file, err := os.Open(filePath)
+		if err != nil {
+			log.Printf("File open error")
+			continue
+		}
+
+		if fi, _ := file.Stat(); fi.IsDir() {
+			continue
+		}
+
+		_, present := historyFileMap[filePath]
+		if present {
+			fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
+			continue
+		}
+		validatedFilePaths = append(validatedFilePaths, filePath)
+		file.Close()
+	}
+	return validatedFilePaths
+}
+
+func processFilename(uploadPath string, filePath string, includeSubDirName bool) (fileInfo, error) {
+	var err error
+	filename := filepath.Base(filePath)
+	if includeSubDirName {
+		presentDirname := strings.TrimSuffix(commonUtils.ParseRootPath(uploadPath), pathSeparator+"*")
+		subFilename := strings.TrimPrefix(filePath, presentDirname)
+		dir, _ := filepath.Split(subFilename)
+		if dir != "" && dir != string(pathSeparator) {
+			filename = strings.TrimPrefix(subFilename, pathSeparator)
+			filename = strings.Replace(filename, pathSeparator, ".", -1)
+		} else {
+			err = errors.New("Include subdirectory names will only works if the file is under at least one subdirectory.")
+		}
+	}
+	return fileInfo{filePath, filename}, err
+}
+
+func getPresignedURL(function *jwt.Functions, filePath string, uploadPath string, includeSubDirName bool) (string, string, error) {
+	fileinfo, err := processFilename(uploadPath, filePath, includeSubDirName)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	endPointPostfix := "/user/data/upload"
+	object := NewFlowRequestObject{Filename: fileinfo.filename}
+	objectBytes, err := json.Marshal(object)
+
+	respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+
+	if respURL == "" || guid == "" {
+		if err != nil {
+			return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
+		}
+		return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
+	}
+	return respURL, guid, err
 }
 
 func init() {
@@ -104,75 +176,40 @@ func init() {
 			}
 			fmt.Println()
 
-			reqs := make([]*http.Request, 0)
-			bars := make([]*pb.ProgressBar, 0)
-
-			for _, filePath := range filePaths {
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					log.Fatalf("The file you specified \"%s\" does not exist locally", filePath)
-				}
-
-				file, err := os.Open(filePath)
-				if err != nil {
-					log.Fatal("File open error")
-				}
-				defer file.Close()
-
-				if fi, _ := file.Stat(); fi.IsDir() {
-					continue
-				}
-
-				_, present := historyFileMap[filePath]
-				if present {
-					fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
-					continue
-				}
-
-				filename := filepath.Base(filePath)
-				if includeSubDirName {
-					presentDirname := strings.TrimSuffix(commonUtils.ParseRootPath(uploadPath), pathSeparator+"*")
-					subFilename := strings.TrimPrefix(filePath, presentDirname)
-					dir, _ := filepath.Split(subFilename)
-					if dir != "" && dir != string(pathSeparator) {
-						filename = strings.TrimPrefix(subFilename, pathSeparator)
-						filename = strings.Replace(filename, pathSeparator, ".", -1)
-					} else {
-						fmt.Println("Include subdirectory names will only works if the file is under at least one subdirectory.")
-					}
-				}
-
-				endPointPostfix := "/user/data/upload"
-				object := NewFlowRequestObject{Filename: filename}
-				objectBytes, err := json.Marshal(object)
-
-				respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
-
-				if respURL == "" || guid == "" {
-					if err != nil {
-						log.Fatalf("You don't have permission to upload data, detailed error message: " + err.Error())
-					} else {
-						log.Fatalf("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
-					}
-				}
-
-				req, bar, err := GenerateUploadRequest("", respURL, file)
-				if err != nil {
-					log.Printf("Error occurred during request generation: %s", err.Error())
-					continue
-				}
-				if batch {
-					reqs = append(reqs, req)
-					bars = append(bars, bar)
-				} else {
-					uploadFile(req, bar, guid, filePath)
-					file.Close()
-				}
-				historyFileMap[filePath] = guid
-			}
+			validatedFilePaths := validateFilePath(filePaths)
 
 			if batch {
-				batchUpload(numParallel, reqs, bars)
+				workers := numParallel
+				if workers < 1 || workers > len(validatedFilePaths) {
+					workers = len(validatedFilePaths)
+				}
+				//TODO: batch work here
+			} else {
+				for _, filePath := range validatedFilePaths {
+					respURL, guid, err := getPresignedURL(function, filePath, uploadPath, includeSubDirName)
+					if err != nil {
+						log.Println(err.Error())
+						continue
+					}
+					file, err := os.Open(filePath)
+					if err != nil {
+						log.Println("File open error")
+						continue
+					}
+					req, bar, err := GenerateUploadRequest("", respURL, file)
+					if err != nil {
+						file.Close()
+						log.Println("Error occurred during request generation: %s", err.Error())
+						continue
+					}
+					uploadFile(req, bar, guid, filePath)
+					historyFileMap[filePath] = guid
+					file.Close()
+				}
 			}
+
+			reqs := make([]*http.Request, 0)
+			bars := make([]*pb.ProgressBar, 0)
 
 			jsonData, err := json.Marshal(historyFileMap)
 			if err != nil {
