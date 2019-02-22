@@ -52,6 +52,7 @@ func doBatchHTTPClient(client *http.Client, workers int, requests ...*http.Reque
 
 	wg.Wait()
 	close(respch)
+	close(errch)
 	return respch, errch
 }
 
@@ -71,7 +72,6 @@ func batchUpload(numParallel int, reqs []*http.Request, bars []*pb.ProgressBar) 
 		go func(cb *pb.ProgressBar) {
 			for cb.Get() < cb.Total {
 			}
-			cb.Finish()
 			wg.Done()
 		}(bar)
 	}
