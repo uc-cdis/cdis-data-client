@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -21,6 +22,10 @@ import (
 var historyFile string
 var historyFileMap map[string]string
 var pathSeparator = string(os.PathSeparator)
+var uploadPath string
+var batch bool
+var numParallel int
+var includeSubDirName bool
 
 type fileInfo struct {
 	filepath string
@@ -97,7 +102,7 @@ func validateFilePath(filePaths []string) []string {
 	return validatedFilePaths
 }
 
-func processFilename(uploadPath string, filePath string, includeSubDirName bool) (fileInfo, error) {
+func processFilename(filePath string) (fileInfo, error) {
 	var err error
 	filename := filepath.Base(filePath)
 	if includeSubDirName {
@@ -114,8 +119,8 @@ func processFilename(uploadPath string, filePath string, includeSubDirName bool)
 	return fileInfo{filePath, filename}, err
 }
 
-func getPresignedURL(function *jwt.Functions, filePath string, uploadPath string, includeSubDirName bool) (string, string, error) {
-	fileinfo, err := processFilename(uploadPath, filePath, includeSubDirName)
+func getPresignedURL(function *jwt.Functions, filePath string) (string, string, error) {
+	fileinfo, err := processFilename(filePath)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -134,11 +139,63 @@ func getPresignedURL(function *jwt.Functions, filePath string, uploadPath string
 	return respURL, guid, err
 }
 
+func uploadABatch(function *jwt.Functions, filePaths []string, workers int, reqCh chan *http.Request, respCh chan *http.Response, errCh chan error) {
+	reqs := make([]*http.Request, 0)
+	bars := make([]*pb.ProgressBar, 0)
+
+	for _, filePath := range filePaths {
+		respURL, _, err := getPresignedURL(function, filePath)
+		if err != nil {
+			errCh <- err
+			continue
+		}
+		file, err := os.Open(filePath)
+		defer file.Close()
+		if err != nil {
+			errCh <- err
+			continue
+		}
+		req, bar, err := GenerateUploadRequest("", respURL, file)
+		if err != nil {
+			file.Close()
+			errCh <- err
+			continue
+		}
+		reqs = append(reqs, req)
+		bars = append(bars, bar)
+	}
+
+	pool, err := pb.StartPool(bars...)
+	if err != nil {
+		panic(err)
+	}
+	client := &http.Client{}
+	wg := sync.WaitGroup{}
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			for req := range reqCh {
+				resp, err := client.Do(req)
+				if err != nil {
+					errCh <- err
+				} else {
+					respCh <- resp
+				}
+			}
+			wg.Done()
+		}()
+	}
+
+	for _, req := range reqs {
+		reqCh <- req
+	}
+	close(reqCh)
+
+	wg.Wait()
+	pool.Stop()
+}
+
 func init() {
-	var uploadPath string
-	var batch bool
-	var numParallel int
-	var includeSubDirName bool
 
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
@@ -183,10 +240,34 @@ func init() {
 				if workers < 1 || workers > len(validatedFilePaths) {
 					workers = len(validatedFilePaths)
 				}
-				//TODO: batch work here
+				reqCh := make(chan *http.Request, workers)
+				respCh := make(chan *http.Response, len(validatedFilePaths))
+				errCh := make(chan error, len(validatedFilePaths))
+				batchFilePaths := make([]string, 0)
+
+				for _, filePath := range validatedFilePaths {
+					if len(batchFilePaths) < workers {
+						batchFilePaths = append(batchFilePaths, filePath)
+					} else {
+						uploadABatch(function, batchFilePaths, workers, reqCh, respCh, errCh)
+						reqCh = make(chan *http.Request, workers)
+						batchFilePaths = make([]string, 0)
+						batchFilePaths = append(batchFilePaths, filePath)
+					}
+				}
+				uploadABatch(function, batchFilePaths, workers, reqCh, respCh, errCh)
+
+				if len(errCh) > 0 {
+					for err := range errCh {
+						if err != nil {
+							fmt.Printf("Error: %s\n", err.Error())
+						}
+					}
+				}
+				fmt.Printf("%d files uploaded.\n", len(respCh))
 			} else {
 				for _, filePath := range validatedFilePaths {
-					respURL, guid, err := getPresignedURL(function, filePath, uploadPath, includeSubDirName)
+					respURL, guid, err := getPresignedURL(function, filePath)
 					if err != nil {
 						log.Println(err.Error())
 						continue
@@ -207,9 +288,6 @@ func init() {
 					file.Close()
 				}
 			}
-
-			reqs := make([]*http.Request, 0)
-			bars := make([]*pb.ProgressBar, 0)
 
 			jsonData, err := json.Marshal(historyFileMap)
 			if err != nil {
