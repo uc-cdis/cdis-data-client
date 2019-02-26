@@ -8,8 +8,8 @@ import (
 	"runtime"
 )
 
-func IsHidden(filename string) (bool, error) {
-	filename = filepath.Base(filename)
+func IsHidden(filePath string) (bool, error) {
+	filename := filepath.Base(filePath)
 	if runtime.GOOS != "windows" {
 		if filename[0:1] == "." {
 			return true, nil

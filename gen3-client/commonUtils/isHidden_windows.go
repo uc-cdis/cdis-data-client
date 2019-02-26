@@ -4,16 +4,18 @@ package commonUtils
 
 import (
 	"errors"
+	"path/filepath"
 	"runtime"
 	"syscall"
 )
 
-func IsHidden(filename string) (bool, error) {
+func IsHidden(filePath string) (bool, error) {
+	filename := filepath.Base(filePath)
 	if runtime.GOOS == "windows" {
 		if filename[0:1] == "." {
 			return true, nil
 		}
-		pointer, err := syscall.UTF16PtrFromString(filename)
+		pointer, err := syscall.UTF16PtrFromString(filePath)
 		if err != nil {
 			return false, err
 		}
