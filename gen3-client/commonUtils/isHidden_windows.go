@@ -10,6 +10,9 @@ import (
 
 func IsHidden(filename string) (bool, error) {
 	if runtime.GOOS == "windows" {
+		if filename[0:1] == "." {
+			return true, nil
+		}
 		pointer, err := syscall.UTF16PtrFromString(filename)
 		if err != nil {
 			return false, err
