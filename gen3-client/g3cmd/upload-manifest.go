@@ -11,72 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
-
-	"gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
 )
-
-// doBatchHTTPClient executes a batch of HTTP PUT requests using worker pool. The default number of workers is 3
-func doBatchHTTPClient(client *http.Client, workers int, requests ...*http.Request) (<-chan *http.Response, <-chan error) {
-	if workers < 1 || workers > len(requests) {
-		workers = len(requests)
-	}
-
-	// channels for requests, responses and errors
-	reqch := make(chan *http.Request, len(requests))
-	respch := make(chan *http.Response, len(requests))
-	errch := make(chan error, len(requests))
-
-	wg := sync.WaitGroup{}
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		go func() {
-			for req := range reqch {
-				resp, err := client.Do(req)
-				if err != nil {
-					errch <- err
-				} else {
-					respch <- resp
-				}
-			}
-			wg.Done()
-		}()
-	}
-
-	for _, req := range requests {
-		reqch <- req
-	}
-	close(reqch)
-
-	wg.Wait()
-	close(respch)
-	close(errch)
-	return respch, errch
-}
-
-func batchUpload(numParallel int, reqs []*http.Request, bars []*pb.ProgressBar) {
-	pool, err := pb.StartPool(bars...)
-	if err != nil {
-		panic(err)
-	}
-
-	client := &http.Client{}
-	_, errch := doBatchHTTPClient(client, numParallel, reqs...)
-
-	pool.Stop()
-
-	if len(errch) > 0 {
-		for err := range errch {
-			if err != nil {
-				fmt.Printf("Error: %s\n", err.Error())
-			}
-		}
-	}
-
-	fmt.Printf("%d files uploaded.\n", len(reqs))
-}
 
 func getFullFilePath(filePath string, filename string) (string, error) {
 	fi, err := os.Stat(filePath)
@@ -97,11 +34,38 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	}
 }
 
+func validateObject(objects []ManifestObject) []NewFlowUploadObject {
+	fileObjects := make([]NewFlowUploadObject, 0)
+	for _, object := range objects {
+		guid := object.ObjectID
+		// Here we are assuming the local filename will be the same as GUID
+		filePath, err := getFullFilePath(uploadPath, object.ObjectID)
+		if err != nil {
+			log.Println(err.Error())
+			continue
+		}
+
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			log.Println("The file you specified \"%s\" does not exist locally.", filePath)
+			continue
+		}
+
+		fileObject := NewFlowUploadObject{FilePath: filePath, GUID: guid}
+		fileObjects = append(fileObjects, fileObject)
+	}
+	return fileObjects
+}
+
 func init() {
 	var manifestPath string
 	var uploadPath string
 	var batch bool
 	var numParallel int
+	var workers int
+	var reqCh chan *http.Request
+	var respCh chan *http.Response
+	var errCh chan error
+	var batchFileObjects []NewFlowUploadObject
 
 	var uploadManifestCmd = &cobra.Command{
 		Use:     "upload-manifest",
@@ -132,43 +96,37 @@ func init() {
 				return
 			}
 
-			reqs := make([]*http.Request, 0)
-			bars := make([]*pb.ProgressBar, 0)
-			for _, object := range objects {
-				guid := object.ObjectID
-				// Here we are assuming the local filename will be the same as GUID
-				filePath, err := getFullFilePath(uploadPath, object.ObjectID)
-				if err != nil {
-					log.Fatalf(err.Error())
-					continue
-				}
-
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
-				}
-
-				file, err := os.Open(filePath)
-				if err != nil {
-					log.Fatal("File Error")
-				}
-				defer file.Close()
-
-				req, bar, err := GenerateUploadRequest(guid, "", file)
-				if err != nil {
-					log.Fatalf("Error occurred during request generation: %s", err.Error())
-					continue
-				}
-				if batch {
-					reqs = append(reqs, req)
-					bars = append(bars, bar)
-				} else {
-					uploadFile(req, bar, guid, filePath)
-					file.Close()
-				}
-			}
+			fileObjects := validateObject(objects)
 
 			if batch {
-				batchUpload(numParallel, reqs, bars)
+				workers, reqCh, respCh, errCh, batchFileObjects = initBathUploadChannels(numParallel, len(objects))
+			}
+
+			for _, fileObject := range fileObjects {
+				if batch {
+					if len(batchFileObjects) < workers {
+						batchFileObjects = append(batchFileObjects, fileObject)
+					} else {
+						batchUpload(batchFileObjects, workers, reqCh, respCh, errCh)
+						reqCh = make(chan *http.Request, workers)
+						batchFileObjects = make([]NewFlowUploadObject, 0)
+						batchFileObjects = append(batchFileObjects, fileObject)
+					}
+				} else {
+					file, err := os.Open(fileObject.FilePath)
+					if err != nil {
+						log.Fatal("File Error")
+					}
+					defer file.Close()
+
+					req, bar, err := GenerateUploadRequest(fileObject.GUID, "", file)
+					if err != nil {
+						log.Fatalf("Error occurred during request generation: %s", err.Error())
+						continue
+					}
+					uploadFile(req, bar, fileObject.GUID, fileObject.FilePath)
+					file.Close()
+				}
 			}
 		},
 	}

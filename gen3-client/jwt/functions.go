@@ -13,6 +13,8 @@ import (
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 type Functions struct {
@@ -162,7 +164,7 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 		if err == nil {
 			homeDir = usr.HomeDir
 		}
-		configPath := path.Join(homeDir + "/.gen3/config")
+		configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 		content := f.Config.ReadFile(configPath, configFileType)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 

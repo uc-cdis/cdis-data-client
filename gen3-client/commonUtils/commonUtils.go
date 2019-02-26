@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 )
 
+var PathSeparator = string(os.PathSeparator)
+
 func ParseRootPath(filePath string) string {
 	if filePath != "" && filePath[0] == '~' {
 		usr, _ := user.Current()

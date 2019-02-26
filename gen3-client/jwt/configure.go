@@ -100,7 +100,7 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 	if err == nil {
 		homeDir = usr.HomeDir
 	}
-	configPath := path.Join(homeDir + "/.gen3/config")
+	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 
 	content, err := conf.TryReadFile(configPath)
 
@@ -227,7 +227,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	if err == nil {
 		homeDir = usr.HomeDir
 	}
-	configPath := path.Join(homeDir + "/.gen3/config")
+	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 	cred := Credential{
 		KeyId:       "",
 		APIKey:      "",

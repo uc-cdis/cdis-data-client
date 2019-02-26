@@ -15,13 +15,11 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 var historyFile string
 var historyFileMap map[string]string
-var pathSeparator = string(os.PathSeparator)
 var uploadPath string
 var batch bool
 var numParallel int
@@ -39,7 +37,7 @@ func initHistory() {
 		os.Exit(1)
 	}
 
-	historyPath := home + pathSeparator + ".gen3" + pathSeparator
+	historyPath := home + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator
 
 	if _, err := os.Stat(historyPath); os.IsNotExist(err) { // path to ~/.gen3 does not exist
 		err = os.Mkdir(historyPath, 0644)
@@ -71,6 +69,18 @@ func initHistory() {
 			log.Fatal("Error occurred when unmarshaling JSON objects: " + err.Error())
 		}
 	}
+}
+
+func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan *http.Request, chan *http.Response, chan error, []NewFlowUploadObject) {
+	workers := numParallel
+	if workers < 1 || workers > inputSliceLen {
+		workers = inputSliceLen
+	}
+	reqCh := make(chan *http.Request, workers)
+	respCh := make(chan *http.Response, inputSliceLen)
+	errCh := make(chan error, inputSliceLen)
+	batchInputSlice := make([]NewFlowUploadObject, 0)
+	return workers, reqCh, respCh, errCh, batchInputSlice
 }
 
 func validateFilePath(filePaths []string) []string {
@@ -106,12 +116,12 @@ func processFilename(filePath string) (fileInfo, error) {
 	var err error
 	filename := filepath.Base(filePath)
 	if includeSubDirName {
-		presentDirname := strings.TrimSuffix(commonUtils.ParseRootPath(uploadPath), pathSeparator+"*")
+		presentDirname := strings.TrimSuffix(commonUtils.ParseRootPath(uploadPath), commonUtils.PathSeparator+"*")
 		subFilename := strings.TrimPrefix(filePath, presentDirname)
 		dir, _ := filepath.Split(subFilename)
-		if dir != "" && dir != string(pathSeparator) {
-			filename = strings.TrimPrefix(subFilename, pathSeparator)
-			filename = strings.Replace(filename, pathSeparator, ".", -1)
+		if dir != "" && dir != commonUtils.PathSeparator {
+			filename = strings.TrimPrefix(subFilename, commonUtils.PathSeparator)
+			filename = strings.Replace(filename, commonUtils.PathSeparator, ".", -1)
 		} else {
 			err = errors.New("Include subdirectory names will only works if the file is under at least one subdirectory.")
 		}
@@ -119,56 +129,43 @@ func processFilename(filePath string) (fileInfo, error) {
 	return fileInfo{filePath, filename}, err
 }
 
-func getPresignedURL(function *jwt.Functions, filePath string) (string, string, error) {
-	fileinfo, err := processFilename(filePath)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	endPointPostfix := "/user/data/upload"
-	object := NewFlowRequestObject{Filename: fileinfo.filename}
-	objectBytes, err := json.Marshal(object)
-
-	respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
-
-	if respURL == "" || guid == "" {
-		if err != nil {
-			return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
-		}
-		return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
-	}
-	return respURL, guid, err
-}
-
-func uploadABatch(function *jwt.Functions, filePaths []string, workers int, reqCh chan *http.Request, respCh chan *http.Response, errCh chan error) {
+func batchUpload(fileObjects []NewFlowUploadObject, workers int, reqCh chan *http.Request, respCh chan *http.Response, errCh chan error) {
 	reqs := make([]*http.Request, 0)
 	bars := make([]*pb.ProgressBar, 0)
+	respURL := ""
+	var err error
 
-	for _, filePath := range filePaths {
-		respURL, _, err := getPresignedURL(function, filePath)
+	for _, fileObject := range fileObjects {
+		if fileObject.GUID == "" {
+			respURL, _, err = GeneratePresignedURL(fileObject.FilePath)
+			if err != nil {
+				errCh <- err
+				continue
+			}
+		}
+		file, err := os.Open(fileObject.FilePath)
 		if err != nil {
-			errCh <- err
+			errCh <- errors.New("File open error: " + err.Error())
 			continue
 		}
-		file, err := os.Open(filePath)
 		defer file.Close()
-		if err != nil {
-			errCh <- err
-			continue
-		}
-		req, bar, err := GenerateUploadRequest("", respURL, file)
+
+		req, bar, err := GenerateUploadRequest(fileObject.GUID, respURL, file)
 		if err != nil {
 			file.Close()
-			errCh <- err
+			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
 		}
 		reqs = append(reqs, req)
 		bars = append(bars, bar)
+		historyFileMap[fileObject.FilePath] = fileObject.GUID
 	}
 
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
 		panic(err)
 	}
+
 	client := &http.Client{}
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
@@ -196,7 +193,6 @@ func uploadABatch(function *jwt.Functions, filePaths []string, workers int, reqC
 }
 
 func init() {
-
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
 		Short: "upload file(s) to object storage.",
@@ -207,13 +203,6 @@ func init() {
 			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
 		Run: func(cmd *cobra.Command, args []string) {
 			initHistory()
-
-			request := new(jwt.Request)
-			configure := new(jwt.Configure)
-			function := new(jwt.Functions)
-
-			function.Config = configure
-			function.Request = request
 
 			uploadPath = filepath.Clean(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
@@ -236,26 +225,20 @@ func init() {
 			validatedFilePaths := validateFilePath(filePaths)
 
 			if batch {
-				workers := numParallel
-				if workers < 1 || workers > len(validatedFilePaths) {
-					workers = len(validatedFilePaths)
-				}
-				reqCh := make(chan *http.Request, workers)
-				respCh := make(chan *http.Response, len(validatedFilePaths))
-				errCh := make(chan error, len(validatedFilePaths))
-				batchFilePaths := make([]string, 0)
-
+				workers, reqCh, respCh, errCh, batchFileObjects := initBathUploadChannels(numParallel, len(validatedFilePaths))
 				for _, filePath := range validatedFilePaths {
-					if len(batchFilePaths) < workers {
-						batchFilePaths = append(batchFilePaths, filePath)
+					if len(batchFileObjects) < workers {
+						fileObject := NewFlowUploadObject{FilePath: filePath, GUID: ""}
+						batchFileObjects = append(batchFileObjects, fileObject)
 					} else {
-						uploadABatch(function, batchFilePaths, workers, reqCh, respCh, errCh)
+						batchUpload(batchFileObjects, workers, reqCh, respCh, errCh)
 						reqCh = make(chan *http.Request, workers)
-						batchFilePaths = make([]string, 0)
-						batchFilePaths = append(batchFilePaths, filePath)
+						batchFileObjects = make([]NewFlowUploadObject, 0)
+						fileObject := NewFlowUploadObject{FilePath: filePath, GUID: ""}
+						batchFileObjects = append(batchFileObjects, fileObject)
 					}
 				}
-				uploadABatch(function, batchFilePaths, workers, reqCh, respCh, errCh)
+				batchUpload(batchFileObjects, workers, reqCh, respCh, errCh)
 
 				if len(errCh) > 0 {
 					for err := range errCh {
@@ -267,7 +250,7 @@ func init() {
 				fmt.Printf("%d files uploaded.\n", len(respCh))
 			} else {
 				for _, filePath := range validatedFilePaths {
-					respURL, guid, err := getPresignedURL(function, filePath)
+					respURL, guid, err := GeneratePresignedURL(filePath)
 					if err != nil {
 						log.Println(err.Error())
 						continue
@@ -280,7 +263,7 @@ func init() {
 					req, bar, err := GenerateUploadRequest("", respURL, file)
 					if err != nil {
 						file.Close()
-						log.Println("Error occurred during request generation: %s", err.Error())
+						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
 					uploadFile(req, bar, guid, filePath)

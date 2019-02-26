@@ -1,7 +1,9 @@
 package g3cmd
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -18,11 +20,43 @@ type ManifestObject struct {
 	SubjectID string `json:"subject_id"`
 }
 
+type NewFlowUploadObject struct {
+	FilePath string
+	GUID     string
+}
+
 type NewFlowRequestObject struct {
 	Filename string `json:"file_name"`
 }
 
 const FileSizeLimit = 5 * 1024 * 1024 * 1024
+
+func GeneratePresignedURL(filePath string) (string, string, error) {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	fileinfo, err := processFilename(filePath)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	endPointPostfix := "/user/data/upload"
+	object := NewFlowRequestObject{Filename: fileinfo.filename}
+	objectBytes, err := json.Marshal(object)
+
+	respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+
+	if respURL == "" || guid == "" {
+		if err != nil {
+			return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
+		}
+		return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
+	}
+	return respURL, guid, err
+}
 
 func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Request, *pb.ProgressBar, error) {
 	request := new(jwt.Request)
