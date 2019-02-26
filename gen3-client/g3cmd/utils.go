@@ -20,12 +20,13 @@ type ManifestObject struct {
 	SubjectID string `json:"subject_id"`
 }
 
-type NewFlowUploadObject struct {
+type FileUploadRequestObject struct {
 	FilePath string
 	GUID     string
+	Request  *http.Request
 }
 
-type NewFlowRequestObject struct {
+type PresignedURLRequestObject struct {
 	Filename string `json:"file_name"`
 }
 
@@ -44,8 +45,8 @@ func GeneratePresignedURL(filePath string) (string, string, error) {
 		fmt.Println(err.Error())
 	}
 	endPointPostfix := "/user/data/upload"
-	object := NewFlowRequestObject{Filename: fileinfo.filename}
-	objectBytes, err := json.Marshal(object)
+	purObject := PresignedURLRequestObject{Filename: fileinfo.filename}
+	objectBytes, err := json.Marshal(purObject)
 
 	respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 

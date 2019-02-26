@@ -34,8 +34,8 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	}
 }
 
-func validateObject(objects []ManifestObject) []NewFlowUploadObject {
-	fileObjects := make([]NewFlowUploadObject, 0)
+func validateObject(objects []ManifestObject) []FileUploadRequestObject {
+	furObjects := make([]FileUploadRequestObject, 0)
 	for _, object := range objects {
 		guid := object.ObjectID
 		// Here we are assuming the local filename will be the same as GUID
@@ -50,10 +50,10 @@ func validateObject(objects []ManifestObject) []NewFlowUploadObject {
 			continue
 		}
 
-		fileObject := NewFlowUploadObject{FilePath: filePath, GUID: guid}
-		fileObjects = append(fileObjects, fileObject)
+		furObject := FileUploadRequestObject{FilePath: filePath, GUID: guid}
+		furObjects = append(furObjects, furObject)
 	}
-	return fileObjects
+	return furObjects
 }
 
 func init() {
@@ -62,10 +62,10 @@ func init() {
 	var batch bool
 	var numParallel int
 	var workers int
-	var reqCh chan *http.Request
+	var furCh chan FileUploadRequestObject
 	var respCh chan *http.Response
 	var errCh chan error
-	var batchFileObjects []NewFlowUploadObject
+	var batchFURObjects []FileUploadRequestObject
 
 	var uploadManifestCmd = &cobra.Command{
 		Use:     "upload-manifest",
@@ -96,35 +96,35 @@ func init() {
 				return
 			}
 
-			fileObjects := validateObject(objects)
+			furObjects := validateObject(objects)
 
 			if batch {
-				workers, reqCh, respCh, errCh, batchFileObjects = initBathUploadChannels(numParallel, len(objects))
+				workers, furCh, respCh, errCh, batchFURObjects = initBathUploadChannels(numParallel, len(objects))
 			}
 
-			for _, fileObject := range fileObjects {
+			for _, furObject := range furObjects {
 				if batch {
-					if len(batchFileObjects) < workers {
-						batchFileObjects = append(batchFileObjects, fileObject)
+					if len(batchFURObjects) < workers {
+						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFileObjects, workers, reqCh, respCh, errCh)
-						reqCh = make(chan *http.Request, workers)
-						batchFileObjects = make([]NewFlowUploadObject, 0)
-						batchFileObjects = append(batchFileObjects, fileObject)
+						batchUpload(batchFURObjects, workers, furCh, respCh, errCh)
+						furCh = make(chan FileUploadRequestObject, workers)
+						batchFURObjects = make([]FileUploadRequestObject, 0)
+						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				} else {
-					file, err := os.Open(fileObject.FilePath)
+					file, err := os.Open(furObject.FilePath)
 					if err != nil {
 						log.Fatal("File Error")
 					}
 					defer file.Close()
 
-					req, bar, err := GenerateUploadRequest(fileObject.GUID, "", file)
+					req, bar, err := GenerateUploadRequest(furObject.GUID, "", file)
 					if err != nil {
 						log.Fatalf("Error occurred during request generation: %s", err.Error())
 						continue
 					}
-					uploadFile(req, bar, fileObject.GUID, fileObject.FilePath)
+					uploadFile(req, bar, furObject.GUID, furObject.FilePath)
 					file.Close()
 				}
 			}

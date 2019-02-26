@@ -71,16 +71,16 @@ func initHistory() {
 	}
 }
 
-func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan *http.Request, chan *http.Response, chan error, []NewFlowUploadObject) {
+func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan FileUploadRequestObject, chan *http.Response, chan error, []FileUploadRequestObject) {
 	workers := numParallel
 	if workers < 1 || workers > inputSliceLen {
 		workers = inputSliceLen
 	}
-	reqCh := make(chan *http.Request, workers)
+	furCh := make(chan FileUploadRequestObject, workers)
 	respCh := make(chan *http.Response, inputSliceLen)
 	errCh := make(chan error, inputSliceLen)
-	batchInputSlice := make([]NewFlowUploadObject, 0)
-	return workers, reqCh, respCh, errCh, batchInputSlice
+	batchFURSlice := make([]FileUploadRequestObject, 0)
+	return workers, furCh, respCh, errCh, batchFURSlice
 }
 
 func validateFilePath(filePaths []string) []string {
@@ -129,36 +129,34 @@ func processFilename(filePath string) (fileInfo, error) {
 	return fileInfo{filePath, filename}, err
 }
 
-func batchUpload(fileObjects []NewFlowUploadObject, workers int, reqCh chan *http.Request, respCh chan *http.Response, errCh chan error) {
-	reqs := make([]*http.Request, 0)
+func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh chan FileUploadRequestObject, respCh chan *http.Response, errCh chan error) {
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
 
-	for _, fileObject := range fileObjects {
-		if fileObject.GUID == "" {
-			respURL, _, err = GeneratePresignedURL(fileObject.FilePath)
+	for _, furObject := range furObjects {
+		if furObject.GUID == "" {
+			respURL, _, err = GeneratePresignedURL(furObject.FilePath)
 			if err != nil {
 				errCh <- err
 				continue
 			}
 		}
-		file, err := os.Open(fileObject.FilePath)
+		file, err := os.Open(furObject.FilePath)
 		if err != nil {
 			errCh <- errors.New("File open error: " + err.Error())
 			continue
 		}
 		defer file.Close()
 
-		req, bar, err := GenerateUploadRequest(fileObject.GUID, respURL, file)
+		req, bar, err := GenerateUploadRequest(furObject.GUID, respURL, file)
 		if err != nil {
 			file.Close()
 			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
 		}
-		reqs = append(reqs, req)
+		furObject.Request = req
 		bars = append(bars, bar)
-		historyFileMap[fileObject.FilePath] = fileObject.GUID
 	}
 
 	pool, err := pb.StartPool(bars...)
@@ -171,22 +169,27 @@ func batchUpload(fileObjects []NewFlowUploadObject, workers int, reqCh chan *htt
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		go func() {
-			for req := range reqCh {
-				resp, err := client.Do(req)
+			for furObject := range furObjectCh {
+				resp, err := client.Do(furObject.Request)
 				if err != nil {
 					errCh <- err
 				} else {
-					respCh <- resp
+					if resp.StatusCode != 200 {
+						//TODO add to failed file map
+					} else {
+						respCh <- resp
+						historyFileMap[furObject.FilePath] = furObject.GUID
+					}
 				}
 			}
 			wg.Done()
 		}()
 	}
 
-	for _, req := range reqs {
-		reqCh <- req
+	for _, furObject := range furObjects {
+		furObjectCh <- furObject
 	}
-	close(reqCh)
+	close(furObjectCh)
 
 	wg.Wait()
 	pool.Stop()
@@ -225,20 +228,20 @@ func init() {
 			validatedFilePaths := validateFilePath(filePaths)
 
 			if batch {
-				workers, reqCh, respCh, errCh, batchFileObjects := initBathUploadChannels(numParallel, len(validatedFilePaths))
+				workers, furCh, respCh, errCh, batchFURObjects := initBathUploadChannels(numParallel, len(validatedFilePaths))
 				for _, filePath := range validatedFilePaths {
-					if len(batchFileObjects) < workers {
-						fileObject := NewFlowUploadObject{FilePath: filePath, GUID: ""}
-						batchFileObjects = append(batchFileObjects, fileObject)
+					if len(batchFURObjects) < workers {
+						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
+						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFileObjects, workers, reqCh, respCh, errCh)
-						reqCh = make(chan *http.Request, workers)
-						batchFileObjects = make([]NewFlowUploadObject, 0)
-						fileObject := NewFlowUploadObject{FilePath: filePath, GUID: ""}
-						batchFileObjects = append(batchFileObjects, fileObject)
+						batchUpload(batchFURObjects, workers, furCh, respCh, errCh)
+						furCh = make(chan FileUploadRequestObject, workers)
+						batchFURObjects = make([]FileUploadRequestObject, 0)
+						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
+						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
-				batchUpload(batchFileObjects, workers, reqCh, respCh, errCh)
+				batchUpload(batchFURObjects, workers, furCh, respCh, errCh)
 
 				if len(errCh) > 0 {
 					for err := range errCh {
