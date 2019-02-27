@@ -103,21 +103,26 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		return msg, errors.New("Nil response received")
 	}
 
-	if resp.StatusCode == 401 {
-		return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials")
-	}
-
-	if resp.StatusCode == 403 {
-		return msg, errors.New("403 Forbidden error has occurred! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
-	}
-
-	if resp.StatusCode == 404 {
-		return msg, errors.New("The provided guid at url \"" + resp.Request.URL.String() + "\" is not found")
+	if !(resp.StatusCode == 200 || resp.StatusCode == 201) {
+		switch resp.StatusCode {
+		case 401:
+			return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials")
+		case 403:
+			return msg, errors.New("403 Forbidden error has occurred! You don't have premission to access the requested url \"" + resp.Request.URL.String() + "\"")
+		case 404:
+			return msg, errors.New("Can't find provided GUID at url \"" + resp.Request.URL.String() + "\"")
+		case 500:
+			return msg, errors.New("500 Internal Server error has occurred! Please try again later")
+		case 503:
+			return msg, errors.New("503 Service Unavailable error has occurred! Please check backend services for more details")
+		default:
+			return msg, errors.New("Unexpected server error has occurred! Please check backend services or contact support")
+		}
 	}
 
 	str := ResponseToString(resp)
 	if strings.Contains(str, "Can't find a location for the data") {
-		return msg, errors.New("The provided guid is not found")
+		return msg, errors.New("The provided GUID is not found")
 	}
 
 	err := DecodeJsonFromString(str, &msg)
@@ -199,9 +204,6 @@ func (r *Request) GetPresignedURL(method string, host *url.URL, endpointPostPref
 	resp, err := r.MakeARequest(client, method, apiEndPoint, headers, body)
 	if err != nil {
 		panic(err)
-	}
-	if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 401 && resp.StatusCode != 403 && resp.StatusCode != 404 {
-		log.Fatalf("Unexpected error %d\n", resp.StatusCode)
 	}
 
 	return resp
