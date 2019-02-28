@@ -56,7 +56,7 @@ func validateFilePath(filePaths []string) []string {
 			continue
 		}
 
-		if logs.ExistsInHistory(filePath) {
+		if logs.ExistsInSucceededLog(filePath) {
 			fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 			continue
 		}
@@ -132,7 +132,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 						//TODO add to failed file map
 					} else {
 						respCh <- resp
-						logs.WriteHistory(furObject.FilePath, furObject.GUID)
+						logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID)
 					}
 				}
 			}

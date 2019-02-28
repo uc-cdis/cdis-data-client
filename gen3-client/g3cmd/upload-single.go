@@ -26,7 +26,7 @@ func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath st
 		return
 	}
 	bar.Finish()
-	logs.WriteHistory(filePath, guid)
+	logs.WriteToSucceededLog(filePath, guid)
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
 }
 
