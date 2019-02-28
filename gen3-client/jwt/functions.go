@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os/user"
@@ -32,7 +31,7 @@ type Request struct {
 
 type RequestInterface interface {
 	MakeARequest(*http.Client, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
-	RequestNewAccessKey(string, *Credential)
+	RequestNewAccessKey(string, *Credential) error
 	GetPresignedURL(method string, host *url.URL, endpointPostPrefix string, accessKey string, contentType string, body *bytes.Buffer) *http.Response
 }
 
@@ -55,14 +54,15 @@ func (r *Request) MakeARequest(client *http.Client, method string, apiEndpoint s
 
 }
 
-func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
+func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) error {
 	/*
 		Request new access token to replace the expired one.
 
 		Args:
-			apiEndpoint: the api enpoint for request new access token
+			apiEndpoint: the api endpoint for request new access token
 		Returns:
 			cred: new credential
+			err: error
 
 	*/
 	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
@@ -72,28 +72,27 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) {
 	resp, err := r.MakeARequest(client, "POST", apiEndpoint, headers, body)
 	var m AccessTokenStruct
 	if err != nil {
-		log.Fatalf("Error occurred in RequestNewAccessKey: " + err.Error())
+		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
 	if resp.StatusCode != 200 {
 		if resp.StatusCode == 401 {
 			fmt.Println("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials.")
 		}
-		log.Fatalf("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check fence log for more details.")
-		return
+		return errors.New("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check fence log for more details.")
 	}
 
 	str := ResponseToString(resp)
 	err = DecodeJsonFromString(str, &m)
 	if err != nil {
-		log.Fatalf("Error occurred in RequestNewAccessKey: " + err.Error())
+		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
 	if m.Access_token == "" {
-		log.Fatalf("Could not get new access key from response string: " + str)
+		return errors.New("Could not get new access key from response string: " + str)
 	}
 	cred.AccessKey = m.Access_token
-
+	return nil
 }
 
 func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, error) {
@@ -163,7 +162,10 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
-		f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/api/access_token", &cred)
+		err := f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/api/access_token", &cred)
+		if err == nil {
+			return "", "", err
+		}
 		usr, err := user.Current()
 		homeDir := ""
 		if err == nil {

@@ -87,14 +87,17 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
+	var guid string
 
 	for _, furObject := range furObjects {
 		if furObject.GUID == "" {
-			respURL, _, err = GeneratePresignedURL(furObject.FilePath)
+			respURL, guid, err = GeneratePresignedURL(furObject.FilePath)
 			if err != nil {
 				errCh <- err
 				continue
 			}
+			furObject.PresignedURL = respURL
+			furObject.GUID = guid
 		}
 		file, err := os.Open(furObject.FilePath)
 		if err != nil {
@@ -103,14 +106,13 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 		}
 		defer file.Close()
 
-		req, bar, err := GenerateUploadRequest(furObject.GUID, respURL, file)
+		furObject, err := GenerateUploadRequest(furObject, file)
 		if err != nil {
 			file.Close()
 			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
 		}
-		furObject.Request = req
-		bars = append(bars, bar)
+		bars = append(bars, furObject.Bar)
 	}
 
 	pool, err := pb.StartPool(bars...)
@@ -162,10 +164,11 @@ func init() {
 			uploadPath = filepath.Clean(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
 			if err != nil {
-				log.Fatalf(err.Error())
+				log.Fatalf("Error when parsing file paths: " + err.Error())
 			}
 			if len(filePaths) == 0 {
-				log.Fatalf("Error when parsing file paths, no file has been found in the provided location \"" + uploadPath + "\"")
+				fmt.Println("No file has been found in the provided location \"" + uploadPath + "\"")
+				return
 			}
 			fmt.Println("\nThe following file(s) has been found in path \"" + uploadPath + "\" and will be uploaded:")
 			for _, filePath := range filePaths {
@@ -210,18 +213,19 @@ func init() {
 						log.Println(err.Error())
 						continue
 					}
+					furObject := FileUploadRequestObject{FilePath: filePath, GUID: guid, PresignedURL: respURL}
 					file, err := os.Open(filePath)
 					if err != nil {
 						log.Println("File open error")
 						continue
 					}
-					req, bar, err := GenerateUploadRequest("", respURL, file)
+					furObject, err = GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
-					uploadFile(req, bar, guid, filePath)
+					uploadFile(furObject)
 					file.Close()
 				}
 			}

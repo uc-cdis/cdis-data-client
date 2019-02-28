@@ -80,7 +80,6 @@ func init() {
 			manifestFile, err := os.Open(manifestPath)
 			if err != nil {
 				log.Fatalf("Failed to open manifest file\n")
-				return
 			}
 			defer manifestFile.Close()
 
@@ -93,7 +92,6 @@ func init() {
 				json.Unmarshal(manifestBytes, &objects)
 			default:
 				log.Fatalf("Unsupported manifast format")
-				return
 			}
 
 			furObjects := validateObject(objects)
@@ -115,16 +113,18 @@ func init() {
 				} else {
 					file, err := os.Open(furObject.FilePath)
 					if err != nil {
-						log.Fatal("File Error")
+						log.Println("File open error: " + err.Error())
+						continue
 					}
 					defer file.Close()
 
-					req, bar, err := GenerateUploadRequest(furObject.GUID, "", file)
+					furObject, err := GenerateUploadRequest(furObject, file)
 					if err != nil {
-						log.Fatalf("Error occurred during request generation: %s", err.Error())
+						file.Close()
+						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue
 					}
-					uploadFile(req, bar, furObject.GUID, furObject.FilePath)
+					uploadFile(furObject)
 					file.Close()
 				}
 			}

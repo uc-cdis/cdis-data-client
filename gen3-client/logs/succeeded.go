@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
@@ -14,6 +15,7 @@ import (
 var succeededLogFilename string
 var succeededLogFileMap map[string]string
 var succeededLogFile *os.File
+var succeededLogLock sync.Mutex
 
 func InitSucceededLog(profile string) {
 	home, err := homedir.Dir()
@@ -63,10 +65,10 @@ func ExistsInSucceededLog(filePath string) bool {
 }
 
 func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
-	tempSucceededLogFileMap := make(map[string]string)
-	tempSucceededLogFileMap["FilePath"] = filePath
-	tempSucceededLogFileMap["GUID"] = guid
-	jsonData, err := json.Marshal(tempSucceededLogFileMap)
+	succeededLogLock.Lock()
+	defer succeededLogLock.Unlock()
+	succeededLogFileMap[filePath] = guid
+	jsonData, err := json.Marshal(succeededLogFileMap)
 	if err != nil {
 		succeededLogFile.Close()
 		log.Fatal("Error occurred when marshaling to JSON objects: " + err.Error())

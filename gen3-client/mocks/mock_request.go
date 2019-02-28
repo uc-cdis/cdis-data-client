@@ -51,8 +51,10 @@ func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3,
 }
 
 // RequestNewAccessKey mocks base method
-func (m *MockRequestInterface) RequestNewAccessKey(arg0 string, arg1 *jwt.Credential) {
-	m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1)
+func (m *MockRequestInterface) RequestNewAccessKey(arg0 string, arg1 *jwt.Credential) error {
+	ret := m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // RequestNewAccessKey indicates an expected call of RequestNewAccessKey

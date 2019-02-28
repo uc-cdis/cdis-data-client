@@ -11,23 +11,22 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath string) {
+func uploadFile(furObject FileUploadRequestObject) {
 	fmt.Println("Uploading data ...")
-	bar.Start()
+	furObject.Bar.Start()
 
 	client := &http.Client{}
-	_, err := client.Do(req)
+	_, err := client.Do(furObject.Request)
 	if err != nil {
-		log.Fatalf("Error occurred during upload: %s", err.Error())
-		bar.Finish()
+		log.Printf("Error occurred during upload: %s", err.Error())
+		furObject.Bar.Finish()
 		return
 	}
-	bar.Finish()
-	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
-	logs.WriteToSucceededLog(filePath, guid, false)
+	furObject.Bar.Finish()
+	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
+	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
 }
 
 func init() {
@@ -59,16 +58,18 @@ func init() {
 
 			file, err := os.Open(filePath)
 			if err != nil {
-				log.Fatal("File open error")
+				log.Fatalln("File open error: " + err.Error())
 			}
 			defer file.Close()
 
-			req, bar, err := GenerateUploadRequest(guid, "", file)
+			furObject := FileUploadRequestObject{FilePath: filePath, GUID: guid}
+
+			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
+				file.Close()
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
-				return
 			}
-			uploadFile(req, bar, guid, filePath)
+			uploadFile(furObject)
 		},
 	}
 

@@ -21,9 +21,11 @@ type ManifestObject struct {
 }
 
 type FileUploadRequestObject struct {
-	FilePath string
-	GUID     string
-	Request  *http.Request
+	FilePath     string
+	GUID         string
+	PresignedURL string
+	Request      *http.Request
+	Bar          *pb.ProgressBar
 }
 
 type PresignedURLRequestObject struct {
@@ -59,7 +61,7 @@ func GeneratePresignedURL(filePath string) (string, string, error) {
 	return respURL, guid, err
 }
 
-func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Request, *pb.ProgressBar, error) {
+func GenerateUploadRequest(furObject FileUploadRequestObject, file *os.File) (FileUploadRequestObject, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -67,23 +69,22 @@ func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Reques
 	function.Config = configure
 	function.Request = request
 
-	if url == "" {
-		endPointPostfix := "/user/data/upload/" + guid
-		signedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+	if furObject.PresignedURL == "" {
+		endPointPostfix := "/user/data/upload/" + furObject.GUID
+		presignedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
-			log.Fatalf("Upload error: %s\n", err)
-			return nil, nil, err
+			return furObject, errors.New("Upload error: " + err.Error())
 		}
-		url = signedURL
+		furObject.PresignedURL = presignedURL
 	}
 
 	fi, err := file.Stat()
 	if err != nil {
-		log.Fatalf("File stat error for file %s, file may be missing or unreadable because of permissions\n", fi.Name())
+		return furObject, errors.New("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 	}
 
 	if fi.Size() > FileSizeLimit {
-		return nil, nil, errors.New("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5GB.\n")
+		return furObject, errors.New("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5GB.\n")
 	}
 
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fi.Name() + " ")
@@ -103,8 +104,11 @@ func GenerateUploadRequest(guid string, url string, file *os.File) (*http.Reques
 		}
 	}()
 
-	req, err := http.NewRequest(http.MethodPut, url, pr)
+	req, err := http.NewRequest(http.MethodPut, furObject.PresignedURL, pr)
 	req.ContentLength = fi.Size()
 
-	return req, bar, err
+	furObject.Request = req
+	furObject.Bar = bar
+
+	return furObject, err
 }
