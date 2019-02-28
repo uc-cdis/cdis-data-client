@@ -132,7 +132,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 						//TODO add to failed file map
 					} else {
 						respCh <- resp
-						logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID)
+						logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, true)
 					}
 				}
 			}
@@ -225,7 +225,6 @@ func init() {
 					file.Close()
 				}
 			}
-			fmt.Println("Local history data updated")
 		},
 	}
 

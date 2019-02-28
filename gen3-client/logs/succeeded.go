@@ -62,7 +62,7 @@ func ExistsInSucceededLog(filePath string) bool {
 	return present
 }
 
-func WriteToSucceededLog(filePath string, guid string) {
+func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 	tempSucceededLogFileMap := make(map[string]string)
 	tempSucceededLogFileMap["FilePath"] = filePath
 	tempSucceededLogFileMap["GUID"] = guid
@@ -75,6 +75,9 @@ func WriteToSucceededLog(filePath string, guid string) {
 	if err != nil {
 		succeededLogFile.Close()
 		log.Fatal("Error occurred when writing to file \"" + succeededLogFilename + "\": " + err.Error())
+	}
+	if !isMuted {
+		fmt.Println("Local succeeded log file updated")
 	}
 }
 
