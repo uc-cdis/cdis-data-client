@@ -1,10 +1,8 @@
 package g3cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -12,14 +10,12 @@ import (
 	"strings"
 	"sync"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-var historyFile string
-var historyFileMap map[string]string
 var uploadPath string
 var batch bool
 var numParallel int
@@ -28,47 +24,6 @@ var includeSubDirName bool
 type fileInfo struct {
 	filepath string
 	filename string
-}
-
-func initHistory() {
-	home, err := homedir.Dir()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	historyPath := home + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator
-
-	if _, err := os.Stat(historyPath); os.IsNotExist(err) { // path to ~/.gen3 does not exist
-		err = os.Mkdir(historyPath, 0644)
-		if err != nil {
-			log.Fatal("Cannot create folder \"" + historyPath + "\"")
-			os.Exit(1)
-		}
-		fmt.Println("Created folder \"" + historyPath + "\"")
-	}
-
-	historyFile = historyPath + profile + "_history.json"
-
-	file, _ := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0644)
-	fi, err := file.Stat()
-	if err != nil {
-		log.Fatal("Error occurred when opening file \"" + historyFile + "\": " + err.Error())
-	}
-	fmt.Println("Local history file \"" + historyFile + "\" has opened")
-
-	historyFileMap = make(map[string]string)
-	if fi.Size() > 0 {
-		data, err := ioutil.ReadAll(file)
-		if err != nil {
-			log.Fatal("Error occurred when reading from file \"" + historyFile + "\": " + err.Error())
-		}
-
-		err = json.Unmarshal(data, &historyFileMap)
-		if err != nil {
-			log.Fatal("Error occurred when unmarshaling JSON objects: " + err.Error())
-		}
-	}
 }
 
 func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan FileUploadRequestObject, chan *http.Response, chan error, []FileUploadRequestObject) {
@@ -101,8 +56,7 @@ func validateFilePath(filePaths []string) []string {
 			continue
 		}
 
-		_, present := historyFileMap[filePath]
-		if present {
+		if logs.ExistsInHistory(filePath) {
 			fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 			continue
 		}
@@ -178,7 +132,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 						//TODO add to failed file map
 					} else {
 						respCh <- resp
-						historyFileMap[furObject.FilePath] = furObject.GUID
+						logs.WriteHistory(furObject.FilePath, furObject.GUID)
 					}
 				}
 			}
@@ -205,8 +159,6 @@ func init() {
 			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
 			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
 		Run: func(cmd *cobra.Command, args []string) {
-			initHistory()
-
 			uploadPath = filepath.Clean(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
 			if err != nil {
@@ -270,24 +222,10 @@ func init() {
 						continue
 					}
 					uploadFile(req, bar, guid, filePath)
-					historyFileMap[filePath] = guid
 					file.Close()
 				}
 			}
-
-			jsonData, err := json.Marshal(historyFileMap)
-			if err != nil {
-				panic(err)
-			}
-			jsonFile, err := os.OpenFile(historyFile, os.O_RDWR|os.O_CREATE, 0666)
-			if err != nil {
-				panic(err)
-			}
-			defer jsonFile.Close()
-
-			jsonFile.Write(jsonData)
-			jsonFile.Close()
-			fmt.Println("Local history data updated in ", jsonFile.Name())
+			fmt.Println("Local history data updated")
 		},
 	}
 

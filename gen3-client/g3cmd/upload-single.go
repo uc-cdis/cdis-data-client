@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	pb "gopkg.in/cheggaaa/pb.v1"
@@ -24,6 +26,7 @@ func uploadFile(req *http.Request, bar *pb.ProgressBar, guid string, filePath st
 		return
 	}
 	bar.Finish()
+	logs.WriteHistory(filePath, guid)
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
 }
 

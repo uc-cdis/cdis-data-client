@@ -7,6 +7,7 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 var cfgFile string
@@ -61,4 +62,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+
+	logs.InitHistory(profile)
 }
