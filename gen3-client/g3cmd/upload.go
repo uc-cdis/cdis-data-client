@@ -26,16 +26,15 @@ type fileInfo struct {
 	filename string
 }
 
-func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan FileUploadRequestObject, chan *http.Response, chan error, []FileUploadRequestObject) {
+func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan *http.Response, chan error, []FileUploadRequestObject) {
 	workers := numParallel
 	if workers < 1 || workers > inputSliceLen {
 		workers = inputSliceLen
 	}
-	furCh := make(chan FileUploadRequestObject, workers)
 	respCh := make(chan *http.Response, inputSliceLen)
 	errCh := make(chan error, inputSliceLen)
 	batchFURSlice := make([]FileUploadRequestObject, 0)
-	return workers, furCh, respCh, errCh, batchFURSlice
+	return workers, respCh, errCh, batchFURSlice
 }
 
 func validateFilePath(filePaths []string) []string {
@@ -86,40 +85,42 @@ func processFilename(filePath string) (fileInfo, error) {
 	return fileInfo{filePath, filename}, err
 }
 
-func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh chan FileUploadRequestObject, respCh chan *http.Response, errCh chan error) {
+func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
 	var guid string
 
-	for _, furObject := range furObjects {
-		if furObject.GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(furObject.FilePath)
+	for i := range furObjects {
+		if furObjects[i].GUID == "" {
+			respURL, guid, err = GeneratePresignedURL(furObjects[i].FilePath)
 			if err != nil {
 				errCh <- err
-				logs.AddToFailedLogMap(furObject.FilePath, respURL, false)
+				logs.AddToFailedLogMap(furObjects[i].FilePath, respURL, false)
 				continue
 			}
-			furObject.PresignedURL = respURL
-			furObject.GUID = guid
+			furObjects[i].PresignedURL = respURL
+			furObjects[i].GUID = guid
 		}
-		file, err := os.Open(furObject.FilePath)
+		file, err := os.Open(furObjects[i].FilePath)
 		if err != nil {
 			errCh <- errors.New("File open error: " + err.Error())
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].PresignedURL, false)
 			continue
 		}
 		defer file.Close()
 
-		furObject, err = GenerateUploadRequest(furObject, file)
+		furObjects[i], err = GenerateUploadRequest(furObjects[i], file)
 		if err != nil {
 			file.Close()
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].PresignedURL, false)
 			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
 		}
-		bars = append(bars, furObject.Bar)
+		bars = append(bars, furObjects[i].Bar)
 	}
+
+	furObjectCh := make(chan FileUploadRequestObject, len(furObjects))
 
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
@@ -154,8 +155,8 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 		}()
 	}
 
-	for _, furObject := range furObjects {
-		furObjectCh <- furObject
+	for i := range furObjects {
+		furObjectCh <- furObjects[i]
 	}
 	close(furObjectCh)
 
@@ -195,20 +196,19 @@ func init() {
 			validatedFilePaths := validateFilePath(filePaths)
 
 			if batch {
-				workers, furCh, respCh, errCh, batchFURObjects := initBathUploadChannels(numParallel, len(validatedFilePaths))
+				workers, respCh, errCh, batchFURObjects := initBathUploadChannels(numParallel, len(validatedFilePaths))
 				for _, filePath := range validatedFilePaths {
 					if len(batchFURObjects) < workers {
 						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFURObjects, workers, furCh, respCh, errCh)
-						furCh = make(chan FileUploadRequestObject, workers)
+						batchUpload(batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]FileUploadRequestObject, 0)
 						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
-				batchUpload(batchFURObjects, workers, furCh, respCh, errCh)
+				batchUpload(batchFURObjects, workers, respCh, errCh)
 
 				if len(errCh) > 0 {
 					for err := range errCh {
@@ -217,6 +217,7 @@ func init() {
 						}
 					}
 				}
+				logs.WriteToFailedLog(false)
 				fmt.Printf("%d files uploaded.\n", len(respCh))
 			} else {
 				for _, filePath := range validatedFilePaths {
@@ -243,6 +244,7 @@ func init() {
 					uploadFile(furObject)
 					file.Close()
 				}
+				logs.WriteToFailedLog(false)
 			}
 
 			if !logs.IsFailedLogMapEmpty() {

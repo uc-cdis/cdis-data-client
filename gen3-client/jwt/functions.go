@@ -163,7 +163,7 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 	}
 	if cred.AccessKey == "" || isExpiredToken {
 		err := f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/api/access_token", &cred)
-		if err == nil {
+		if err != nil {
 			return "", "", err
 		}
 		usr, err := user.Current()

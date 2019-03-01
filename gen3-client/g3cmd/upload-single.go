@@ -27,7 +27,7 @@ func uploadFile(furObject FileUploadRequestObject) {
 	}
 	furObject.Bar.Finish()
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
-	logs.DeleteFromFailedLogMap(furObject.FilePath, false)
+	logs.DeleteFromFailedLogMap(furObject.FilePath, true)
 	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
 }
 

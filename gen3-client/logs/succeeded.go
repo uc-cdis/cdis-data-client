@@ -7,9 +7,6 @@ import (
 	"log"
 	"os"
 	"sync"
-
-	homedir "github.com/mitchellh/go-homedir"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 var succeededLogFilename string
@@ -18,24 +15,9 @@ var succeededLogFile *os.File
 var succeededLogLock sync.Mutex
 
 func InitSucceededLog(profile string) {
-	home, err := homedir.Dir()
-	if err != nil {
-		log.Fatalln(err)
-	}
+	succeededLogFilename = MainLogPath + profile + "_succeeded_log.json"
 
-	succeededLogPath := home + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator
-
-	if _, err := os.Stat(succeededLogPath); os.IsNotExist(err) { // path to ~/.gen3 does not exist
-		err = os.Mkdir(succeededLogPath, 0666)
-		if err != nil {
-			log.Fatal("Cannot create folder \"" + succeededLogPath + "\"")
-		}
-		fmt.Println("Created folder \"" + succeededLogPath + "\"")
-	}
-
-	succeededLogFilename = succeededLogPath + profile + "_succeeded_log.json"
-
-	succeededLogFile, _ = os.OpenFile(succeededLogFilename, os.O_RDWR|os.O_CREATE, 0666)
+	succeededLogFile, _ = os.OpenFile(succeededLogFilename, os.O_RDWR|os.O_CREATE, 0766)
 	fi, err := succeededLogFile.Stat()
 	if err != nil {
 		succeededLogFile.Close()
@@ -73,7 +55,8 @@ func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 		succeededLogFile.Close()
 		log.Fatal("Error occurred when marshaling to JSON objects: " + err.Error())
 	}
-	_, err = succeededLogFile.Write(jsonData)
+	err = succeededLogFile.Truncate(0)
+	_, err = succeededLogFile.WriteAt(jsonData, 0)
 	if err != nil {
 		succeededLogFile.Close()
 		log.Fatal("Error occurred when writing to file \"" + succeededLogFilename + "\": " + err.Error())

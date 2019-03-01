@@ -62,7 +62,6 @@ func init() {
 	var batch bool
 	var numParallel int
 	var workers int
-	var furCh chan FileUploadRequestObject
 	var respCh chan *http.Response
 	var errCh chan error
 	var batchFURObjects []FileUploadRequestObject
@@ -97,7 +96,7 @@ func init() {
 			furObjects := validateObject(objects)
 
 			if batch {
-				workers, furCh, respCh, errCh, batchFURObjects = initBathUploadChannels(numParallel, len(objects))
+				workers, respCh, errCh, batchFURObjects = initBathUploadChannels(numParallel, len(objects))
 			}
 
 			for _, furObject := range furObjects {
@@ -105,8 +104,7 @@ func init() {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFURObjects, workers, furCh, respCh, errCh)
-						furCh = make(chan FileUploadRequestObject, workers)
+						batchUpload(batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}

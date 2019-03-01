@@ -63,6 +63,7 @@ func initConfig() {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 
+	logs.Init()
 	logs.InitSucceededLog(profile)
 	logs.InitFailedLog(profile)
 }
