@@ -21,11 +21,13 @@ func uploadFile(furObject FileUploadRequestObject) {
 	_, err := client.Do(furObject.Request)
 	if err != nil {
 		log.Printf("Error occurred during upload: %s", err.Error())
+		logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 		furObject.Bar.Finish()
 		return
 	}
 	furObject.Bar.Finish()
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
+	logs.DeleteFromFailedLogMap(furObject.FilePath, false)
 	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
 }
 
@@ -70,6 +72,7 @@ func init() {
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
 			}
 			uploadFile(furObject)
+			logs.WriteToFailedLog(false)
 		},
 	}
 

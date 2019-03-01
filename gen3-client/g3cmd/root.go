@@ -64,4 +64,5 @@ func initConfig() {
 	}
 
 	logs.InitSucceededLog(profile)
+	logs.InitFailedLog(profile)
 }

@@ -59,10 +59,13 @@ func validateFilePath(filePaths []string) []string {
 		if logs.ExistsInSucceededLog(filePath) {
 			fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 			continue
+		} else {
+			logs.AddToFailedLogMap(filePath, "", true)
 		}
 		validatedFilePaths = append(validatedFilePaths, filePath)
 		file.Close()
 	}
+	logs.WriteToFailedLog(false)
 	return validatedFilePaths
 }
 
@@ -94,6 +97,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 			respURL, guid, err = GeneratePresignedURL(furObject.FilePath)
 			if err != nil {
 				errCh <- err
+				logs.AddToFailedLogMap(furObject.FilePath, respURL, false)
 				continue
 			}
 			furObject.PresignedURL = respURL
@@ -102,13 +106,15 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 		file, err := os.Open(furObject.FilePath)
 		if err != nil {
 			errCh <- errors.New("File open error: " + err.Error())
+			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 			continue
 		}
 		defer file.Close()
 
-		furObject, err := GenerateUploadRequest(furObject, file)
+		furObject, err = GenerateUploadRequest(furObject, file)
 		if err != nil {
 			file.Close()
+			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
 		}
@@ -117,7 +123,11 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
-		panic(err)
+		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
+		for _, furObject := range furObjects {
+			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+		}
+		return
 	}
 
 	client := &http.Client{}
@@ -129,11 +139,13 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, furObjectCh 
 				resp, err := client.Do(furObject.Request)
 				if err != nil {
 					errCh <- err
+					logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
 				} else {
 					if resp.StatusCode != 200 {
-						//TODO add to failed file map
-					} else {
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
+					} else { // Succeeded
 						respCh <- resp
+						logs.DeleteFromFailedLogMap(furObject.FilePath, true)
 						logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, true)
 					}
 				}
@@ -201,7 +213,7 @@ func init() {
 				if len(errCh) > 0 {
 					for err := range errCh {
 						if err != nil {
-							fmt.Printf("Error: %s\n", err.Error())
+							fmt.Printf("Error occurred during uploading: %s\n", err.Error())
 						}
 					}
 				}
@@ -210,24 +222,31 @@ func init() {
 				for _, filePath := range validatedFilePaths {
 					respURL, guid, err := GeneratePresignedURL(filePath)
 					if err != nil {
+						logs.AddToFailedLogMap(filePath, respURL, false)
 						log.Println(err.Error())
 						continue
 					}
 					furObject := FileUploadRequestObject{FilePath: filePath, GUID: guid, PresignedURL: respURL}
 					file, err := os.Open(filePath)
 					if err != nil {
+						logs.AddToFailedLogMap(filePath, respURL, false)
 						log.Println("File open error")
 						continue
 					}
 					furObject, err = GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
+						logs.AddToFailedLogMap(filePath, respURL, false)
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
 					uploadFile(furObject)
 					file.Close()
 				}
+			}
+
+			if !logs.IsFailedLogMapEmpty() {
+				// TODO: retransmissions
 			}
 		},
 	}

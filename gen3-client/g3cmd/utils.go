@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
@@ -98,9 +100,11 @@ func GenerateUploadRequest(furObject FileUploadRequestObject, file *os.File) (Fi
 		writer = io.MultiWriter(pw, bar)
 		if _, err = io.Copy(writer, file); err != nil {
 			log.Fatalf("io.Copy error: %s\n", err)
+			logs.WriteToFailedLog(true)
 		}
 		if err = pw.Close(); err != nil {
 			log.Fatalf("Pipe writer close error: %s\n", err)
+			logs.WriteToFailedLog(true)
 		}
 	}()
 

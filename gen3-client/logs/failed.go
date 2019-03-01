@@ -45,14 +45,31 @@ func InitFailedLog(profile string) {
 	failedLogFileMap = make(map[string]string)
 }
 
-func AddToFailedLogMap(filePath string) {
-
+func IsFailedLogMapEmpty() bool {
+	return len(failedLogFileMap) == 0
 }
 
-func WriteToFailedLog(filePath string, guid string, isMuted bool) {
+func AddToFailedLogMap(filePath string, presignedUrl string, isMuted bool) {
 	failedLogLock.Lock()
 	defer failedLogLock.Unlock()
-	failedLogFileMap[filePath] = guid
+	failedLogFileMap[filePath] = presignedUrl
+	if !isMuted {
+		fmt.Printf("Failed file entry added for %s\n", filePath)
+	}
+}
+
+func DeleteFromFailedLogMap(filePath string, isMuted bool) {
+	failedLogLock.Lock()
+	defer failedLogLock.Unlock()
+	delete(failedLogFileMap, filePath)
+	if !isMuted {
+		fmt.Printf("Failed file entry deleted for %s\n", filePath)
+	}
+}
+
+func WriteToFailedLog(isMuted bool) {
+	failedLogLock.Lock()
+	defer failedLogLock.Unlock()
 	jsonData, err := json.Marshal(failedLogFileMap)
 	if err != nil {
 		failedLogFile.Close()
