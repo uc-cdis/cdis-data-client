@@ -40,9 +40,14 @@ type PresignedURLRequestObject struct {
 	Filename string `json:"file_name"`
 }
 
+type fileInfo struct {
+	filepath string
+	filename string
+}
+
 const FileSizeLimit = 5 * 1024 * 1024 * 1024
 
-func GeneratePresignedURL(filePath string, includeSubDirName bool) (string, string, string, error) {
+func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -50,7 +55,7 @@ func GeneratePresignedURL(filePath string, includeSubDirName bool) (string, stri
 	function.Config = configure
 	function.Request = request
 
-	fileinfo, err := processFilename(filePath, includeSubDirName)
+	fileinfo, err := processFilename(uploadPath, filePath, includeSubDirName)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -154,7 +159,7 @@ func validateFilePath(filePaths []string) []string {
 	return validatedFilePaths
 }
 
-func processFilename(filePath string, includeSubDirName bool) (fileInfo, error) {
+func processFilename(uploadPath string, filePath string, includeSubDirName bool) (fileInfo, error) {
 	var err error
 	filename := filepath.Base(filePath)
 	if includeSubDirName {
@@ -190,7 +195,7 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	}
 }
 
-func validateObject(objects []ManifestObject) []FileUploadRequestObject {
+func validateObject(objects []ManifestObject, uploadPath string) []FileUploadRequestObject {
 	furObjects := make([]FileUploadRequestObject, 0)
 	for _, object := range objects {
 		guid := object.ObjectID
@@ -246,7 +251,7 @@ func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan *http
 	return workers, respCh, errCh, batchFURSlice
 }
 
-func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
+func batchUpload(uploadPath string, includeSubDirName bool, furObjects []FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
@@ -255,7 +260,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, filename, err = GeneratePresignedURL(furObjects[i].FilePath, includeSubDirName)
+			respURL, guid, filename, err = GeneratePresignedURL(uploadPath, furObjects[i].FilePath, includeSubDirName)
 			if err != nil {
 				logs.AddToFailedLogMap(furObjects[i].FilePath, respURL, false)
 				errCh <- err

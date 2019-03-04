@@ -11,17 +11,11 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
-var uploadPath string
-var batch bool
-var numParallel int
-
-type fileInfo struct {
-	filepath string
-	filename string
-}
-
 func init() {
 	var includeSubDirName bool
+	var uploadPath string
+	var batch bool
+	var numParallel int
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
 		Short: "upload file(s) to object storage.",
@@ -60,13 +54,13 @@ func init() {
 						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFURObjects, workers, respCh, errCh)
+						batchUpload(uploadPath, includeSubDirName, batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]FileUploadRequestObject, 0)
 						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
-				batchUpload(batchFURObjects, workers, respCh, errCh)
+				batchUpload(uploadPath, includeSubDirName, batchFURObjects, workers, respCh, errCh)
 
 				if len(errCh) > 0 {
 					for err := range errCh {
@@ -78,7 +72,7 @@ func init() {
 				logs.WriteToFailedLog(false)
 			} else {
 				for _, filePath := range validatedFilePaths {
-					respURL, guid, filename, err := GeneratePresignedURL(filePath, includeSubDirName)
+					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, respURL, false)
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
@@ -114,7 +108,7 @@ func init() {
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
-				retryUpload(logs.GetFailedLogMap(), includeSubDirName)
+				retryUpload(logs.GetFailedLogMap(), includeSubDirName, uploadPath)
 			}
 			logs.CloseSucceededLog()
 			logs.CloseFailedLog()

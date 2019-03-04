@@ -20,18 +20,15 @@ type retryObject struct {
 const MaxRetryCount = 5
 const maxWaitTime = 300000
 
-var failedLogPath string
-var err error
-var includeSubDirName bool
-
 func getWaitTime(retryCount int) time.Duration {
 	exponentialWaitTime := math.Pow(2, float64(retryCount)) * 1000
 	return time.Duration(math.Max(exponentialWaitTime, float64(maxWaitTime))) * time.Millisecond
 }
 
-func retryUpload(failedLogMap map[string]string, includeSubDirName bool) {
+func retryUpload(failedLogMap map[string]string, includeSubDirName bool, uploadPath string) {
 	var guid string
 	var filename string
+	var err error
 	if len(failedLogMap) == 0 {
 		fmt.Println("No failed file in log, no need to retry upload.")
 		return
@@ -45,7 +42,7 @@ func retryUpload(failedLogMap map[string]string, includeSubDirName bool) {
 
 	for ro := range retryObjCh {
 		if ro.presignedURL == "" {
-			ro.presignedURL, guid, filename, err = GeneratePresignedURL(ro.filePath, includeSubDirName)
+			ro.presignedURL, guid, filename, err = GeneratePresignedURL(uploadPath, ro.filePath, includeSubDirName)
 			if err != nil {
 				logs.AddToFailedLogMap(ro.filePath, ro.presignedURL, false)
 				log.Println(err.Error())
@@ -104,18 +101,22 @@ func retryUpload(failedLogMap map[string]string, includeSubDirName bool) {
 }
 
 func init() {
+	var failedLogPath string
+	var includeSubDirName bool
+	var uploadPath string
 	var retryUploadCmd = &cobra.Command{
 		Use:     "retry-upload",
 		Short:   "retry upload file(s) to object storage.",
 		Example: "For retrying file upload:\n./gen3-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			logs.LoadFailedLogFile(failedLogPath)
-			retryUpload(logs.GetFailedLogMap(), includeSubDirName)
+			retryUpload(logs.GetFailedLogMap(), includeSubDirName, uploadPath)
 		},
 	}
 
 	retryUploadCmd.Flags().StringVar(&failedLogPath, "failed-log-path", "", "The path to the failed log file.")
 	retryUploadCmd.MarkFlagRequired("failed-log-path")
+	retryUploadCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
 	retryUploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	RootCmd.AddCommand(retryUploadCmd)
 }

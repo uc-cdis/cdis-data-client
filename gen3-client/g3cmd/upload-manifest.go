@@ -53,7 +53,7 @@ func init() {
 				log.Fatalf("Unsupported manifast format")
 			}
 
-			furObjects := validateObject(objects)
+			furObjects := validateObject(objects, uploadPath)
 
 			if batch {
 				workers, respCh, errCh, batchFURObjects = initBathUploadChannels(numParallel, len(objects))
@@ -64,7 +64,7 @@ func init() {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFURObjects, workers, respCh, errCh)
+						batchUpload(uploadPath, false, batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
