@@ -21,13 +21,13 @@ func PrintScoreBoard() {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 0, ' ', tabwriter.Debug)
 		for i, score := range ScoreBoard {
 			if i < len(ScoreBoard)-1 {
-				fmt.Fprintf(w, "Finished with %d retry/retries\t%d\n", i, score)
+				fmt.Fprintf(w, "Finished with %d retry(ies) \t %d\n", i, score)
 			} else {
-				fmt.Fprintf(w, "Failed\t%d\n", ScoreBoard[len(ScoreBoard)-1])
+				fmt.Fprintf(w, "Failed \t %d\n", ScoreBoard[len(ScoreBoard)-1])
 			}
 			sum += score
 		}
-		fmt.Fprintf(w, "TOTAL\t%d\n", sum)
+		fmt.Fprintf(w, "TOTAL \t %d\n", sum)
 		w.Flush()
 	}
 }

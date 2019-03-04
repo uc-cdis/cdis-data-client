@@ -107,5 +107,6 @@ func WriteToFailedLog(isMuted bool) {
 }
 
 func CloseFailedLog() error {
+	fmt.Println("Local failed log file \"" + failedLogFilename + "\" has closed")
 	return failedLogFile.Close()
 }

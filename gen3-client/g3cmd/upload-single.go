@@ -2,42 +2,16 @@ package g3cmd
 
 // Deprecated: Use upload instead.
 import (
-	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"path"
-	"strconv"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
-
-func uploadFile(furObject FileUploadRequestObject) error {
-	fmt.Println("Uploading data ...")
-	furObject.Bar.Start()
-
-	client := &http.Client{}
-	resp, err := client.Do(furObject.Request)
-	if err != nil {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
-		furObject.Bar.Finish()
-		return errors.New("Error occurred during upload: " + err.Error())
-	}
-	if resp.StatusCode != 200 {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
-		furObject.Bar.Finish()
-		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
-	}
-	furObject.Bar.Finish()
-	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
-	logs.DeleteFromFailedLogMap(furObject.FilePath, true)
-	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
-	return nil
-}
 
 func init() {
 	var guid string
@@ -68,6 +42,8 @@ func init() {
 				logs.WriteToFailedLog(false)
 				logs.IncrementScore(len(logs.ScoreBoard) - 1)
 				logs.PrintScoreBoard()
+				logs.CloseSucceededLog()
+				logs.CloseFailedLog()
 				log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
 			}
 
@@ -77,6 +53,8 @@ func init() {
 				logs.WriteToFailedLog(false)
 				logs.IncrementScore(len(logs.ScoreBoard) - 1)
 				logs.PrintScoreBoard()
+				logs.CloseSucceededLog()
+				logs.CloseFailedLog()
 				log.Fatalln("File open error: " + err.Error())
 			}
 			defer file.Close()
@@ -90,6 +68,8 @@ func init() {
 				logs.WriteToFailedLog(false)
 				logs.IncrementScore(len(logs.ScoreBoard) - 1)
 				logs.PrintScoreBoard()
+				logs.CloseSucceededLog()
+				logs.CloseFailedLog()
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
 			}
 			err = uploadFile(furObject)
@@ -100,6 +80,8 @@ func init() {
 				logs.IncrementScore(0) // update succeeded score
 			}
 			logs.WriteToFailedLog(false)
+			logs.CloseSucceededLog()
+			logs.CloseFailedLog()
 			logs.PrintScoreBoard()
 		},
 	}

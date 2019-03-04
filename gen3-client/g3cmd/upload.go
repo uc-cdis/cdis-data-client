@@ -1,19 +1,14 @@
 package g3cmd
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
-	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
-	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 var uploadPath string
@@ -23,151 +18,6 @@ var numParallel int
 type fileInfo struct {
 	filepath string
 	filename string
-}
-
-func initBathUploadChannels(numParallel int, inputSliceLen int) (int, chan *http.Response, chan error, []FileUploadRequestObject) {
-	workers := numParallel
-	if workers < 1 || workers > inputSliceLen {
-		workers = inputSliceLen
-	}
-	respCh := make(chan *http.Response, inputSliceLen)
-	errCh := make(chan error, inputSliceLen)
-	batchFURSlice := make([]FileUploadRequestObject, 0)
-	return workers, respCh, errCh, batchFURSlice
-}
-
-func validateFilePath(filePaths []string) []string {
-	validatedFilePaths := make([]string, 0)
-	for _, filePath := range filePaths {
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			log.Printf("The file you specified \"%s\" does not exist locally", filePath)
-			continue
-		}
-
-		file, err := os.Open(filePath)
-		if err != nil {
-			log.Printf("File open error")
-			continue
-		}
-
-		if fi, _ := file.Stat(); fi.IsDir() {
-			continue
-		}
-
-		if logs.ExistsInSucceededLog(filePath) {
-			fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
-			continue
-		} else {
-			logs.AddToFailedLogMap(filePath, "", true)
-		}
-		validatedFilePaths = append(validatedFilePaths, filePath)
-		file.Close()
-	}
-	logs.WriteToFailedLog(false)
-	return validatedFilePaths
-}
-
-func processFilename(filePath string, includeSubDirName bool) (fileInfo, error) {
-	var err error
-	filename := filepath.Base(filePath)
-	if includeSubDirName {
-		presentDirname := strings.TrimSuffix(commonUtils.ParseRootPath(uploadPath), commonUtils.PathSeparator+"*")
-		subFilename := strings.TrimPrefix(filePath, presentDirname)
-		dir, _ := filepath.Split(subFilename)
-		if dir != "" && dir != commonUtils.PathSeparator {
-			filename = strings.TrimPrefix(subFilename, commonUtils.PathSeparator)
-			filename = strings.Replace(filename, commonUtils.PathSeparator, ".", -1)
-		} else {
-			err = errors.New("Include subdirectory names will only works if the file is under at least one subdirectory.")
-		}
-	}
-	return fileInfo{filePath, filename}, err
-}
-
-func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
-	bars := make([]*pb.ProgressBar, 0)
-	respURL := ""
-	var err error
-	var guid string
-	var filename string
-
-	for i := range furObjects {
-		if furObjects[i].GUID == "" {
-			respURL, guid, filename, err = GeneratePresignedURL(furObjects[i].FilePath, includeSubDirName)
-			if err != nil {
-				logs.AddToFailedLogMap(furObjects[i].FilePath, respURL, false)
-				errCh <- err
-				continue
-			}
-			furObjects[i].PresignedURL = respURL
-			furObjects[i].GUID = guid
-			furObjects[i].FileName = filename
-		}
-		file, err := os.Open(furObjects[i].FilePath)
-		if err != nil {
-			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].PresignedURL, false)
-			errCh <- errors.New("File open error: " + err.Error())
-			continue
-		}
-		defer file.Close()
-
-		furObjects[i], err = GenerateUploadRequest(furObjects[i], file)
-		if err != nil {
-			file.Close()
-			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].PresignedURL, false)
-			errCh <- errors.New("Error occurred during request generation: " + err.Error())
-			continue
-		}
-		bars = append(bars, furObjects[i].Bar)
-	}
-
-	furObjectCh := make(chan FileUploadRequestObject, len(furObjects))
-
-	pool, err := pb.StartPool(bars...)
-	if err != nil {
-		for _, furObject := range furObjects {
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
-		}
-		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
-		return
-	}
-
-	client := &http.Client{}
-	wg := sync.WaitGroup{}
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		go func() {
-			for furObject := range furObjectCh {
-				if furObject.Request != nil {
-					resp, err := client.Do(furObject.Request)
-					if err != nil {
-						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
-						errCh <- err
-					} else {
-						if resp.StatusCode != 200 {
-							logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
-						} else { // Succeeded
-							respCh <- resp
-							logs.DeleteFromFailedLogMap(furObject.FilePath, true)
-							logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, true)
-							logs.ScoreBoard[0]++
-						}
-					}
-				} else if furObject.FilePath != "" {
-					logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
-				}
-			}
-			wg.Done()
-		}()
-	}
-
-	for i := range furObjects {
-		furObjectCh <- furObjects[i]
-	}
-	close(furObjectCh)
-
-	wg.Wait()
-	pool.Stop()
 }
 
 func init() {
@@ -266,6 +116,8 @@ func init() {
 			if !logs.IsFailedLogMapEmpty() {
 				retryUpload(logs.GetFailedLogMap(), includeSubDirName)
 			}
+			logs.CloseSucceededLog()
+			logs.CloseFailedLog()
 			logs.PrintScoreBoard()
 		},
 	}

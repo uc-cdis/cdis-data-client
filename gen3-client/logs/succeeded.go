@@ -67,5 +67,6 @@ func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 }
 
 func CloseSucceededLog() error {
+	fmt.Println("Local succeeded log file \"" + succeededLogFilename + "\" has closed")
 	return succeededLogFile.Close()
 }

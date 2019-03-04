@@ -3,60 +3,17 @@ package g3cmd
 // Deprecated: Use upload instead.
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
-
-func getFullFilePath(filePath string, filename string) (string, error) {
-	fi, err := os.Stat(filePath)
-	if err != nil {
-		fmt.Println(err)
-		return "", err
-	}
-	switch mode := fi.Mode(); {
-	case mode.IsDir():
-		if strings.HasSuffix(filePath, "/") {
-			return filePath + filename, nil
-		}
-		return filePath + "/" + filename, nil
-	case mode.IsRegular():
-		return "", errors.New("in manifest upload mode filePath must be a dir")
-	default:
-		return "", errors.New("full file path creation unsuccessful")
-	}
-}
-
-func validateObject(objects []ManifestObject) []FileUploadRequestObject {
-	furObjects := make([]FileUploadRequestObject, 0)
-	for _, object := range objects {
-		guid := object.ObjectID
-		// Here we are assuming the local filename will be the same as GUID
-		filePath, err := getFullFilePath(uploadPath, object.ObjectID)
-		if err != nil {
-			log.Println(err.Error())
-			continue
-		}
-
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			log.Println("The file you specified \"%s\" does not exist locally.", filePath)
-			continue
-		}
-
-		furObject := FileUploadRequestObject{FilePath: filePath, FileName: path.Base(filePath), GUID: guid}
-		furObjects = append(furObjects, furObject)
-	}
-	return furObjects
-}
 
 func init() {
 	var manifestPath string
@@ -140,6 +97,8 @@ func init() {
 				}
 			}
 			logs.WriteToFailedLog(false)
+			logs.CloseSucceededLog()
+			logs.CloseFailedLog()
 			logs.PrintScoreBoard()
 		},
 	}
