@@ -89,10 +89,11 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 	respURL := ""
 	var err error
 	var guid string
+	var filename string
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(furObjects[i].FilePath, includeSubDirName)
+			respURL, guid, filename, err = GeneratePresignedURL(furObjects[i].FilePath, includeSubDirName)
 			if err != nil {
 				logs.AddToFailedLogMap(furObjects[i].FilePath, respURL, false)
 				errCh <- err
@@ -100,6 +101,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 			}
 			furObjects[i].PresignedURL = respURL
 			furObjects[i].GUID = guid
+			furObjects[i].FileName = filename
 		}
 		file, err := os.Open(furObjects[i].FilePath)
 		if err != nil {
@@ -226,14 +228,14 @@ func init() {
 				logs.WriteToFailedLog(false)
 			} else {
 				for _, filePath := range validatedFilePaths {
-					respURL, guid, err := GeneratePresignedURL(filePath, includeSubDirName)
+					respURL, guid, filename, err := GeneratePresignedURL(filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, respURL, false)
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println(err.Error())
 						continue
 					}
-					furObject := FileUploadRequestObject{FilePath: filePath, GUID: guid, PresignedURL: respURL}
+					furObject := FileUploadRequestObject{FilePath: filePath, FileName: filename, GUID: guid, PresignedURL: respURL}
 					file, err := os.Open(filePath)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, respURL, false)
@@ -262,7 +264,7 @@ func init() {
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
-				retryUpload(logs.GetFailedLogMap())
+				retryUpload(logs.GetFailedLogMap(), includeSubDirName)
 			}
 			logs.PrintScoreBoard()
 		},

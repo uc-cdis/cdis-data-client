@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
@@ -80,7 +81,7 @@ func init() {
 			}
 			defer file.Close()
 
-			furObject := FileUploadRequestObject{FilePath: filePath, GUID: guid}
+			furObject := FileUploadRequestObject{FilePath: filePath, FileName: path.Base(filePath), GUID: guid}
 
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {

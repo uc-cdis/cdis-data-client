@@ -24,6 +24,7 @@ type ManifestObject struct {
 
 type FileUploadRequestObject struct {
 	FilePath     string
+	FileName     string
 	GUID         string
 	PresignedURL string
 	Request      *http.Request
@@ -36,7 +37,7 @@ type PresignedURLRequestObject struct {
 
 const FileSizeLimit = 5 * 1024 * 1024 * 1024
 
-func GeneratePresignedURL(filePath string, includeSubDirName bool) (string, string, error) {
+func GeneratePresignedURL(filePath string, includeSubDirName bool) (string, string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -56,11 +57,11 @@ func GeneratePresignedURL(filePath string, includeSubDirName bool) (string, stri
 
 	if respURL == "" || guid == "" {
 		if err != nil {
-			return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
+			return "", "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
 		}
-		return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
+		return "", "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
 	}
-	return respURL, guid, err
+	return respURL, guid, fileinfo.filename, err
 }
 
 func GenerateUploadRequest(furObject FileUploadRequestObject, file *os.File) (FileUploadRequestObject, error) {
@@ -89,7 +90,7 @@ func GenerateUploadRequest(furObject FileUploadRequestObject, file *os.File) (Fi
 		return furObject, errors.New("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5GB.\n")
 	}
 
-	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fi.Name() + " ")
+	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(furObject.FileName + " ")
 	pr, pw := io.Pipe()
 
 	go func() {

@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -51,7 +52,7 @@ func validateObject(objects []ManifestObject) []FileUploadRequestObject {
 			continue
 		}
 
-		furObject := FileUploadRequestObject{FilePath: filePath, GUID: guid}
+		furObject := FileUploadRequestObject{FilePath: filePath, FileName: path.Base(filePath), GUID: guid}
 		furObjects = append(furObjects, furObject)
 	}
 	return furObjects

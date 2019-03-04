@@ -29,12 +29,15 @@ func getWaitTime(retryCount int) time.Duration {
 	return time.Duration(math.Max(exponentialWaitTime, float64(maxWaitTime))) * time.Millisecond
 }
 
-func retryUpload(failedLogMap map[string]string) {
+func retryUpload(failedLogMap map[string]string, includeSubDirName bool) {
 	var guid string
+	var filename string
 	if len(failedLogMap) == 0 {
-		fmt.Println("No failed file in log, aborting...")
+		fmt.Println("No failed file in log, no need to retry upload.")
 		return
 	}
+
+	fmt.Println("Retry upload has started...")
 	retryObjCh := make(chan retryObject, len(failedLogMap))
 	for f, u := range failedLogMap {
 		retryObjCh <- retryObject{filePath: f, presignedURL: u, retryCount: 0}
@@ -42,7 +45,7 @@ func retryUpload(failedLogMap map[string]string) {
 
 	for ro := range retryObjCh {
 		if ro.presignedURL == "" {
-			ro.presignedURL, guid, err = GeneratePresignedURL(ro.filePath, includeSubDirName)
+			ro.presignedURL, guid, filename, err = GeneratePresignedURL(ro.filePath, includeSubDirName)
 			if err != nil {
 				logs.AddToFailedLogMap(ro.filePath, ro.presignedURL, false)
 				log.Println(err.Error())
@@ -55,7 +58,7 @@ func retryUpload(failedLogMap map[string]string) {
 				continue
 			}
 		}
-		furObject := FileUploadRequestObject{FilePath: ro.filePath, GUID: guid, PresignedURL: ro.presignedURL}
+		furObject := FileUploadRequestObject{FilePath: ro.filePath, FileName: filename, GUID: guid, PresignedURL: ro.presignedURL}
 		file, err := os.Open(ro.filePath)
 		if err != nil {
 			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
@@ -107,7 +110,7 @@ func init() {
 		Example: "For retrying file upload:\n./gen3-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			logs.LoadFailedLogFile(failedLogPath)
-			retryUpload(logs.GetFailedLogMap())
+			retryUpload(logs.GetFailedLogMap(), includeSubDirName)
 		},
 	}
 
