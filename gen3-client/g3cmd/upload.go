@@ -19,7 +19,6 @@ import (
 var uploadPath string
 var batch bool
 var numParallel int
-var includeSubDirName bool
 
 type fileInfo struct {
 	filepath string
@@ -68,7 +67,7 @@ func validateFilePath(filePaths []string) []string {
 	return validatedFilePaths
 }
 
-func processFilename(filePath string) (fileInfo, error) {
+func processFilename(filePath string, includeSubDirName bool) (fileInfo, error) {
 	var err error
 	filename := filepath.Base(filePath)
 	if includeSubDirName {
@@ -93,7 +92,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(furObjects[i].FilePath)
+			respURL, guid, err = GeneratePresignedURL(furObjects[i].FilePath, includeSubDirName)
 			if err != nil {
 				errCh <- err
 				logs.AddToFailedLogMap(furObjects[i].FilePath, respURL, false)
@@ -165,6 +164,7 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 }
 
 func init() {
+	var includeSubDirName bool
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
 		Short: "upload file(s) to object storage.",
@@ -221,7 +221,7 @@ func init() {
 				fmt.Printf("%d files uploaded.\n", len(respCh))
 			} else {
 				for _, filePath := range validatedFilePaths {
-					respURL, guid, err := GeneratePresignedURL(filePath)
+					respURL, guid, err := GeneratePresignedURL(filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, respURL, false)
 						log.Println(err.Error())
@@ -241,7 +241,10 @@ func init() {
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
-					uploadFile(furObject)
+					err = uploadFile(furObject)
+					if err != nil {
+						log.Println(err.Error())
+					}
 					file.Close()
 				}
 				logs.WriteToFailedLog(false)

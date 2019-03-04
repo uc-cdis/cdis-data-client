@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func getFullFilePath(filePath string, filename string) (string, error) {
@@ -112,6 +113,7 @@ func init() {
 					file, err := os.Open(furObject.FilePath)
 					if err != nil {
 						log.Println("File open error: " + err.Error())
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 						continue
 					}
 					defer file.Close()
@@ -119,13 +121,18 @@ func init() {
 					furObject, err := GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue
 					}
-					uploadFile(furObject)
+					err = uploadFile(furObject)
+					if err != nil {
+						log.Println(err.Error())
+					}
 					file.Close()
 				}
 			}
+			logs.WriteToFailedLog(false)
 		},
 	}
 

@@ -2,10 +2,12 @@ package g3cmd
 
 // Deprecated: Use upload instead.
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 
@@ -13,22 +15,27 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
-func uploadFile(furObject FileUploadRequestObject) {
+func uploadFile(furObject FileUploadRequestObject) error {
 	fmt.Println("Uploading data ...")
 	furObject.Bar.Start()
 
 	client := &http.Client{}
-	_, err := client.Do(furObject.Request)
+	resp, err := client.Do(furObject.Request)
 	if err != nil {
-		log.Printf("Error occurred during upload: %s", err.Error())
 		logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 		furObject.Bar.Finish()
-		return
+		return errors.New("Error occurred during upload: " + err.Error())
+	}
+	if resp.StatusCode != 200 {
+		logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+		furObject.Bar.Finish()
+		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
 	}
 	furObject.Bar.Finish()
 	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
 	logs.DeleteFromFailedLogMap(furObject.FilePath, true)
 	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
+	return nil
 }
 
 func init() {
@@ -49,17 +56,21 @@ func init() {
 				return
 			}
 			if err != nil {
-				panic(err)
+				log.Fatalln("File path parsing error: " + err.Error())
 			}
 			if len(filePaths) == 1 {
 				filePath = filePaths[0]
 			}
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				logs.AddToFailedLogMap(filePath, "", false)
+				logs.WriteToFailedLog(false)
 				log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
 			}
 
 			file, err := os.Open(filePath)
 			if err != nil {
+				logs.AddToFailedLogMap(filePath, "", false)
+				logs.WriteToFailedLog(false)
 				log.Fatalln("File open error: " + err.Error())
 			}
 			defer file.Close()
@@ -69,9 +80,14 @@ func init() {
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
 				file.Close()
+				logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+				logs.WriteToFailedLog(false)
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
 			}
-			uploadFile(furObject)
+			err = uploadFile(furObject)
+			if err != nil {
+				log.Println(err.Error())
+			}
 			logs.WriteToFailedLog(false)
 		},
 	}

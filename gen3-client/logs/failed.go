@@ -32,6 +32,10 @@ func IsFailedLogMapEmpty() bool {
 	return len(failedLogFileMap) == 0
 }
 
+func GetFailedLogMap() map[string]string {
+	return failedLogFileMap
+}
+
 func AddToFailedLogMap(filePath string, presignedUrl string, isMuted bool) {
 	failedLogLock.Lock()
 	defer failedLogLock.Unlock()

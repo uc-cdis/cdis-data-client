@@ -50,7 +50,7 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().GetPresignedURL("GET", gomock.Any(), "/user/data/download/test_uuid", "non_exprired_token", "", gomock.Any()).Return(mockedResp).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/data/download/test_uuid", "non_exprired_token", "", gomock.Any()).Return(mockedResp, nil).Times(1)
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
 
@@ -78,7 +78,7 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Return(nil).Times(1)
-	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(1)
+	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
 
@@ -107,7 +107,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), "http://www.test.com", gomock.Any(), "default").Times(1)
 
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Return(nil).Times(1)
-	mockRequest.EXPECT().GetPresignedURL(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp).Times(2)
+	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(2)
 
 	_, _, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
 

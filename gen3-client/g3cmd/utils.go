@@ -36,7 +36,7 @@ type PresignedURLRequestObject struct {
 
 const FileSizeLimit = 5 * 1024 * 1024 * 1024
 
-func GeneratePresignedURL(filePath string) (string, string, error) {
+func GeneratePresignedURL(filePath string, includeSubDirName bool) (string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -44,7 +44,7 @@ func GeneratePresignedURL(filePath string) (string, string, error) {
 	function.Config = configure
 	function.Request = request
 
-	fileinfo, err := processFilename(filePath)
+	fileinfo, err := processFilename(filePath, includeSubDirName)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -99,12 +99,12 @@ func GenerateUploadRequest(furObject FileUploadRequestObject, file *os.File) (Fi
 
 		writer = io.MultiWriter(pw, bar)
 		if _, err = io.Copy(writer, file); err != nil {
-			log.Fatalf("io.Copy error: %s\n", err)
 			logs.WriteToFailedLog(true)
+			log.Fatalf("io.Copy error: %s\n", err)
 		}
 		if err = pw.Close(); err != nil {
-			log.Fatalf("Pipe writer close error: %s\n", err)
 			logs.WriteToFailedLog(true)
+			log.Fatalf("Pipe writer close error: %s\n", err)
 		}
 	}()
 
