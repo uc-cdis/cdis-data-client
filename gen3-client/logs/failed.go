@@ -3,6 +3,7 @@ package logs
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -26,6 +27,38 @@ func InitFailedLog(profile string) {
 	fmt.Println("Local failed log file \"" + failedLogFilename + "\" has opened")
 
 	failedLogFileMap = make(map[string]string)
+}
+
+func LoadFailedLogFile(filePath string) {
+	file, err := os.OpenFile(filePath, os.O_RDONLY, 0766)
+	if err != nil {
+		file.Close()
+		failedLogFile.Close()
+		log.Fatal("Error occurred when opening file \"" + file.Name() + "\": " + err.Error())
+	}
+	fi, err := file.Stat()
+	if err != nil {
+		file.Close()
+		failedLogFile.Close()
+		log.Fatal("Error occurred when opening file \"" + file.Name() + "\": " + err.Error())
+	}
+	fmt.Println("Failed log file \"" + file.Name() + "\" has been opened for read")
+
+	if fi.Size() > 0 {
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			file.Close()
+			failedLogFile.Close()
+			log.Fatal("Error occurred when reading from file \"" + file.Name() + "\": " + err.Error())
+		}
+
+		err = json.Unmarshal(data, &failedLogFileMap)
+		if err != nil {
+			file.Close()
+			failedLogFile.Close()
+			log.Fatal("Error occurred when unmarshaling from JSON objects: " + err.Error())
+		}
+	}
 }
 
 func IsFailedLogMapEmpty() bool {

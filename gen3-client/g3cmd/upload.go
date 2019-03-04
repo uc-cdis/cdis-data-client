@@ -94,8 +94,8 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 		if furObjects[i].GUID == "" {
 			respURL, guid, err = GeneratePresignedURL(furObjects[i].FilePath, includeSubDirName)
 			if err != nil {
-				errCh <- err
 				logs.AddToFailedLogMap(furObjects[i].FilePath, respURL, false)
+				errCh <- err
 				continue
 			}
 			furObjects[i].PresignedURL = respURL
@@ -103,8 +103,8 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 		}
 		file, err := os.Open(furObjects[i].FilePath)
 		if err != nil {
-			errCh <- errors.New("File open error: " + err.Error())
 			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].PresignedURL, false)
+			errCh <- errors.New("File open error: " + err.Error())
 			continue
 		}
 		defer file.Close()
@@ -123,10 +123,10 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
-		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
 		for _, furObject := range furObjects {
 			logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 		}
+		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
 		return
 	}
 
@@ -136,18 +136,23 @@ func batchUpload(furObjects []FileUploadRequestObject, workers int, respCh chan 
 		wg.Add(1)
 		go func() {
 			for furObject := range furObjectCh {
-				resp, err := client.Do(furObject.Request)
-				if err != nil {
-					errCh <- err
-					logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
-				} else {
-					if resp.StatusCode != 200 {
+				if furObject.Request != nil {
+					resp, err := client.Do(furObject.Request)
+					if err != nil {
 						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
-					} else { // Succeeded
-						respCh <- resp
-						logs.DeleteFromFailedLogMap(furObject.FilePath, true)
-						logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, true)
+						errCh <- err
+					} else {
+						if resp.StatusCode != 200 {
+							logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
+						} else { // Succeeded
+							respCh <- resp
+							logs.DeleteFromFailedLogMap(furObject.FilePath, true)
+							logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, true)
+							logs.ScoreBoard[0]++
+						}
 					}
+				} else if furObject.FilePath != "" {
+					logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, true)
 				}
 			}
 			wg.Done()
@@ -174,6 +179,7 @@ func init() {
 			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
 			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
 		Run: func(cmd *cobra.Command, args []string) {
+			logs.InitScoreBoard(MaxRetryCount)
 			uploadPath = filepath.Clean(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
 			if err != nil {
@@ -218,12 +224,12 @@ func init() {
 					}
 				}
 				logs.WriteToFailedLog(false)
-				fmt.Printf("%d files uploaded.\n", len(respCh))
 			} else {
 				for _, filePath := range validatedFilePaths {
 					respURL, guid, err := GeneratePresignedURL(filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, respURL, false)
+						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println(err.Error())
 						continue
 					}
@@ -231,6 +237,7 @@ func init() {
 					file, err := os.Open(filePath)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, respURL, false)
+						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println("File open error")
 						continue
 					}
@@ -238,12 +245,16 @@ func init() {
 					if err != nil {
 						file.Close()
 						logs.AddToFailedLogMap(filePath, respURL, false)
+						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
 					err = uploadFile(furObject)
 					if err != nil {
+						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println(err.Error())
+					} else {
+						logs.IncrementScore(0)
 					}
 					file.Close()
 				}
@@ -251,8 +262,9 @@ func init() {
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
-				// TODO: retransmissions
+				retryUpload(logs.GetFailedLogMap())
 			}
+			logs.PrintScoreBoard()
 		},
 	}
 

@@ -77,6 +77,7 @@ func init() {
 
 			var objects []ManifestObject
 
+			logs.InitScoreBoard(0)
 			manifestFile, err := os.Open(manifestPath)
 			if err != nil {
 				log.Fatalf("Failed to open manifest file\n")
@@ -114,6 +115,7 @@ func init() {
 					if err != nil {
 						log.Println("File open error: " + err.Error())
 						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						continue
 					}
 					defer file.Close()
@@ -122,17 +124,22 @@ func init() {
 					if err != nil {
 						file.Close()
 						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue
 					}
 					err = uploadFile(furObject)
 					if err != nil {
 						log.Println(err.Error())
+						logs.IncrementScore(len(logs.ScoreBoard) - 1)
+					} else {
+						logs.IncrementScore(0)
 					}
 					file.Close()
 				}
 			}
 			logs.WriteToFailedLog(false)
+			logs.PrintScoreBoard()
 		},
 	}
 

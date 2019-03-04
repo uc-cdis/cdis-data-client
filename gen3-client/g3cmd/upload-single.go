@@ -50,6 +50,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./gen3-client upload\" instead.\n")
 
+			logs.InitScoreBoard(0)
 			filePaths, err := commonUtils.ParseFilePaths(filePath)
 			if len(filePaths) > 1 {
 				fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
@@ -64,6 +65,8 @@ func init() {
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
 				logs.AddToFailedLogMap(filePath, "", false)
 				logs.WriteToFailedLog(false)
+				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.PrintScoreBoard()
 				log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
 			}
 
@@ -71,6 +74,8 @@ func init() {
 			if err != nil {
 				logs.AddToFailedLogMap(filePath, "", false)
 				logs.WriteToFailedLog(false)
+				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.PrintScoreBoard()
 				log.Fatalln("File open error: " + err.Error())
 			}
 			defer file.Close()
@@ -82,13 +87,19 @@ func init() {
 				file.Close()
 				logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
 				logs.WriteToFailedLog(false)
+				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.PrintScoreBoard()
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
 			}
 			err = uploadFile(furObject)
 			if err != nil {
 				log.Println(err.Error())
+				logs.IncrementScore(len(logs.ScoreBoard) - 1) // update failed score
+			} else {
+				logs.IncrementScore(0) // update succeeded score
 			}
 			logs.WriteToFailedLog(false)
+			logs.PrintScoreBoard()
 		},
 	}
 
