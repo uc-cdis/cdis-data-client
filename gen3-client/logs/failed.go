@@ -2,7 +2,6 @@ package logs
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,7 +25,7 @@ func InitFailedLog(profile string) {
 		failedLogFile.Close()
 		log.Fatal("Error occurred when opening file \"" + failedLogFilename + "\": " + err.Error())
 	}
-	fmt.Println("Local failed log file \"" + failedLogFilename + "\" has opened")
+	log.Println("Local failed log file \"" + failedLogFilename + "\" has opened")
 
 	failedLogFileMap = make(map[string]commonUtils.RetryObject)
 }
@@ -44,7 +43,7 @@ func LoadFailedLogFile(filePath string) {
 		failedLogFile.Close()
 		log.Fatal("Error occurred when opening file \"" + file.Name() + "\": " + err.Error())
 	}
-	fmt.Println("Failed log file \"" + file.Name() + "\" has been opened for read")
+	log.Println("Failed log file \"" + file.Name() + "\" has been opened for read")
 
 	if fi.Size() > 0 {
 		var tempRetryObjectSlice []commonUtils.RetryObject
@@ -81,7 +80,7 @@ func AddToFailedLogMap(filePath string, guid string, presignedUrl string, retryC
 	defer failedLogLock.Unlock()
 	failedLogFileMap[filePath] = commonUtils.RetryObject{FilePath: filePath, GUID: guid, PresignedURL: presignedUrl, RetryCount: retryCount}
 	if !isMuted {
-		fmt.Printf("Failed file entry added for %s\n", filePath)
+		log.Printf("Failed file entry added for %s\n", filePath)
 	}
 }
 
@@ -90,7 +89,7 @@ func DeleteFromFailedLogMap(filePath string, isMuted bool) {
 	defer failedLogLock.Unlock()
 	delete(failedLogFileMap, filePath)
 	if !isMuted {
-		fmt.Printf("Failed file entry deleted for %s\n", filePath)
+		log.Printf("Failed file entry deleted for %s\n", filePath)
 	}
 }
 
@@ -116,11 +115,11 @@ func WriteToFailedLog(isMuted bool) {
 		log.Fatal("Error occurred when writing to file \"" + failedLogFilename + "\": " + err.Error())
 	}
 	if !isMuted {
-		fmt.Println("Local failed log file updated")
+		log.Println("Local failed log file updated")
 	}
 }
 
-func CloseFailedLog() error {
-	fmt.Println("Local failed log file \"" + failedLogFilename + "\" has closed")
+func closeFailedLog() error {
+	log.Println("Local failed log file \"" + failedLogFilename + "\" has closed")
 	return failedLogFile.Close()
 }

@@ -32,7 +32,7 @@ func init() {
 		Long:    `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
 		Example: `./gen3-client upload-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n")
+			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n\n")
 
 			var objects []ManifestObject
 
@@ -74,7 +74,7 @@ func init() {
 					if err != nil {
 						log.Println("File open error: " + err.Error())
 						logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
-						logs.IncrementScore(len(logs.ScoreBoard) - 1)
+						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						continue
 					}
 					defer file.Close()
@@ -83,14 +83,14 @@ func init() {
 					if err != nil {
 						file.Close()
 						logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
-						logs.IncrementScore(len(logs.ScoreBoard) - 1)
+						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue
 					}
 					err = uploadFile(furObject, 0)
 					if err != nil {
 						log.Println(err.Error())
-						logs.IncrementScore(len(logs.ScoreBoard) - 1)
+						logs.IncrementScore(logs.ScoreBoardLen - 1)
 					} else {
 						logs.IncrementScore(0)
 					}
@@ -98,8 +98,7 @@ func init() {
 				}
 			}
 			logs.WriteToFailedLog(false)
-			logs.CloseSucceededLog()
-			logs.CloseFailedLog()
+			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},
 	}

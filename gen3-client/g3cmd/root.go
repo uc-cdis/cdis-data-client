@@ -14,7 +14,7 @@ var cfgFile string
 var profile string
 var uri string
 
-/* RootCmd represents the base command when called without any subcommands */
+// RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:     "gen3-client",
 	Short:   "Use the gen3-client to interact with a Gen3 Data Commons",
@@ -22,8 +22,8 @@ var RootCmd = &cobra.Command{
 	Version: gitversion,
 }
 
-/* Execute adds all child commands to the root command sets flags appropriately
-   This is called by main.main(). It only needs to happen once to the rootCmd. */
+// Execute adds all child commands to the root command sets flags appropriately
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -64,6 +64,7 @@ func initConfig() {
 	}
 
 	logs.Init()
+	logs.InitMessageLog(profile)
 	logs.InitSucceededLog(profile)
 	logs.InitFailedLog(profile)
 }

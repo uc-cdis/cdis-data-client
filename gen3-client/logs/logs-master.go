@@ -1,7 +1,6 @@
 package logs
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -24,6 +23,19 @@ func Init() {
 		if err != nil {
 			log.Fatal("Cannot create folder \"" + MainLogPath + "\"")
 		}
-		fmt.Println("Created folder \"" + MainLogPath + "\"")
+		log.Println("Created folder \"" + MainLogPath + "\"")
+	}
+}
+
+func CloseAll() {
+	errorSlice := make([]error, 0)
+	errorSlice = append(errorSlice, closeSucceededLog())
+	errorSlice = append(errorSlice, closeFailedLog())
+	errorSlice = append(errorSlice, closeMessageLog())
+	log.SetOutput(os.Stdout)
+	for _, err := range errorSlice {
+		if err != nil {
+			log.Println(err.Error())
+		}
 	}
 }

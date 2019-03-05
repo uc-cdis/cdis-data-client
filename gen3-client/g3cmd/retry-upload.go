@@ -12,6 +12,7 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
+// MaxRetryCount is the maximum retry number per record
 const MaxRetryCount = 5
 const maxWaitTime = 300
 
@@ -24,27 +25,28 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 	var guid string
 	var filename string
 	var err error
+	fmt.Println()
 	if len(failedLogMap) == 0 {
-		fmt.Println("No failed file in log, no need to retry upload.")
+		log.Println("No failed file in log, no need to retry upload.")
 		return
 	}
 
-	fmt.Println("Retry upload has started...")
+	log.Println("Retry upload has started...")
 	retryObjCh := make(chan commonUtils.RetryObject, len(failedLogMap))
 	for _, v := range failedLogMap {
 		if logs.ExistsInSucceededLog(v.FilePath) {
-			fmt.Println("File \"" + v.FilePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
+			log.Println("File \"" + v.FilePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 			continue
 		}
 		retryObjCh <- v
 	}
-	fmt.Printf("%d records has been sent to the retry channel\n\n", len(retryObjCh))
+	log.Printf("%d records has been sent to the retry channel\n\n", len(retryObjCh))
 	if len(retryObjCh) == 0 {
 		return
 	}
 
 	for ro := range retryObjCh {
-		fmt.Printf("#%d retry of record %s\n", ro.RetryCount, ro.FilePath)
+		log.Printf("#%d retry of record %s\n", ro.RetryCount, ro.FilePath)
 		if ro.PresignedURL == "" {
 			ro.PresignedURL, guid, filename, err = GeneratePresignedURL(uploadPath, ro.FilePath, includeSubDirName)
 			if err != nil {
@@ -54,7 +56,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 				if ro.RetryCount < MaxRetryCount { // try another time
 					retryObjCh <- ro
 				} else {
-					logs.IncrementScore(len(logs.ScoreBoard) - 1) // inevitable failure
+					logs.IncrementScore(logs.ScoreBoardLen - 1) // inevitable failure
 					if (len(retryObjCh)) == 0 {
 						close(retryObjCh)
 					}
@@ -72,7 +74,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 			if ro.RetryCount < MaxRetryCount {
 				retryObjCh <- ro
 			} else {
-				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				if (len(retryObjCh)) == 0 {
 					close(retryObjCh)
 				}
@@ -89,7 +91,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 			if ro.RetryCount < MaxRetryCount {
 				retryObjCh <- ro
 			} else {
-				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				if (len(retryObjCh)) == 0 {
 					close(retryObjCh)
 				}
@@ -97,7 +99,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 			continue
 		}
 
-		fmt.Printf("Sleep for %.0f seconds\n", getWaitTime(ro.RetryCount).Seconds())
+		log.Printf("Sleep for %.0f seconds\n", getWaitTime(ro.RetryCount).Seconds())
 		time.Sleep(getWaitTime(ro.RetryCount)) // exponential wait for retry
 		err = uploadFile(furObject, ro.RetryCount)
 		if err != nil {
@@ -108,7 +110,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 			if ro.RetryCount < MaxRetryCount {
 				retryObjCh <- ro
 			} else {
-				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				if (len(retryObjCh)) == 0 {
 					close(retryObjCh)
 				}
@@ -118,7 +120,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 		logs.IncrementScore(ro.RetryCount + 1)
 		if (len(retryObjCh)) == 0 {
 			close(retryObjCh)
-			fmt.Println("RetryObjCh has been closed")
+			log.Println("Retry channel has been closed")
 		}
 	}
 }
@@ -130,14 +132,18 @@ func init() {
 	var retryUploadCmd = &cobra.Command{
 		Use:     "retry-upload",
 		Short:   "retry upload file(s) to object storage.",
+		Long:    `Re-submit files found in a given failed log by using sequential (non-batching) uploading and exponential backoff.`,
 		Example: "For retrying file upload:\n./gen3-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
 		Run: func(cmd *cobra.Command, args []string) {
+			if includeSubDirName && uploadPath == "" {
+				fmt.Println("Error: in retry upload mode, you need to specify --uploadPath option to the parent directory of data files if you set --includeSubDirName=true")
+				return
+			}
 			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
 			logs.LoadFailedLogFile(failedLogPath)
 			logs.InitScoreBoard(MaxRetryCount)
 			retryUpload(logs.GetFailedLogMap(), includeSubDirName, uploadPath)
-			logs.CloseSucceededLog()
-			logs.CloseFailedLog()
+			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},
 	}

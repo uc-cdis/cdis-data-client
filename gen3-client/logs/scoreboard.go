@@ -7,23 +7,25 @@ import (
 	"text/tabwriter"
 )
 
-var ScoreBoard []int
+var scoreBoard []int
 var scoreBoardLock sync.Mutex
+var ScoreBoardLen int
 
 func InitScoreBoard(maxRetryCount int) {
-	ScoreBoard = make([]int, maxRetryCount+2)
+	scoreBoard = make([]int, maxRetryCount+2)
+	ScoreBoardLen = len(scoreBoard)
 }
 
 func PrintScoreBoard() {
-	if ScoreBoard != nil {
+	if scoreBoard != nil {
 		sum := 0
 		fmt.Println("\n\nSubmission Results")
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 0, ' ', tabwriter.Debug)
-		for i, score := range ScoreBoard {
-			if i < len(ScoreBoard)-1 {
+		for i, score := range scoreBoard {
+			if i < len(scoreBoard)-1 {
 				fmt.Fprintf(w, "Finished with %d retry(ies) \t %d\n", i, score)
 			} else {
-				fmt.Fprintf(w, "Failed \t %d\n", ScoreBoard[len(ScoreBoard)-1])
+				fmt.Fprintf(w, "Failed \t %d\n", scoreBoard[len(scoreBoard)-1])
 			}
 			sum += score
 		}
@@ -35,7 +37,7 @@ func PrintScoreBoard() {
 func IncrementScore(index int) {
 	scoreBoardLock.Lock()
 	defer scoreBoardLock.Unlock()
-	if ScoreBoard != nil && index >= 0 && index < len(ScoreBoard) {
-		ScoreBoard[index]++
+	if scoreBoard != nil && index >= 0 && index < len(scoreBoard) {
+		scoreBoard[index]++
 	}
 }

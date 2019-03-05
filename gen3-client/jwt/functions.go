@@ -160,7 +160,7 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 
 		// 401 code is general error code from fence. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.
-		if resp.StatusCode == 401 {
+		if resp != nil && resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else if err != nil {
 			return "", "", err

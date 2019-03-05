@@ -3,7 +3,6 @@ package g3cmd
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -22,22 +21,27 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
+// ManifestObject represents an object from manifest that downloaded from windmill
 type ManifestObject struct {
 	ObjectID  string `json:"object_id"`
 	SubjectID string `json:"subject_id"`
 }
 
+// PresignedURLRequestObject represents the playload that sends to fence for getting a presignedURL for new object file
 type PresignedURLRequestObject struct {
 	Filename string `json:"file_name"`
 }
 
+// FileInfo is a helper struct for including subdirname as filename
 type FileInfo struct {
 	FilePath string
 	Filename string
 }
 
+// FileSizeLimit is the maximun single file size (5GB)
 const FileSizeLimit = 5 * 1024 * 1024 * 1024
 
+// GeneratePresignedURL helps sending requests to fence and parsing the response
 func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -48,7 +52,7 @@ func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName 
 
 	fileinfo, err := processFilename(uploadPath, filePath, includeSubDirName)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 	}
 	endPointPostfix := "/user/data/upload"
 	purObject := PresignedURLRequestObject{Filename: fileinfo.Filename}
@@ -65,6 +69,7 @@ func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName 
 	return respURL, guid, fileinfo.Filename, err
 }
 
+// GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar
 func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -138,7 +143,7 @@ func validateFilePath(filePaths []string) []string {
 		}
 
 		if logs.ExistsInSucceededLog(filePath) {
-			fmt.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
+			log.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 			continue
 		} else {
 			logs.AddToFailedLogMap(filePath, "", "", 0, true)
@@ -161,7 +166,7 @@ func processFilename(uploadPath string, filePath string, includeSubDirName bool)
 			filename = strings.TrimPrefix(subFilename, commonUtils.PathSeparator)
 			filename = strings.Replace(filename, commonUtils.PathSeparator, ".", -1)
 		} else {
-			err = errors.New("Include subdirectory names will only works if the file is under at least one subdirectory.")
+			err = errors.New("Include subdirectory names will only works if the file is under at least one subdirectory")
 		}
 	}
 	return FileInfo{filePath, filename}, err
@@ -170,7 +175,7 @@ func processFilename(uploadPath string, filePath string, includeSubDirName bool)
 func getFullFilePath(filePath string, filename string) (string, error) {
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return "", err
 	}
 	switch mode := fi.Mode(); {
@@ -198,7 +203,7 @@ func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.F
 		}
 
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			log.Println("The file you specified \"%s\" does not exist locally.", filePath)
+			log.Printf("The file you specified \"%s\" does not exist locally.\n", filePath)
 			continue
 		}
 
@@ -209,7 +214,7 @@ func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.F
 }
 
 func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) error {
-	fmt.Println("Uploading data ...")
+	log.Println("Uploading data ...")
 	furObject.Bar.Start()
 
 	client := &http.Client{}
@@ -227,7 +232,7 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
 	}
 	furObject.Bar.Finish()
-	fmt.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
+	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
 	logs.DeleteFromFailedLogMap(furObject.FilePath, true)
 	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
 	logs.WriteToFailedLog(false)
@@ -318,7 +323,7 @@ func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonU
 							logs.DeleteFromFailedLogMap(furObject.FilePath, true)
 							logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, true)
 							logs.WriteToFailedLog(true)
-							logs.ScoreBoard[0]++
+							logs.IncrementScore(0)
 						}
 					}
 				} else if furObject.FilePath != "" {

@@ -39,7 +39,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	//Look in config file
 	fullFilePaths, err := commonUtils.ParseFilePaths(filePath)
 	if len(fullFilePaths) > 1 {
-		fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
+		log.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
 		return ""
 	}
 	if err != nil {
@@ -50,7 +50,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 		fullFilePath = fullFilePaths[0]
 	}
 	if _, err := os.Stat(fullFilePath); err != nil {
-		fmt.Println("File specified at " + fullFilePath + " not found")
+		log.Println("File specified at " + fullFilePath + " not found")
 		return ""
 	}
 
@@ -73,8 +73,7 @@ func (conf *Configure) ValidateUrl(apiEndpoint string) {
 		panic(err)
 	}
 	if parsedUrl.Host == "" {
-		fmt.Print("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
-		os.Exit(1)
+		log.Fatalf("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
 	}
 }
 
@@ -85,8 +84,7 @@ func (conf *Configure) ReadCredentials(filePath string) Credential {
 	jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
 	err := json.Unmarshal([]byte(jsonContent), &configuration)
 	if err != nil {
-		fmt.Println("Cannot read json file: " + err.Error())
-		os.Exit(1)
+		log.Fatalln("Cannot read json file: " + err.Error())
 	}
 	return configuration
 }
@@ -235,7 +233,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		APIEndpoint: "",
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		fmt.Println("No config file found in ~/.gen3/")
+		log.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
 			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
 		return cred
@@ -257,7 +255,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	}
 
 	if profileLine == -1 {
-		fmt.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
+		log.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 		return cred
 	} else {
 		// Read in access key, secret key, endpoint for given profile

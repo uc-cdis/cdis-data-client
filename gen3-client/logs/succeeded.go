@@ -2,7 +2,6 @@ package logs
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,7 +22,7 @@ func InitSucceededLog(profile string) {
 		succeededLogFile.Close()
 		log.Fatal("Error occurred when opening file \"" + succeededLogFilename + "\": " + err.Error())
 	}
-	fmt.Println("Local succeeded log file \"" + succeededLogFilename + "\" has opened")
+	log.Println("Local succeeded log file \"" + succeededLogFilename + "\" has opened")
 
 	succeededLogFileMap = make(map[string]string)
 	if fi.Size() > 0 {
@@ -62,11 +61,11 @@ func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 		log.Fatal("Error occurred when writing to file \"" + succeededLogFilename + "\": " + err.Error())
 	}
 	if !isMuted {
-		fmt.Println("Local succeeded log file updated")
+		log.Println("Local succeeded log file updated")
 	}
 }
 
-func CloseSucceededLog() error {
-	fmt.Println("Local succeeded log file \"" + succeededLogFilename + "\" has closed")
+func closeSucceededLog() error {
+	log.Println("Local succeeded log file \"" + succeededLogFilename + "\" has closed")
 	return succeededLogFile.Close()
 }

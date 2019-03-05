@@ -32,7 +32,7 @@ func init() {
 				log.Fatalf("Error when parsing file paths: " + err.Error())
 			}
 			if len(filePaths) == 0 {
-				fmt.Println("No file has been found in the provided location \"" + uploadPath + "\"")
+				log.Println("No file has been found in the provided location \"" + uploadPath + "\"")
 				return
 			}
 			fmt.Println("\nThe following file(s) has been found in path \"" + uploadPath + "\" and will be uploaded:")
@@ -66,7 +66,7 @@ func init() {
 					close(errCh)
 					for err := range errCh {
 						if err != nil {
-							fmt.Printf("Error occurred during uploading: %s\n", err.Error())
+							log.Printf("Error occurred during uploading: %s\n", err.Error())
 						}
 					}
 				}
@@ -76,7 +76,6 @@ func init() {
 					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
-						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println(err.Error())
 						continue
 					}
@@ -84,21 +83,17 @@ func init() {
 					file, err := os.Open(filePath)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
-						logs.IncrementScore(len(logs.ScoreBoard) - 1)
-						log.Println("File open error")
+						log.Println("File open error: " + err.Error())
 						continue
 					}
 					furObject, err = GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
-						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
-						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
 					err = uploadFile(furObject, 0)
 					if err != nil {
-						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println(err.Error())
 					} else {
 						logs.IncrementScore(0)
@@ -111,8 +106,7 @@ func init() {
 			if !logs.IsFailedLogMapEmpty() {
 				retryUpload(logs.GetFailedLogMap(), includeSubDirName, uploadPath)
 			}
-			logs.CloseSucceededLog()
-			logs.CloseFailedLog()
+			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},
 	}

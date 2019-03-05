@@ -23,7 +23,7 @@ func init() {
 		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
 		Example: `./gen3-client upload-single --profile=<profile-name> --guid=f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=<path-to-file>`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./gen3-client upload\" instead.\n")
+			fmt.Printf("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./gen3-client upload\" instead.\n\n")
 
 			logs.InitScoreBoard(0)
 			filePaths, err := commonUtils.ParseFilePaths(filePath)
@@ -40,10 +40,9 @@ func init() {
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
 				logs.AddToFailedLogMap(filePath, "", "", 0, false)
 				logs.WriteToFailedLog(false)
-				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
-				logs.CloseSucceededLog()
-				logs.CloseFailedLog()
+				logs.CloseAll()
 				log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
 			}
 
@@ -51,10 +50,9 @@ func init() {
 			if err != nil {
 				logs.AddToFailedLogMap(filePath, "", "", 0, false)
 				logs.WriteToFailedLog(false)
-				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
-				logs.CloseSucceededLog()
-				logs.CloseFailedLog()
+				logs.CloseAll()
 				log.Fatalln("File open error: " + err.Error())
 			}
 			defer file.Close()
@@ -66,22 +64,20 @@ func init() {
 				file.Close()
 				logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
 				logs.WriteToFailedLog(false)
-				logs.IncrementScore(len(logs.ScoreBoard) - 1)
+				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
-				logs.CloseSucceededLog()
-				logs.CloseFailedLog()
+				logs.CloseAll()
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
 			}
 			err = uploadFile(furObject, 0)
 			if err != nil {
 				log.Println(err.Error())
-				logs.IncrementScore(len(logs.ScoreBoard) - 1) // update failed score
+				logs.IncrementScore(logs.ScoreBoardLen - 1) // update failed score
 			} else {
 				logs.IncrementScore(0) // update succeeded score
 			}
 			logs.WriteToFailedLog(false)
-			logs.CloseSucceededLog()
-			logs.CloseFailedLog()
+			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},
 	}
