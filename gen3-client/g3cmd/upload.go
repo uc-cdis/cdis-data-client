@@ -51,18 +51,19 @@ func init() {
 				workers, respCh, errCh, batchFURObjects := initBathUploadChannels(numParallel, len(validatedFilePaths))
 				for _, filePath := range validatedFilePaths {
 					if len(batchFURObjects) < workers {
-						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
+						furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
 						batchUpload(uploadPath, includeSubDirName, batchFURObjects, workers, respCh, errCh)
-						batchFURObjects = make([]FileUploadRequestObject, 0)
-						furObject := FileUploadRequestObject{FilePath: filePath, GUID: ""}
+						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
+						furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
 				batchUpload(uploadPath, includeSubDirName, batchFURObjects, workers, respCh, errCh)
 
 				if len(errCh) > 0 {
+					close(errCh)
 					for err := range errCh {
 						if err != nil {
 							fmt.Printf("Error occurred during uploading: %s\n", err.Error())
@@ -74,15 +75,15 @@ func init() {
 				for _, filePath := range validatedFilePaths {
 					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, respURL, false)
+						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println(err.Error())
 						continue
 					}
-					furObject := FileUploadRequestObject{FilePath: filePath, FileName: filename, GUID: guid, PresignedURL: respURL}
+					furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filename, GUID: guid, PresignedURL: respURL}
 					file, err := os.Open(filePath)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, respURL, false)
+						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println("File open error")
 						continue
@@ -90,12 +91,12 @@ func init() {
 					furObject, err = GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
-						logs.AddToFailedLogMap(filePath, respURL, false)
+						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
-					err = uploadFile(furObject)
+					err = uploadFile(furObject, 0)
 					if err != nil {
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Println(err.Error())

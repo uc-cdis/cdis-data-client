@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -23,7 +24,7 @@ func init() {
 	var workers int
 	var respCh chan *http.Response
 	var errCh chan error
-	var batchFURObjects []FileUploadRequestObject
+	var batchFURObjects []commonUtils.FileUploadRequestObject
 
 	var uploadManifestCmd = &cobra.Command{
 		Use:     "upload-manifest",
@@ -65,14 +66,14 @@ func init() {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
 						batchUpload(uploadPath, false, batchFURObjects, workers, respCh, errCh)
-						batchFURObjects = make([]FileUploadRequestObject, 0)
+						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				} else {
 					file, err := os.Open(furObject.FilePath)
 					if err != nil {
 						log.Println("File open error: " + err.Error())
-						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						continue
 					}
@@ -81,12 +82,12 @@ func init() {
 					furObject, err := GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
-						logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)
 						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue
 					}
-					err = uploadFile(furObject)
+					err = uploadFile(furObject, 0)
 					if err != nil {
 						log.Println(err.Error())
 						logs.IncrementScore(len(logs.ScoreBoard) - 1)

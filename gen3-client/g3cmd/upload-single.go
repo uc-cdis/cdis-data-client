@@ -38,7 +38,7 @@ func init() {
 				filePath = filePaths[0]
 			}
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				logs.AddToFailedLogMap(filePath, "", false)
+				logs.AddToFailedLogMap(filePath, "", "", 0, false)
 				logs.WriteToFailedLog(false)
 				logs.IncrementScore(len(logs.ScoreBoard) - 1)
 				logs.PrintScoreBoard()
@@ -49,7 +49,7 @@ func init() {
 
 			file, err := os.Open(filePath)
 			if err != nil {
-				logs.AddToFailedLogMap(filePath, "", false)
+				logs.AddToFailedLogMap(filePath, "", "", 0, false)
 				logs.WriteToFailedLog(false)
 				logs.IncrementScore(len(logs.ScoreBoard) - 1)
 				logs.PrintScoreBoard()
@@ -59,12 +59,12 @@ func init() {
 			}
 			defer file.Close()
 
-			furObject := FileUploadRequestObject{FilePath: filePath, FileName: path.Base(filePath), GUID: guid}
+			furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: path.Base(filePath), GUID: guid}
 
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
 				file.Close()
-				logs.AddToFailedLogMap(furObject.FilePath, furObject.PresignedURL, false)
+				logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
 				logs.WriteToFailedLog(false)
 				logs.IncrementScore(len(logs.ScoreBoard) - 1)
 				logs.PrintScoreBoard()
@@ -72,7 +72,7 @@ func init() {
 				logs.CloseFailedLog()
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
 			}
-			err = uploadFile(furObject)
+			err = uploadFile(furObject, 0)
 			if err != nil {
 				log.Println(err.Error())
 				logs.IncrementScore(len(logs.ScoreBoard) - 1) // update failed score
