@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"path"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -63,6 +64,8 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 				}
 				continue
 			}
+		} else {
+			filename = path.Base(ro.FilePath)
 		}
 
 		furObject := commonUtils.FileUploadRequestObject{FilePath: ro.FilePath, Filename: filename, GUID: guid, PresignedURL: ro.PresignedURL}
