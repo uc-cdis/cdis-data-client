@@ -18,7 +18,7 @@ func init() {
 	var numParallel int
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
-		Short: "upload file(s) to object storage.",
+		Short: "Upload file(s) to object storage.",
 		Long:  `Gets a presigned URL for each file and then uploads the specified file(s).`,
 		Example: "For uploading a single file:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/data.bam>\n" +
 			"For uploading all files within an folder:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/>\n" +

@@ -134,7 +134,7 @@ func init() {
 	var uploadPath string
 	var retryUploadCmd = &cobra.Command{
 		Use:     "retry-upload",
-		Short:   "retry upload file(s) to object storage.",
+		Short:   "Retry upload file(s) to object storage.",
 		Long:    `Re-submit files found in a given failed log by using sequential (non-batching) uploading and exponential backoff.`,
 		Example: "For retrying file upload:\n./gen3-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
 		Run: func(cmd *cobra.Command, args []string) {

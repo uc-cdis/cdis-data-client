@@ -28,7 +28,7 @@ func init() {
 
 	var uploadManifestCmd = &cobra.Command{
 		Use:     "upload-manifest",
-		Short:   "upload files from a specified manifest",
+		Short:   "Upload files from a specified manifest",
 		Long:    `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
 		Example: `./gen3-client upload-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
