@@ -7,7 +7,6 @@ package mocks
 import (
 	bytes "bytes"
 	http "net/http"
-	url "net/url"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -38,7 +37,7 @@ func (m *MockRequestInterface) EXPECT() *MockRequestInterfaceMockRecorder {
 }
 
 // MakeARequest mocks base method
-func (m *MockRequestInterface) MakeARequest(arg0 *http.Client, arg1, arg2 string, arg3 map[string]string, arg4 *bytes.Buffer) (*http.Response, error) {
+func (m *MockRequestInterface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 *bytes.Buffer) (*http.Response, error) {
 	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(*http.Response)
 	ret1, _ := ret[1].(error)
@@ -51,23 +50,13 @@ func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3,
 }
 
 // RequestNewAccessKey mocks base method
-func (m *MockRequestInterface) RequestNewAccessKey(arg0 string, arg1 *jwt.Credential) {
-	m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1)
+func (m *MockRequestInterface) RequestNewAccessKey(arg0 string, arg1 *jwt.Credential) error {
+	ret := m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // RequestNewAccessKey indicates an expected call of RequestNewAccessKey
 func (mr *MockRequestInterfaceMockRecorder) RequestNewAccessKey(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessKey", reflect.TypeOf((*MockRequestInterface)(nil).RequestNewAccessKey), arg0, arg1)
-}
-
-// GetPresignedURL mocks base method
-func (m *MockRequestInterface) GetPresignedURL(method string, host *url.URL, endpointPostPrefix, accessKey, contentType string, body *bytes.Buffer) *http.Response {
-	ret := m.ctrl.Call(m, "GetPresignedURL", method, host, endpointPostPrefix, accessKey, contentType, body)
-	ret0, _ := ret[0].(*http.Response)
-	return ret0
-}
-
-// GetPresignedURL indicates an expected call of GetPresignedURL
-func (mr *MockRequestInterfaceMockRecorder) GetPresignedURL(method, host, endpointPostPrefix, accessKey, contentType, body interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPresignedURL", reflect.TypeOf((*MockRequestInterface)(nil).GetPresignedURL), method, host, endpointPostPrefix, accessKey, contentType, body)
 }

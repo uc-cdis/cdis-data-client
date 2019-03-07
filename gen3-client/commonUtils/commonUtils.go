@@ -3,10 +3,31 @@ package commonUtils
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
+
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
+
+var PathSeparator = string(os.PathSeparator)
+
+type FileUploadRequestObject struct {
+	FilePath     string
+	Filename     string
+	GUID         string
+	PresignedURL string
+	Request      *http.Request
+	Bar          *pb.ProgressBar
+}
+
+type RetryObject struct {
+	FilePath     string
+	GUID         string
+	PresignedURL string
+	RetryCount   int
+}
 
 func ParseRootPath(filePath string) string {
 	if filePath != "" && filePath[0] == '~' {

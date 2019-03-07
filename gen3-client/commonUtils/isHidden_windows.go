@@ -12,7 +12,7 @@ import (
 func IsHidden(filePath string) (bool, error) {
 	filename := filepath.Base(filePath)
 	if runtime.GOOS == "windows" {
-		if filename[0:1] == "." {
+		if filename[0:1] == "." || filename[0:1] == "~" {
 			return true, nil
 		}
 		pointer, err := syscall.UTF16PtrFromString(filePath)
