@@ -6,13 +6,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
-	"os/user"
 	"path"
 	"strconv"
 	"strings"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
@@ -174,10 +175,9 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 		if err != nil {
 			return "", "", err
 		}
-		usr, err := user.Current()
-		homeDir := ""
-		if err == nil {
-			homeDir = usr.HomeDir
+		homeDir, err := homedir.Dir()
+		if err != nil {
+			log.Fatalln(err)
 		}
 		configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 		content := f.Config.ReadFile(configPath, configFileType)

@@ -11,13 +11,21 @@ import (
 var MainLogPath string
 
 func Init() {
-	home, err := homedir.Dir()
+	homeDir, err := homedir.Dir()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	MainLogPath = home + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "logs" + commonUtils.PathSeparator
+	mainPath := homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator
+	if _, err := os.Stat(mainPath); os.IsNotExist(err) { // path to ~/.gen3/logs does not exist
+		err = os.Mkdir(mainPath, 0766)
+		if err != nil {
+			log.Fatal("Cannot create folder \"" + mainPath + "\"")
+		}
+		log.Println("Created folder \"" + mainPath + "\"")
+	}
 
+	MainLogPath = mainPath + "logs" + commonUtils.PathSeparator
 	if _, err := os.Stat(MainLogPath); os.IsNotExist(err) { // path to ~/.gen3/logs does not exist
 		err = os.Mkdir(MainLogPath, 0766)
 		if err != nil {
