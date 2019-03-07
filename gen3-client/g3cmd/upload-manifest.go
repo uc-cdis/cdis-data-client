@@ -57,7 +57,7 @@ func init() {
 			furObjects := validateObject(objects, uploadPath)
 
 			if batch {
-				workers, respCh, errCh, batchFURObjects = initBathUploadChannels(numParallel, len(objects))
+				workers, respCh, errCh, batchFURObjects = initBatchUploadChannels(numParallel, len(objects))
 			}
 
 			for _, furObject := range furObjects {
@@ -97,7 +97,7 @@ func init() {
 					file.Close()
 				}
 			}
-			logs.WriteToFailedLog(false)
+			logs.WriteToFailedLog()
 			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},

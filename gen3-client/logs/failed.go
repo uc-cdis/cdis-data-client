@@ -93,7 +93,7 @@ func DeleteFromFailedLogMap(filePath string, isMuted bool) {
 	}
 }
 
-func WriteToFailedLog(isMuted bool) {
+func WriteToFailedLog() {
 	failedLogLock.Lock()
 	defer failedLogLock.Unlock()
 	var tempSlice []commonUtils.RetryObject
@@ -113,9 +113,6 @@ func WriteToFailedLog(isMuted bool) {
 	if err != nil {
 		failedLogFile.Close()
 		log.Fatal("Error occurred when writing to file \"" + failedLogFilename + "\": " + err.Error())
-	}
-	if !isMuted {
-		log.Println("Local failed log file updated")
 	}
 }
 

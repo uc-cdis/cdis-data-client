@@ -39,7 +39,7 @@ func init() {
 			}
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
 				logs.AddToFailedLogMap(filePath, "", "", 0, false)
-				logs.WriteToFailedLog(false)
+				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -49,7 +49,7 @@ func init() {
 			file, err := os.Open(filePath)
 			if err != nil {
 				logs.AddToFailedLogMap(filePath, "", "", 0, false)
-				logs.WriteToFailedLog(false)
+				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -63,7 +63,7 @@ func init() {
 			if err != nil {
 				file.Close()
 				logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
-				logs.WriteToFailedLog(false)
+				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -76,7 +76,7 @@ func init() {
 			} else {
 				logs.IncrementScore(0) // update succeeded score
 			}
-			logs.WriteToFailedLog(false)
+			logs.WriteToFailedLog()
 			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},

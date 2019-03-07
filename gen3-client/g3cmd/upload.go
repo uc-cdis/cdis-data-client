@@ -48,7 +48,7 @@ func init() {
 			validatedFilePaths := validateFilePath(filePaths)
 
 			if batch {
-				workers, respCh, errCh, batchFURObjects := initBathUploadChannels(numParallel, len(validatedFilePaths))
+				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(validatedFilePaths))
 				for _, filePath := range validatedFilePaths {
 					if len(batchFURObjects) < workers {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, GUID: ""}
@@ -70,7 +70,7 @@ func init() {
 						}
 					}
 				}
-				logs.WriteToFailedLog(false)
+				logs.WriteToFailedLog()
 			} else {
 				for _, filePath := range validatedFilePaths {
 					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
@@ -100,7 +100,7 @@ func init() {
 					}
 					file.Close()
 				}
-				logs.WriteToFailedLog(false)
+				logs.WriteToFailedLog()
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
