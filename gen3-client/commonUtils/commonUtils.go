@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/user"
 	"path/filepath"
 
+	homedir "github.com/mitchellh/go-homedir"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
@@ -31,8 +31,10 @@ type RetryObject struct {
 
 func ParseRootPath(filePath string) string {
 	if filePath != "" && filePath[0] == '~' {
-		usr, _ := user.Current()
-		homeDir := usr.HomeDir
+		homeDir, err := homedir.Dir()
+		if err != nil {
+			log.Fatalln(err)
+		}
 		return homeDir + filePath[1:]
 	}
 	return filePath

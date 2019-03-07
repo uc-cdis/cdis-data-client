@@ -9,11 +9,11 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"os/user"
 	"path"
 	"regexp"
 	"strings"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
@@ -93,10 +93,9 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 	/*
 		Try to open config file. If not existed, create empty config file.
 	*/
-	usr, err := user.Current()
-	homeDir := ""
-	if err == nil {
-		homeDir = usr.HomeDir
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		log.Fatalln(err)
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 
@@ -220,10 +219,9 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		Returns:
 			An instance of Credential
 	*/
-	usr, err := user.Current()
-	homeDir := ""
-	if err == nil {
-		homeDir = usr.HomeDir
+	homeDir, err := homedir.Dir()
+	if err != nil {
+		log.Fatalln(err)
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 	cred := Credential{
