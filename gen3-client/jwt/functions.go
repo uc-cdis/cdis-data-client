@@ -4,6 +4,7 @@ package jwt
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -135,27 +136,23 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	return msg, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, string, error) {
-	/*
-		Do request with signed header. User may have more than one profile and use a profile to make a request
-	*/
+func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (*http.Response, error) {
+
 	var resp *http.Response
 	var err error
-	var msg JsonMessage
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-		return "", "", errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
+		return resp, errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
-	isExpiredToken := false
+	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	method := "GET"
 	if bodyBytes != nil {
 		method = "POST"
 	}
-
-	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
+	isExpiredToken := false
 	if cred.AccessKey != "" {
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
 
@@ -164,16 +161,15 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 		if resp != nil && resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else if err != nil {
-			return "", "", err
+			return resp, err
 		} else {
-			msg, err = f.ParseFenceURLResponse(resp)
-			return msg.Url, msg.GUID, err
+			return resp, err
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
 		err := f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/api/access_token", &cred)
 		if err != nil {
-			return "", "", err
+			return resp, err
 		}
 		homeDir, err := homedir.Dir()
 		if err != nil {
@@ -184,8 +180,55 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
-		msg, err = f.ParseFenceURLResponse(resp)
-		return msg.Url, msg.GUID, err
 	}
+
+	return resp, nil
+}
+
+func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, string, error) {
+	/*
+	   Do request with signed header. User may have more than one profile and use a profile to make a request
+	*/
+	var err error
+	var msg JsonMessage
+
+	resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	if err != nil {
+		return "", "", err
+	}
+
+	msg, err = f.ParseFenceURLResponse(resp)
+	return msg.Url, msg.GUID, err
+
+	panic("Unexpected case")
+}
+
+func (f *Functions) CheckPrivileges(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, map[string]interface{}, error) {
+	/*
+	   Return user privileges from specified profile
+	*/
+	var err error
+	var data map[string]interface{}
+
+	resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	if err != nil {
+		return "", nil, err
+	}
+
+	str := ResponseToString(resp)
+	host := resp.Request.URL.Host
+
+	err = json.Unmarshal([]byte(str), &data)
+	if err != nil {
+		panic(err)
+	}
+
+	project_access, ok := data["project_access"].(map[string]interface{})
+	if !ok {
+		panic("Not possible to read access privileges")
+	}
+
+	return host, project_access, err
+
 	panic("Unexpected case")
 }
