@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
-    "reflect"
 
 	"github.com/golang/mock/gomock"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
 )
-
 
 func Requesting(*http.Response) *http.Response {
 	return &http.Response{}
@@ -159,13 +158,13 @@ func TestCheckPrivilegesNoAccess(t *testing.T) {
 
 	_, project_access, err := testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
 
-    no_access := make(map[string]interface{})
+	no_access := make(map[string]interface{})
 
 	if err != nil {
-        t.Errorf("Expected no errors, received an error \"%v\"", err)
+		t.Errorf("Expected no errors, received an error \"%v\"", err)
 	} else if !reflect.DeepEqual(project_access, no_access) {
-        t.Errorf("Expected no user access, received %v", project_access)
-    }
+		t.Errorf("Expected no user access, received %v", project_access)
+	}
 }
 
 func TestCheckPrivilegesGrantedAccess(t *testing.T) {
@@ -179,14 +178,14 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 
 	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
 
-    granted_access_json := "{\"project_access\": " +
-        "{\"test_project\": {" +
-            "\"0\": \"read\"," +
-            "\"1\": \"create\"," +
-            "\"2\": \"read-storage\"," +
-            "\"3\": \"update\"," +
-            "\"4\": \"delete\"}" +
-    "}}"
+	granted_access_json := "{\"project_access\": " +
+		"{\"test_project\": {" +
+		"\"0\": \"read\"," +
+		"\"1\": \"create\"," +
+		"\"2\": \"read-storage\"," +
+		"\"3\": \"update\"," +
+		"\"4\": \"delete\"}" +
+		"}}"
 
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString(granted_access_json)),
@@ -198,22 +197,21 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 
 	_, project_access, err := testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
 
-    granted_access := make(map[string]interface{})
-    granted_access["test_project"] = map[string]interface{}{
-        "0": "read",
-        "1": "create",
-        "2": "read-storage",
-        "3": "update",
-        "4": "delete"}
-
+	granted_access := make(map[string]interface{})
+	granted_access["test_project"] = map[string]interface{}{
+		"0": "read",
+		"1": "create",
+		"2": "read-storage",
+		"3": "update",
+		"4": "delete"}
 
 	if err != nil {
-        t.Errorf("Expected no errors, received an error \"%v\"", err)
+		t.Errorf("Expected no errors, received an error \"%v\"", err)
 	} else if !reflect.DeepEqual(project_access, granted_access) {
-        t.Errorf(`Expected user access and received user access are note the same.
+		t.Errorf(`Expected user access and received user access are note the same.
         Expected: %v
         Received: %v`, granted_access, project_access)
-    }
+	}
 }
 
 func TestCheckPrivilegesJsonNA(t *testing.T) {
@@ -235,13 +233,12 @@ func TestCheckPrivilegesJsonNA(t *testing.T) {
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any()).Return(mockedResp, nil).Times(1)
 
-    defer func() {
-        if r := recover(); r == nil {
-            t.Errorf("The code did not panic on missing user privileges section")
-        }
-    }()
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic on missing user privileges section")
+		}
+	}()
 
 	testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
 
 }
-
