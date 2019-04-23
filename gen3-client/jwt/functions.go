@@ -136,14 +136,14 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	return msg, nil
 }
 
-func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (*http.Response, error) {
+func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
 
 	var resp *http.Response
 	var err error
 
 	cred := f.Config.ParseConfig(profile)
 	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
-		return resp, errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
+		return "", resp, errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
 	}
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
@@ -161,15 +161,15 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		if resp != nil && resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else if err != nil {
-			return resp, err
+			return prefixEndPoint, resp, err
 		} else {
-			return resp, err
+			return prefixEndPoint, resp, err
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
 		err := f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/api/access_token", &cred)
 		if err != nil {
-			return resp, err
+			return prefixEndPoint, resp, err
 		}
 		homeDir, err := homedir.Dir()
 		if err != nil {
@@ -182,7 +182,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
 	}
 
-	return resp, nil
+	return prefixEndPoint, resp, nil
 }
 
 func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, string, error) {
@@ -192,7 +192,7 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 	var err error
 	var msg JsonMessage
 
-	resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	_, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
 	if err != nil {
 		return "", "", err
 	}
@@ -210,13 +210,12 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string, endpo
 	var err error
 	var data map[string]interface{}
 
-	resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	host, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
 	if err != nil {
 		return "", nil, err
 	}
 
 	str := ResponseToString(resp)
-	host := resp.Request.URL.Host
 
 	err = json.Unmarshal([]byte(str), &data)
 	if err != nil {
@@ -225,7 +224,7 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string, endpo
 
 	project_access, ok := data["project_access"].(map[string]interface{})
 	if !ok {
-		panic("Not possible to read access privileges")
+		panic("Not possible to read user access privileges")
 	}
 
 	return host, project_access, err
