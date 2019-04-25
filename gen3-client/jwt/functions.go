@@ -160,8 +160,6 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		// that the token expired. Temporary solution: get new access token and make another attempt.
 		if resp != nil && resp.StatusCode == 401 {
 			isExpiredToken = true
-		} else if err != nil {
-			return prefixEndPoint, resp, err
 		} else {
 			return prefixEndPoint, resp, err
 		}
