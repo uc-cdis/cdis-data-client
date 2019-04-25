@@ -44,7 +44,15 @@ func init() {
 					sort.Strings(projects)
 
 					for _, project := range projects {
-						log.Printf("%s %s\n", project, projectAccess[project])
+						// Sort by access name
+						permissions := projectAccess[project].([]interface{})
+						access := make([]string, 0, len(permissions))
+						for _, permission := range permissions {
+							access = append(access, permission.(string))
+						}
+						sort.Strings(access)
+
+						log.Printf("%s %s\n", project, access)
 					}
 				}
 			}
