@@ -12,7 +12,7 @@ func init() {
 
 	var authCmd = &cobra.Command{
 		Use:     "auth",
-		Short:   "Return data access priveleges from profile",
+		Short:   "Return data access privileges from profile",
 		Long:    `Gets data access privileges for specified profile.`,
 		Example: `./gen3-client auth --profile=<profile-name>`,
 		Run: func(cmd *cobra.Command, args []string) {
