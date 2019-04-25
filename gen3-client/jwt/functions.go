@@ -199,8 +199,6 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 
 	msg, err = f.ParseFenceURLResponse(resp)
 	return msg.Url, msg.GUID, err
-
-	panic("Unexpected case")
 }
 
 func (f *Functions) CheckPrivileges(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, map[string]interface{}, error) {
@@ -219,15 +217,13 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string, endpo
 
 	err = json.Unmarshal([]byte(str), &data)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	projectAccess, ok := data["project_access"].(map[string]interface{})
 	if !ok {
-		panic("Not possible to read user access privileges")
+		log.Fatal("Not possible to read user access privileges")
 	}
 
 	return host, projectAccess, err
-
-	panic("Unexpected case")
 }

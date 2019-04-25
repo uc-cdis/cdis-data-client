@@ -213,32 +213,3 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
         Received: %v`, expectedAccess, receivedAccess)
 	}
 }
-
-func TestCheckPrivilegesJsonNA(t *testing.T) {
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	mockConfig := mocks.NewMockConfigureInterface(mockCtrl)
-	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
-	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
-
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
-
-	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{}")),
-		StatusCode: 200,
-	}
-
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any()).Return(mockedResp, nil).Times(1)
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic on missing user privileges section")
-		}
-	}()
-
-	testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
-
-}
