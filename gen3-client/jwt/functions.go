@@ -222,12 +222,12 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string, endpo
 		panic(err)
 	}
 
-	project_access, ok := data["project_access"].(map[string]interface{})
+	projectAccess, ok := data["project_access"].(map[string]interface{})
 	if !ok {
 		panic("Not possible to read user access privileges")
 	}
 
-	return host, project_access, err
+	return host, projectAccess, err
 
 	panic("Unexpected case")
 }

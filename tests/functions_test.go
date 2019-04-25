@@ -156,14 +156,14 @@ func TestCheckPrivilegesNoAccess(t *testing.T) {
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any()).Return(mockedResp, nil).Times(1)
 
-	_, project_access, err := testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
+	_, receivedAccess, err := testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
 
-	no_access := make(map[string]interface{})
+	expectedAccess := make(map[string]interface{})
 
 	if err != nil {
 		t.Errorf("Expected no errors, received an error \"%v\"", err)
-	} else if !reflect.DeepEqual(project_access, no_access) {
-		t.Errorf("Expected no user access, received %v", project_access)
+	} else if !reflect.DeepEqual(receivedAccess, expectedAccess) {
+		t.Errorf("Expected no user access, received %v", receivedAccess)
 	}
 }
 
@@ -178,7 +178,7 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 
 	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
 
-	granted_access_json := "{\"project_access\": " +
+	grantedAccessJson := "{\"project_access\": " +
 		"{\"test_project\": {" +
 		"\"0\": \"read\"," +
 		"\"1\": \"create\"," +
@@ -188,17 +188,17 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 		"}}"
 
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString(granted_access_json)),
+		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJson)),
 		StatusCode: 200,
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any()).Return(mockedResp, nil).Times(1)
 
-	_, project_access, err := testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
+	_, expectedAccess, err := testFunction.CheckPrivileges("default", "", "/user/user", "", nil)
 
-	granted_access := make(map[string]interface{})
-	granted_access["test_project"] = map[string]interface{}{
+	receivedAccess := make(map[string]interface{})
+	receivedAccess["test_project"] = map[string]interface{}{
 		"0": "read",
 		"1": "create",
 		"2": "read-storage",
@@ -207,10 +207,10 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("Expected no errors, received an error \"%v\"", err)
-	} else if !reflect.DeepEqual(project_access, granted_access) {
+	} else if !reflect.DeepEqual(expectedAccess, receivedAccess) {
 		t.Errorf(`Expected user access and received user access are note the same.
         Expected: %v
-        Received: %v`, granted_access, project_access)
+        Received: %v`, expectedAccess, receivedAccess)
 	}
 }
 
