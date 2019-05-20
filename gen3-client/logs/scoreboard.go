@@ -22,7 +22,9 @@ func PrintScoreBoard() {
 		fmt.Println("\n\nSubmission Results")
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 0, ' ', tabwriter.Debug)
 		for i, score := range scoreBoard {
-			if i < len(scoreBoard)-1 {
+			if i < 2 {
+				fmt.Fprintf(w, "Finished with %d retry \t %d\n", i, score)
+			} else if i < len(scoreBoard)-1 {
 				fmt.Fprintf(w, "Finished with %d retry(ies) \t %d\n", i, score)
 			} else {
 				fmt.Fprintf(w, "Failed \t %d\n", scoreBoard[len(scoreBoard)-1])

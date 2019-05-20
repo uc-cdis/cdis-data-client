@@ -129,7 +129,7 @@ func init() {
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
-					multipartUpload(uploadPath, filePath, file, includeSubDirName)
+					multipartUpload(uploadPath, filePath, file, numParallel, includeSubDirName)
 				}
 			}
 

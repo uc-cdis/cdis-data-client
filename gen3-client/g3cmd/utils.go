@@ -352,11 +352,16 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	return nil
 }
 
-func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *http.Response, chan error, []commonUtils.FileUploadRequestObject) {
+func getNumberOfWorkers(numParallel int, inputSliceLen int) int {
 	workers := numParallel
 	if workers < 1 || workers > inputSliceLen {
 		workers = inputSliceLen
 	}
+	return workers
+}
+
+func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *http.Response, chan error, []commonUtils.FileUploadRequestObject) {
+	workers := getNumberOfWorkers(numParallel, inputSliceLen)
 	respCh := make(chan *http.Response, inputSliceLen)
 	errCh := make(chan error, inputSliceLen)
 	batchFURSlice := make([]commonUtils.FileUploadRequestObject, 0)
