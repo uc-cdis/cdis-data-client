@@ -24,8 +24,8 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	DoRequestWithSignedHeader(DoRequest, string, string, string, string, []byte) *http.Response
-	ParseFenceURLResponse(*http.Response)
+	DoRequestWithSignedHeader(DoRequest, string, string, string, string, []byte) (JsonMessage, error)
+	ParseFenceURLResponse(*http.Response) (JsonMessage, error)
 }
 
 type Request struct {
@@ -93,10 +93,10 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) erro
 		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
-	if m.Access_token == "" {
+	if m.AccessToken == "" {
 		return errors.New("Could not get new access key from response string: " + str)
 	}
-	cred.AccessKey = m.Access_token
+	cred.AccessKey = m.AccessToken
 	return nil
 }
 
@@ -183,7 +183,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	return prefixEndPoint, resp, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, string, error) {
+func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
 	/*
 	   Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
@@ -192,11 +192,11 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 
 	_, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
 	if err != nil {
-		return "", "", err
+		return msg, err
 	}
 
 	msg, err = f.ParseFenceURLResponse(resp)
-	return msg.Url, msg.GUID, err
+	return msg, err
 }
 
 func (f *Functions) CheckPrivileges(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, map[string]interface{}, error) {

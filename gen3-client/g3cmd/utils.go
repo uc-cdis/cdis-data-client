@@ -27,9 +27,26 @@ type ManifestObject struct {
 	SubjectID string `json:"subject_id"`
 }
 
-// PresignedURLRequestObject represents the playload that sends to fence for getting a presignedURL for new object file
-type PresignedURLRequestObject struct {
+// RequestObject represents the payload that sends to fence for getting a presignedURL or init a multipart upload for new object file
+type MultipartInitRequestObject struct {
 	Filename string `json:"file_name"`
+}
+
+type MultipartUploadRequestObject struct {
+	Key        string `json:"key"`
+	UploadID   string `json:"uploadId"`
+	PartNumber int    `json:"partNumber"`
+}
+
+type MultipartCompleteRequestObject struct {
+	Key      string                `json:"key"`
+	UploadID string                `json:"uploadId"`
+	Parts    []MultipartPartObject `json:"parts"`
+}
+
+type MultipartPartObject struct {
+	PartNumber int    `json:"PartNumber"`
+	ETag       string `json:"ETag"`
 }
 
 // FileInfo is a helper struct for including subdirname as filename
@@ -38,8 +55,90 @@ type FileInfo struct {
 	Filename string
 }
 
-// FileSizeLimit is the maximun single file size (5GB)
-const FileSizeLimit = 5 * 1024 * 1024 * 1024
+// FileSizeLimit is the maximun single file size for non-multipart upload (5GB)
+// const FileSizeLimit = 5 * 1024 * 1024 * 1024
+// TODO: change this back
+const FileSizeLimit = 50 * 1024 * 1024
+
+// MultipartFileSizeLimit is the maximun single file size for multipart upload (5TB)
+const MultipartFileSizeLimit = 5 * 1024 * 1024 * 1024 * 1024
+
+// MultipartFileChunkSize is the chunk size for each part for multipart upload (5MB)
+const MultipartFileChunkSize = 5 * 1024 * 1024
+
+// MaxRetryCount is the maximum retry number per record
+const MaxRetryCount = 5
+const maxWaitTime = 300
+
+func InitMultpartUpload(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	fileinfo, err := processFilename(uploadPath, filePath, includeSubDirName)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	endPointPostfix := "/user/data/multipart/init"
+	multipartInitObject := MultipartInitRequestObject{Filename: fileinfo.Filename}
+	objectBytes, err := json.Marshal(multipartInitObject)
+
+	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+
+	if err != nil {
+		return "", "", "", errors.New("You don't have permission to initialize multipart upload, detailed error message: " + err.Error())
+	}
+	if msg.UploadID == "" || msg.GUID == "" {
+		return "", "", "", errors.New("Unknown error has occurred during multipart upload initialization. Please check logs from Gen3 services")
+	}
+	return msg.UploadID, msg.GUID, fileinfo.Filename, err
+}
+
+func GenerateMultpartPresignedURL(key string, uploadID string, partNumber int) (string, error) {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	endPointPostfix := "/user/data/multipart/upload"
+	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber}
+	objectBytes, err := json.Marshal(multipartUploadObject)
+
+	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+
+	if err != nil {
+		return "", errors.New("You don't have permission to generate presigned url for multipart upload, detailed error message: " + err.Error())
+	}
+	if msg.PresignedURL == "" {
+		return "", errors.New("Unknown error has occurred during multipart upload presigned url generation. Please check logs from Gen3 services")
+	}
+	return msg.PresignedURL, err
+}
+
+func CompleteMultpartUpload(key string, uploadID string, parts []MultipartPartObject) error {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	endPointPostfix := "/user/data/multipart/complete"
+	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts}
+	objectBytes, err := json.Marshal(multipartCompleteObject)
+
+	_, err = function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+
+	if err != nil {
+		return errors.New("Error occurred during completing multipart upload, detailed error message: " + err.Error())
+	}
+	return nil
+}
 
 // GeneratePresignedURL helps sending requests to fence and parsing the response
 func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
@@ -55,18 +154,18 @@ func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName 
 		log.Println(err.Error())
 	}
 	endPointPostfix := "/user/data/upload"
-	purObject := PresignedURLRequestObject{Filename: fileinfo.Filename}
+	purObject := MultipartInitRequestObject{Filename: fileinfo.Filename}
 	objectBytes, err := json.Marshal(purObject)
 
-	respURL, guid, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
-	if respURL == "" || guid == "" {
-		if err != nil {
-			return "", "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
-		}
+	if err != nil {
+		return "", "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
+	}
+	if msg.URL == "" || msg.GUID == "" {
 		return "", "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
 	}
-	return respURL, guid, fileinfo.Filename, err
+	return msg.URL, msg.GUID, fileinfo.Filename, err
 }
 
 // GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar
@@ -80,20 +179,23 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 
 	if furObject.PresignedURL == "" {
 		endPointPostfix := "/user/data/upload/" + furObject.GUID
-		presignedURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+		msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
 		}
-		furObject.PresignedURL = presignedURL
+		if msg.URL == "" {
+			return furObject, errors.New("Upload error: error in generating presigned URL for " + furObject.Filename)
+		}
+		furObject.PresignedURL = msg.URL
 	}
 
 	fi, err := file.Stat()
 	if err != nil {
-		return furObject, errors.New("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
+		return furObject, errors.New("File stat error for file" + furObject.Filename + ", file may be missing or unreadable because of permissions.\n")
 	}
 
 	if fi.Size() > FileSizeLimit {
-		return furObject, errors.New("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5GB.\n")
+		return furObject, errors.New("The file size of file " + furObject.Filename + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5GB.\n")
 	}
 
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(furObject.Filename + " ")
@@ -124,8 +226,9 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	return furObject, err
 }
 
-func validateFilePath(filePaths []string) []string {
-	validatedFilePaths := make([]string, 0)
+func validateFilePath(filePaths []string) ([]string, []string) {
+	singlepartFilePaths := make([]string, 0)
+	multipartFilePaths := make([]string, 0)
 	for _, filePath := range filePaths {
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			log.Printf("The file you specified \"%s\" does not exist locally", filePath)
@@ -133,12 +236,15 @@ func validateFilePath(filePaths []string) []string {
 		}
 
 		file, err := os.Open(filePath)
+		defer file.Close()
 		if err != nil {
 			log.Printf("File open error")
 			continue
 		}
 
-		if fi, _ := file.Stat(); fi.IsDir() {
+		fi, _ := file.Stat()
+
+		if fi.IsDir() {
 			continue
 		}
 
@@ -148,11 +254,18 @@ func validateFilePath(filePaths []string) []string {
 		} else {
 			logs.AddToFailedLogMap(filePath, "", "", 0, true)
 		}
-		validatedFilePaths = append(validatedFilePaths, filePath)
-		file.Close()
+
+		if fi.Size() > MultipartFileSizeLimit {
+			log.Println("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5TB.\n")
+			continue
+		} else if fi.Size() > FileSizeLimit {
+			multipartFilePaths = append(multipartFilePaths, filePath)
+		} else {
+			singlepartFilePaths = append(singlepartFilePaths, filePath)
+		}
 	}
 	logs.WriteToFailedLog()
-	return validatedFilePaths
+	return singlepartFilePaths, multipartFilePaths
 }
 
 func processFilename(uploadPath string, filePath string, includeSubDirName bool) (FileInfo, error) {

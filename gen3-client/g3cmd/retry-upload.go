@@ -13,11 +13,7 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
-// MaxRetryCount is the maximum retry number per record
-const MaxRetryCount = 5
-const maxWaitTime = 300
-
-func getWaitTime(retryCount int) time.Duration {
+func GetWaitTime(retryCount int) time.Duration {
 	exponentialWaitTime := math.Pow(2, float64(retryCount))
 	return time.Duration(math.Min(exponentialWaitTime, float64(maxWaitTime))) * time.Second
 }
@@ -102,8 +98,8 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 			continue
 		}
 
-		log.Printf("Sleep for %.0f seconds\n", getWaitTime(ro.RetryCount).Seconds())
-		time.Sleep(getWaitTime(ro.RetryCount)) // exponential wait for retry
+		log.Printf("Sleep for %.0f seconds\n", GetWaitTime(ro.RetryCount).Seconds())
+		time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
 		err = uploadFile(furObject, ro.RetryCount)
 		if err != nil {
 			ro.RetryCount++

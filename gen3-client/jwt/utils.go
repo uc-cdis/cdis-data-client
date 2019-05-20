@@ -11,12 +11,14 @@ type Message interface{}
 type Response interface{}
 
 type AccessTokenStruct struct {
-	Access_token string
+	AccessToken string `json:"access_token"`
 }
 
 type JsonMessage struct {
-	Url  string
-	GUID string
+	URL          string `json:"url"`
+	GUID         string `json:"guid"`
+	UploadID     string `json:"uploadId"`
+	PresignedURL string `json:"presigned_url"`
 }
 
 type DoRequest func(*http.Response) *http.Response

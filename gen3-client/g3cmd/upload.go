@@ -45,11 +45,11 @@ func init() {
 			}
 			fmt.Println()
 
-			validatedFilePaths := validateFilePath(filePaths)
+			singlepartFilePaths, multipartFilePaths := validateFilePath(filePaths)
 
 			if batch {
-				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(validatedFilePaths))
-				for _, filePath := range validatedFilePaths {
+				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
+				for _, filePath := range singlepartFilePaths {
 					if len(batchFURObjects) < workers {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
@@ -72,7 +72,21 @@ func init() {
 				}
 				logs.WriteToFailedLog()
 			} else {
-				for _, filePath := range validatedFilePaths {
+				for _, filePath := range singlepartFilePaths {
+					file, err := os.Open(filePath)
+					if err != nil {
+						logs.AddToFailedLogMap(filePath, "", "", 0, false)
+						log.Println("File open error: " + err.Error())
+						continue
+					}
+
+					fi, err := file.Stat()
+					if err != nil {
+						logs.AddToFailedLogMap(filePath, "", "", 0, false)
+						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
+						continue
+					}
+					// The following flow is for singlepart upload flow
 					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
@@ -80,12 +94,6 @@ func init() {
 						continue
 					}
 					furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filename, GUID: guid, PresignedURL: respURL}
-					file, err := os.Open(filePath)
-					if err != nil {
-						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
-						log.Println("File open error: " + err.Error())
-						continue
-					}
 					furObject, err = GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
@@ -101,6 +109,28 @@ func init() {
 					file.Close()
 				}
 				logs.WriteToFailedLog()
+			}
+
+			// multipart upload for large files here
+			if len(multipartFilePaths) > 0 {
+				log.Println("Multipart uploading....")
+				for _, filePath := range multipartFilePaths {
+					file, err := os.Open(filePath)
+					defer file.Close()
+					if err != nil {
+						logs.AddToFailedLogMap(filePath, "", "", 0, false)
+						log.Println("File open error: " + err.Error())
+						continue
+					}
+
+					fi, err := file.Stat()
+					if err != nil {
+						logs.AddToFailedLogMap(filePath, "", "", 0, false)
+						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
+						continue
+					}
+					multipartUpload(uploadPath, filePath, file, includeSubDirName)
+				}
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
