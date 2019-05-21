@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 func SignedRequest(method string, url_string string, body io.Reader, content_type string, service string, access_key string, secret_key string) (*http.Response, error) {
@@ -13,7 +15,7 @@ func SignedRequest(method string, url_string string, body io.Reader, content_typ
 		return nil, err
 	}
 
-	client := &http.Client{Timeout: commonUtils.DefaultTimeout
+	client := &http.Client{Timeout: commonUtils.DefaultTimeout}
 
 	req, err := http.NewRequest(method, url_string, body)
 	if err != nil {
