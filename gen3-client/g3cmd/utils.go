@@ -338,13 +338,13 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	client := &http.Client{Timeout: commonUtils.DefaultTimeout}
 	resp, err := client.Do(furObject.Request)
 	if err != nil {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, retryCount, false, false)
+		logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, retryCount, false, true)
 		logs.WriteToFailedLog()
 		furObject.Bar.Finish()
 		return errors.New("Error occurred during upload: " + err.Error())
 	}
 	if resp.StatusCode != 200 {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, retryCount, false, false)
+		logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, retryCount, false, true)
 		logs.WriteToFailedLog()
 		furObject.Bar.Finish()
 		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))

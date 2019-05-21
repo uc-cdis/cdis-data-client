@@ -1,7 +1,6 @@
 package commonUtils
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -51,7 +50,6 @@ func ParseRootPath(filePath string) string {
 
 // ParseFilePaths generates all possible file paths
 func ParseFilePaths(filePath string) ([]string, error) {
-	fmt.Println("\nBegin parsing all file paths for \"" + filePath + "\"")
 	fullFilePath := ParseRootPath(filePath)
 	filePaths, err := filepath.Glob(fullFilePath) // Generating all possible file paths
 
@@ -78,6 +76,6 @@ func ParseFilePaths(filePath string) ([]string, error) {
 		}
 		file.Close()
 	}
-	fmt.Println("Finish parsing all file paths for \"" + filePath + "\"")
+	log.Println("Finish parsing all file paths for \"" + filePath + "\"")
 	return filePaths, err
 }

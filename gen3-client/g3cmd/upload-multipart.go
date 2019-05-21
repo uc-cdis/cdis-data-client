@@ -42,13 +42,13 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 	file, err := os.Open(filePath)
 	defer file.Close()
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, "", "", retryCount, false, true)
+		logs.AddToFailedLogMap(filePath, "", "", retryCount, true, true)
 		log.Println("File open error: " + err.Error())
 	}
 
 	fi, err := file.Stat()
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, "", "", retryCount, false, true)
+		logs.AddToFailedLogMap(filePath, "", "", retryCount, true, true)
 		log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 	}
 

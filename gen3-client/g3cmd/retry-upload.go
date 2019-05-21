@@ -12,13 +12,6 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
-func checkToCloseChannel(channelName string, channel chan interface{}) {
-	if (len(channel)) == 0 {
-		close(channel)
-		log.Printf("%s channel has been close", channelName)
-	}
-}
-
 func updateRetryObject(ro commonUtils.RetryObject, filePath string, guid string, presignedUrl string, retryCount int, isMultipart bool) {
 	ro.FilePath = filePath
 	ro.GUID = guid
@@ -76,7 +69,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 				updateRetryObject(ro, ro.FilePath, ro.GUID, ro.PresignedURL, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
 				continue
-			} else {
+			} else { // succeeded
 				logs.IncrementScore(ro.RetryCount)
 				if (len(retryObjCh)) == 0 {
 					close(retryObjCh)
@@ -123,6 +116,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 			}
 			logs.DeleteFromFailedLogMap(furObject.FilePath, true)
 			logs.IncrementScore(ro.RetryCount)
+			file.Close()
 			if (len(retryObjCh)) == 0 {
 				close(retryObjCh)
 				log.Println("Retry channel has been closed")
