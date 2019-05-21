@@ -12,10 +12,10 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
-func updateRetryObject(ro commonUtils.RetryObject, filePath string, guid string, presignedUrl string, retryCount int, isMultipart bool) {
+func updateRetryObject(ro commonUtils.RetryObject, filePath string, guid string, presignedURL string, retryCount int, isMultipart bool) {
 	ro.FilePath = filePath
 	ro.GUID = guid
-	ro.PresignedURL = presignedUrl
+	ro.PresignedURL = presignedURL
 	ro.RetryCount = retryCount
 	ro.Multipart = isMultipart
 }
@@ -23,7 +23,9 @@ func updateRetryObject(ro commonUtils.RetryObject, filePath string, guid string,
 func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.RetryObject, err error, isMuted bool) {
 	ro.RetryCount++
 	logs.AddToFailedLogMap(ro.FilePath, ro.GUID, ro.PresignedURL, ro.RetryCount, ro.Multipart, isMuted)
-	log.Println(err.Error())
+	if err != nil {
+		log.Println(err.Error())
+	}
 	if ro.RetryCount < MaxRetryCount { // try another time
 		retryObjCh <- ro
 	} else {
@@ -62,6 +64,8 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 	for ro := range retryObjCh {
 		ro.RetryCount++
 		log.Printf("#%d retry of record %s\n", ro.RetryCount, ro.FilePath)
+		log.Printf("Sleep for %.0f seconds\n", GetWaitTime(ro.RetryCount).Seconds())
+		time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
 
 		if ro.Multipart {
 			err = multipartUpload(uploadPath, ro.FilePath, numParallel, includeSubDirName, ro.RetryCount)
@@ -90,8 +94,15 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 
 			furObject := commonUtils.FileUploadRequestObject{FilePath: ro.FilePath, Filename: filename, GUID: guid, PresignedURL: ro.PresignedURL}
 			file, err := os.Open(ro.FilePath)
+			fi, err := file.Stat()
 			if err != nil {
 				updateRetryObject(ro, furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
+				handleFailedRetry(ro, retryObjCh, err, false)
+				file.Close()
+				continue
+			}
+			if fi.Size() > FileSizeLimit { // guard for files, always check fixe size during retry upload
+				updateRetryObject(ro, furObject.FilePath, "", "", ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
 				continue
@@ -105,8 +116,6 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 				continue
 			}
 
-			log.Printf("Sleep for %.0f seconds\n", GetWaitTime(ro.RetryCount).Seconds())
-			time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
 			err = uploadFile(furObject, ro.RetryCount)
 			if err != nil {
 				updateRetryObject(ro, furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
