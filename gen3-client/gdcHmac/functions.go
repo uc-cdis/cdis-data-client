@@ -13,7 +13,7 @@ func SignedRequest(method string, url_string string, body io.Reader, content_typ
 		return nil, err
 	}
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: commonUtils.DefaultTimeout
 
 	req, err := http.NewRequest(method, url_string, body)
 	if err != nil {

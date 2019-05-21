@@ -75,10 +75,10 @@ func GetFailedLogMap() map[string]commonUtils.RetryObject {
 	return failedLogFileMap
 }
 
-func AddToFailedLogMap(filePath string, guid string, presignedUrl string, retryCount int, isMuted bool) {
+func AddToFailedLogMap(filePath string, guid string, presignedUrl string, retryCount int, isMultipart bool, isMuted bool) {
 	failedLogLock.Lock()
 	defer failedLogLock.Unlock()
-	failedLogFileMap[filePath] = commonUtils.RetryObject{FilePath: filePath, GUID: guid, PresignedURL: presignedUrl, RetryCount: retryCount}
+	failedLogFileMap[filePath] = commonUtils.RetryObject{FilePath: filePath, GUID: guid, PresignedURL: presignedUrl, RetryCount: retryCount, Multipart: isMultipart}
 	if !isMuted {
 		log.Printf("Failed file entry added for %s\n", filePath)
 	}

@@ -3,7 +3,6 @@ package g3cmd
 import (
 	"fmt"
 	"log"
-	"math"
 	"os"
 	"path"
 	"time"
@@ -13,12 +12,37 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
-func GetWaitTime(retryCount int) time.Duration {
-	exponentialWaitTime := math.Pow(2, float64(retryCount))
-	return time.Duration(math.Min(exponentialWaitTime, float64(maxWaitTime))) * time.Second
+func checkToCloseChannel(channelName string, channel chan interface{}) {
+	if (len(channel)) == 0 {
+		close(channel)
+		log.Printf("%s channel has been close", channelName)
+	}
 }
 
-func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirName bool, uploadPath string) {
+func updateRetryObject(ro commonUtils.RetryObject, filePath string, guid string, presignedUrl string, retryCount int, isMultipart bool) {
+	ro.FilePath = filePath
+	ro.GUID = guid
+	ro.PresignedURL = presignedUrl
+	ro.RetryCount = retryCount
+	ro.Multipart = isMultipart
+}
+
+func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.RetryObject, err error, isMuted bool) {
+	ro.RetryCount++
+	logs.AddToFailedLogMap(ro.FilePath, ro.GUID, ro.PresignedURL, ro.RetryCount, ro.Multipart, isMuted)
+	log.Println(err.Error())
+	if ro.RetryCount < MaxRetryCount { // try another time
+		retryObjCh <- ro
+	} else {
+		logs.IncrementScore(logs.ScoreBoardLen - 1) // inevitable failure
+		if (len(retryObjCh)) == 0 {
+			close(retryObjCh)
+			log.Println("Retry channel has been closed")
+		}
+	}
+}
+
+func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath string, numParallel int, includeSubDirName bool) {
 	var guid string
 	var filename string
 	var err error
@@ -43,91 +67,76 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, includeSubDirN
 	}
 
 	for ro := range retryObjCh {
+		ro.RetryCount++
 		log.Printf("#%d retry of record %s\n", ro.RetryCount, ro.FilePath)
-		if ro.PresignedURL == "" {
-			ro.PresignedURL, guid, filename, err = GeneratePresignedURL(uploadPath, ro.FilePath, includeSubDirName)
+
+		if ro.Multipart {
+			err = multipartUpload(uploadPath, ro.FilePath, numParallel, includeSubDirName, ro.RetryCount)
 			if err != nil {
-				ro.RetryCount++
-				logs.AddToFailedLogMap(ro.FilePath, guid, ro.PresignedURL, ro.RetryCount, false)
-				log.Println(err.Error())
-				if ro.RetryCount < MaxRetryCount { // try another time
-					retryObjCh <- ro
-				} else {
-					logs.IncrementScore(logs.ScoreBoardLen - 1) // inevitable failure
-					if (len(retryObjCh)) == 0 {
-						close(retryObjCh)
-					}
-				}
+				updateRetryObject(ro, ro.FilePath, ro.GUID, ro.PresignedURL, ro.RetryCount, true)
+				handleFailedRetry(ro, retryObjCh, err, true)
 				continue
+			} else {
+				logs.IncrementScore(ro.RetryCount)
+				if (len(retryObjCh)) == 0 {
+					close(retryObjCh)
+					log.Println("Retry channel has been closed")
+				}
 			}
 		} else {
-			filename = path.Base(ro.FilePath)
-		}
-
-		furObject := commonUtils.FileUploadRequestObject{FilePath: ro.FilePath, Filename: filename, GUID: guid, PresignedURL: ro.PresignedURL}
-		file, err := os.Open(ro.FilePath)
-		if err != nil {
-			ro.RetryCount++
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
-			log.Println("File open error: " + err.Error())
-			if ro.RetryCount < MaxRetryCount {
-				retryObjCh <- ro
-			} else {
-				logs.IncrementScore(logs.ScoreBoardLen - 1)
-				if (len(retryObjCh)) == 0 {
-					close(retryObjCh)
+			if ro.PresignedURL == "" {
+				ro.PresignedURL, guid, filename, err = GeneratePresignedURL(uploadPath, ro.FilePath, includeSubDirName)
+				if err != nil {
+					updateRetryObject(ro, ro.FilePath, guid, ro.PresignedURL, ro.RetryCount, false)
+					handleFailedRetry(ro, retryObjCh, err, true)
+					continue
 				}
-			}
-			continue
-		}
-
-		furObject, err = GenerateUploadRequest(furObject, file)
-		if err != nil {
-			ro.RetryCount++
-			file.Close()
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
-			log.Println("Error occurred during request generation: " + err.Error())
-			if ro.RetryCount < MaxRetryCount {
-				retryObjCh <- ro
 			} else {
-				logs.IncrementScore(logs.ScoreBoardLen - 1)
-				if (len(retryObjCh)) == 0 {
-					close(retryObjCh)
-				}
+				filename = path.Base(ro.FilePath)
 			}
-			continue
-		}
 
-		log.Printf("Sleep for %.0f seconds\n", GetWaitTime(ro.RetryCount).Seconds())
-		time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
-		err = uploadFile(furObject, ro.RetryCount)
-		if err != nil {
-			ro.RetryCount++
-			file.Close()
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
-			log.Println(err.Error())
-			if ro.RetryCount < MaxRetryCount {
-				retryObjCh <- ro
-			} else {
-				logs.IncrementScore(logs.ScoreBoardLen - 1)
-				if (len(retryObjCh)) == 0 {
-					close(retryObjCh)
-				}
+			furObject := commonUtils.FileUploadRequestObject{FilePath: ro.FilePath, Filename: filename, GUID: guid, PresignedURL: ro.PresignedURL}
+			file, err := os.Open(ro.FilePath)
+			if err != nil {
+				updateRetryObject(ro, furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
+				handleFailedRetry(ro, retryObjCh, err, false)
+				file.Close()
+				continue
 			}
-			continue
-		}
-		logs.IncrementScore(ro.RetryCount + 1)
-		if (len(retryObjCh)) == 0 {
-			close(retryObjCh)
-			log.Println("Retry channel has been closed")
+
+			furObject, err = GenerateUploadRequest(furObject, file)
+			if err != nil {
+				updateRetryObject(ro, furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
+				handleFailedRetry(ro, retryObjCh, err, false)
+				file.Close()
+				continue
+			}
+
+			log.Printf("Sleep for %.0f seconds\n", GetWaitTime(ro.RetryCount).Seconds())
+			time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
+			err = uploadFile(furObject, ro.RetryCount)
+			if err != nil {
+				updateRetryObject(ro, furObject.FilePath, furObject.GUID, furObject.PresignedURL, ro.RetryCount, false)
+				handleFailedRetry(ro, retryObjCh, err, false)
+				file.Close()
+				continue
+			}
+			logs.DeleteFromFailedLogMap(furObject.FilePath, true)
+			logs.IncrementScore(ro.RetryCount)
+			if (len(retryObjCh)) == 0 {
+				close(retryObjCh)
+				log.Println("Retry channel has been closed")
+			}
 		}
 	}
+	logs.WriteToFailedLog()
 }
 
 func init() {
 	var failedLogPath string
 	var includeSubDirName bool
 	var uploadPath string
+	var numParallel int
 	var retryUploadCmd = &cobra.Command{
 		Use:     "retry-upload",
 		Short:   "Retry upload file(s) to object storage.",
@@ -141,7 +150,7 @@ func init() {
 			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
 			logs.LoadFailedLogFile(failedLogPath)
 			logs.InitScoreBoard(MaxRetryCount)
-			retryUpload(logs.GetFailedLogMap(), includeSubDirName, uploadPath)
+			retryUpload(logs.GetFailedLogMap(), uploadPath, numParallel, includeSubDirName)
 			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},
@@ -150,6 +159,7 @@ func init() {
 	retryUploadCmd.Flags().StringVar(&failedLogPath, "failed-log-path", "", "The path to the failed log file.")
 	retryUploadCmd.MarkFlagRequired("failed-log-path")
 	retryUploadCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
+	retryUploadCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	retryUploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	RootCmd.AddCommand(retryUploadCmd)
 }

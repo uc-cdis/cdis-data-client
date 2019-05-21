@@ -76,21 +76,21 @@ func init() {
 				for _, filePath := range singlepartFilePaths {
 					file, err := os.Open(filePath)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false)
+						logs.AddToFailedLogMap(filePath, "", "", 0, false, false)
 						log.Println("File open error: " + err.Error())
 						continue
 					}
 
 					fi, err := file.Stat()
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false)
+						logs.AddToFailedLogMap(filePath, "", "", 0, false, false)
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
 					// The following flow is for singlepart upload flow
 					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
+						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false, false)
 						log.Println(err.Error())
 						continue
 					}
@@ -116,26 +116,15 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				log.Println("Multipart uploading....")
 				for _, filePath := range multipartFilePaths {
-					file, err := os.Open(filePath)
-					defer file.Close()
-					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false)
-						log.Println("File open error: " + err.Error())
-						continue
+					err = multipartUpload(uploadPath, filePath, numParallel, includeSubDirName, 0)
+					if err == nil {
+						logs.IncrementScore(0)
 					}
-
-					fi, err := file.Stat()
-					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false)
-						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
-						continue
-					}
-					multipartUpload(uploadPath, filePath, file, numParallel, includeSubDirName)
 				}
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
-				retryUpload(logs.GetFailedLogMap(), includeSubDirName, uploadPath)
+				retryUpload(logs.GetFailedLogMap(), uploadPath, numParallel, includeSubDirName)
 			}
 			logs.CloseAll()
 			logs.PrintScoreBoard()

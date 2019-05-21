@@ -6,13 +6,19 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-var PathSeparator = string(os.PathSeparator)
+// PathSeparator is os dependent path separator char
+const PathSeparator = string(os.PathSeparator)
 
+// DefaultTimeout is used to set timeout value for http client
+const DefaultTimeout = 30 * time.Second
+
+// FileUploadRequestObject defines a object for file upload
 type FileUploadRequestObject struct {
 	FilePath     string
 	Filename     string
@@ -22,13 +28,16 @@ type FileUploadRequestObject struct {
 	Bar          *pb.ProgressBar
 }
 
+// RetryObject defines a object for retry upload
 type RetryObject struct {
 	FilePath     string
 	GUID         string
 	PresignedURL string
 	RetryCount   int
+	Multipart    bool
 }
 
+// ParseRootPath parses dirname that has "~" in the beginning
 func ParseRootPath(filePath string) string {
 	if filePath != "" && filePath[0] == '~' {
 		homeDir, err := homedir.Dir()
@@ -40,6 +49,7 @@ func ParseRootPath(filePath string) string {
 	return filePath
 }
 
+// ParseFilePaths generates all possible file paths
 func ParseFilePaths(filePath string) ([]string, error) {
 	fmt.Println("\nBegin parsing all file paths for \"" + filePath + "\"")
 	fullFilePath := ParseRootPath(filePath)
