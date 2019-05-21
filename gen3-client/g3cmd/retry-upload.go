@@ -101,8 +101,9 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 				file.Close()
 				continue
 			}
-			if fi.Size() > FileSizeLimit { // guard for files, always check fixe size during retry upload
+			if fi.Size() > FileSizeLimit { // guard for files, always check file size during retry upload
 				updateRetryObject(ro, furObject.FilePath, "", "", ro.RetryCount, true)
+				err = fmt.Errorf("File size for %s is greater than the single part upload limit, will retry using multipart upload", furObject.Filename)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
 				continue

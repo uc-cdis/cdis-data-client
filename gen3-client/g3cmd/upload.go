@@ -117,7 +117,9 @@ func init() {
 				log.Println("Multipart uploading....")
 				for _, filePath := range multipartFilePaths {
 					err = multipartUpload(uploadPath, filePath, numParallel, includeSubDirName, 0)
-					if err == nil {
+					if err != nil {
+						log.Println(err.Error())
+					} else {
 						logs.IncrementScore(0)
 					}
 				}
