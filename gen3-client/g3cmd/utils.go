@@ -57,9 +57,7 @@ type FileInfo struct {
 }
 
 // FileSizeLimit is the maximun single file size for non-multipart upload (5GB)
-// const FileSizeLimit = 5 * 1024 * 1024 * 1024
-// TODO: change this back
-const FileSizeLimit = 50 * 1024 * 1024
+const FileSizeLimit = 5 * 1024 * 1024 * 1024
 
 // MultipartFileSizeLimit is the maximun single file size for multipart upload (5TB)
 const MultipartFileSizeLimit = 5 * 1024 * 1024 * 1024 * 1024
@@ -169,7 +167,7 @@ func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName 
 	return msg.URL, msg.GUID, fileinfo.Filename, err
 }
 
-// GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar
+// GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar for single part upload
 func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
