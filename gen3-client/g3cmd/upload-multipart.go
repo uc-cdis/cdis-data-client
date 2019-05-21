@@ -80,6 +80,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 	wg := sync.WaitGroup{}
 	workers := getNumberOfWorkers(numParallel, totalChunks)
 	chunkIndexCh := make(chan int, totalChunks)
+	buf := make([]byte, MultipartFileChunkSize) // one shared buf...
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		go func() {
@@ -96,12 +97,10 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 				}
 
 				var n int
-				buf := make([]byte, MultipartFileChunkSize)
+				multipartUploadLock.Lock() // to avoid racing conditions on buf
 				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
-					multipartUploadLock.Lock()
-					n, err = file.ReadAt(buf[:cap(buf)], int64((chunkIndex-1)*MultipartFileChunkSize))
+					n, err = file.ReadAt(buf[:cap(buf)], int64((chunkIndex-1))*MultipartFileChunkSize)
 					buf = buf[:n]
-					multipartUploadLock.Unlock()
 					if err == io.EOF { // finished reading
 						err = nil
 					}
@@ -110,6 +109,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 				if err != nil {
 					logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
 					log.Println(err.Error())
+					multipartUploadLock.Unlock()
 					continue
 				}
 
@@ -135,10 +135,10 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 				if err != nil {
 					logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
 					log.Println(err.Error())
+					multipartUploadLock.Unlock()
 					continue
 				}
 
-				multipartUploadLock.Lock()
 				parts = append(parts, (MultipartPartObject{PartNumber: chunkIndex, ETag: etag}))
 				bar.Add(n)
 				multipartUploadLock.Unlock()

@@ -56,14 +56,26 @@ type FileInfo struct {
 	Filename string
 }
 
+const (
+	_ = iota
+	// KB is kilobytes
+	KB int64 = 1 << (10 * iota)
+	// MB is megabytes
+	MB
+	// GB is gigabytes
+	GB
+	// TB is terrabytes
+	TB
+)
+
 // FileSizeLimit is the maximun single file size for non-multipart upload (5GB)
-const FileSizeLimit = 5 * 1024 * 1024 * 1024
+const FileSizeLimit = 5 * GB
 
 // MultipartFileSizeLimit is the maximun single file size for multipart upload (5TB)
-const MultipartFileSizeLimit = 5 * 1024 * 1024 * 1024 * 1024
+const MultipartFileSizeLimit = 5 * TB
 
-// MultipartFileChunkSize is the chunk size for each part for multipart upload (5MB)
-const MultipartFileChunkSize = 5 * 1024 * 1024
+// MultipartFileChunkSize is the chunk size for each part for multipart upload (500MB), since the Maximum number of parts per upload is 10,000
+const MultipartFileChunkSize = 500 * MB
 
 // MaxRetryCount is the maximum retry number per record
 const MaxRetryCount = 5
@@ -228,7 +240,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []string) {
 	fileSizeLimit := FileSizeLimit // 5GB
 	if forceMultipart {
-		fileSizeLimit = MultipartFileChunkSize // 5MB
+		fileSizeLimit = MultipartFileChunkSize // 500MB
 	}
 	singlepartFilePaths := make([]string, 0)
 	multipartFilePaths := make([]string, 0)
