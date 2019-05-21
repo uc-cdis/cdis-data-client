@@ -28,23 +28,26 @@ type ManifestObject struct {
 	SubjectID string `json:"subject_id"`
 }
 
-// RequestObject represents the payload that sends to fence for getting a presignedURL or init a multipart upload for new object file
-type MultipartInitRequestObject struct {
+// InitRequestObject represents the payload that sends to fence for getting a singlepart upload presignedURL or init a multipart upload for new object file
+type InitRequestObject struct {
 	Filename string `json:"file_name"`
 }
 
+// MultipartUploadRequestObject represents the payload that sends to fence for getting a presignedURL for a part
 type MultipartUploadRequestObject struct {
 	Key        string `json:"key"`
 	UploadID   string `json:"uploadId"`
 	PartNumber int    `json:"partNumber"`
 }
 
+// MultipartCompleteRequestObject represents the payload that sends to fence for completeing a multipart upload
 type MultipartCompleteRequestObject struct {
 	Key      string                `json:"key"`
 	UploadID string                `json:"uploadId"`
 	Parts    []MultipartPartObject `json:"parts"`
 }
 
+// MultipartPartObject represents a part object
 type MultipartPartObject struct {
 	PartNumber int    `json:"PartNumber"`
 	ETag       string `json:"ETag"`
@@ -81,6 +84,7 @@ const MultipartFileChunkSize = 500 * MB
 const MaxRetryCount = 5
 const maxWaitTime = 300
 
+// InitMultpartUpload helps sending requests to fence to init a multipart upload
 func InitMultpartUpload(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -94,7 +98,7 @@ func InitMultpartUpload(uploadPath string, filePath string, includeSubDirName bo
 		log.Println(err.Error())
 	}
 	endPointPostfix := "/user/data/multipart/init"
-	multipartInitObject := MultipartInitRequestObject{Filename: fileinfo.Filename}
+	multipartInitObject := InitRequestObject{Filename: fileinfo.Filename}
 	objectBytes, err := json.Marshal(multipartInitObject)
 
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
@@ -108,6 +112,7 @@ func InitMultpartUpload(uploadPath string, filePath string, includeSubDirName bo
 	return msg.UploadID, msg.GUID, fileinfo.Filename, err
 }
 
+// GenerateMultpartPresignedURL helps sending requests to fence to get a presigned URL for a part during a multipart upload
 func GenerateMultpartPresignedURL(key string, uploadID string, partNumber int) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -131,6 +136,7 @@ func GenerateMultpartPresignedURL(key string, uploadID string, partNumber int) (
 	return msg.PresignedURL, err
 }
 
+// CompleteMultpartUpload helps sending requests to fence to complete a multipart upload
 func CompleteMultpartUpload(key string, uploadID string, parts []MultipartPartObject) error {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -165,7 +171,7 @@ func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName 
 		log.Println(err.Error())
 	}
 	endPointPostfix := "/user/data/upload"
-	purObject := MultipartInitRequestObject{Filename: fileinfo.Filename}
+	purObject := InitRequestObject{Filename: fileinfo.Filename}
 	objectBytes, err := json.Marshal(purObject)
 
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
