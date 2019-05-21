@@ -226,7 +226,11 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	return furObject, err
 }
 
-func validateFilePath(filePaths []string) ([]string, []string) {
+func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []string) {
+	fileSizeLimit := FileSizeLimit // 5GB
+	if forceMultipart {
+		fileSizeLimit = MultipartFileChunkSize // 5MB
+	}
 	singlepartFilePaths := make([]string, 0)
 	multipartFilePaths := make([]string, 0)
 	for _, filePath := range filePaths {
@@ -258,7 +262,7 @@ func validateFilePath(filePaths []string) ([]string, []string) {
 		if fi.Size() > MultipartFileSizeLimit {
 			log.Println("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5TB.\n")
 			continue
-		} else if fi.Size() > FileSizeLimit {
+		} else if fi.Size() > int64(fileSizeLimit) {
 			multipartFilePaths = append(multipartFilePaths, filePath)
 		} else {
 			singlepartFilePaths = append(singlepartFilePaths, filePath)

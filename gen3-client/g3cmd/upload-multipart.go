@@ -26,7 +26,7 @@ func retry(attempts int, filePath string, guid string, f func() error) (err erro
 			return
 		}
 
-		logs.AddToFailedLogMap(filePath, guid, "", i, false) // we don't save presigned url for multipart upload
+		logs.AddToFailedLogMap(filePath, guid, "", i, false) // don't save presigned url for multipart upload
 
 		if i >= (attempts - 1) {
 			break
@@ -81,7 +81,7 @@ func multipartUpload(uploadPath string, filePath string, file *os.File, numParal
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true) // we don't save presigned url for multipart upload
+					logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true)
 					log.Println(err.Error())
 					logs.IncrementScore(logs.ScoreBoardLen - 1)
 					return
@@ -100,7 +100,7 @@ func multipartUpload(uploadPath string, filePath string, file *os.File, numParal
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true) // we don't save presigned url for multipart upload
+					logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true)
 					log.Println(err.Error())
 					logs.IncrementScore(logs.ScoreBoardLen - 1)
 					return
@@ -123,7 +123,7 @@ func multipartUpload(uploadPath string, filePath string, file *os.File, numParal
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true) // we don't save presigned url for multipart upload
+					logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true)
 					log.Println(err.Error())
 					logs.IncrementScore(logs.ScoreBoardLen - 1)
 					return
@@ -147,18 +147,18 @@ func multipartUpload(uploadPath string, filePath string, file *os.File, numParal
 	bar.Finish()
 
 	if len(parts) != totalChunks {
-		logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true) // we don't save presigned url for multipart upload
+		logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true)
 		log.Println("Total number of received ETags doesn't match the total number of chunks")
 		logs.IncrementScore(logs.ScoreBoardLen - 1)
 		return
 	}
 
 	sort.Slice(parts, func(i, j int) bool {
-		return parts[i].PartNumber < parts[j].PartNumber
+		return parts[i].PartNumber < parts[j].PartNumber // sort parts in ascending order
 	})
 
 	if err = CompleteMultpartUpload(key, uploadID, parts); err != nil {
-		logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true) // we don't save presigned url for multipart upload
+		logs.AddToFailedLogMap(filePath, guid, "", MaxRetryCount, true)
 		log.Println(err.Error())
 		logs.IncrementScore(logs.ScoreBoardLen - 1)
 		return

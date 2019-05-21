@@ -15,6 +15,7 @@ func init() {
 	var includeSubDirName bool
 	var uploadPath string
 	var batch bool
+	var forceMultipart bool
 	var numParallel int
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
@@ -45,7 +46,7 @@ func init() {
 			}
 			fmt.Println()
 
-			singlepartFilePaths, multipartFilePaths := validateFilePath(filePaths)
+			singlepartFilePaths, multipartFilePaths := validateFilePath(filePaths, forceMultipart)
 
 			if batch {
 				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
@@ -146,5 +147,6 @@ func init() {
 	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
 	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	uploadNewCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
+	uploadNewCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
 	RootCmd.AddCommand(uploadNewCmd)
 }
