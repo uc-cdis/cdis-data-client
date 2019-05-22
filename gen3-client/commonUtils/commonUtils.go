@@ -15,7 +15,7 @@ import (
 const PathSeparator = string(os.PathSeparator)
 
 // DefaultTimeout is used to set timeout value for http client
-const DefaultTimeout = 30 * time.Second
+const DefaultTimeout = 120 * time.Second
 
 // FileUploadRequestObject defines a object for file upload
 type FileUploadRequestObject struct {

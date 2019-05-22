@@ -76,9 +76,9 @@ const FileSizeLimit = 5 * GB
 
 // MultipartFileSizeLimit is the maximun single file size for multipart upload (5TB)
 const MultipartFileSizeLimit = 5 * TB
-
-// MultipartFileChunkSize is the chunk size for each part for multipart upload (500MB), since the Maximum number of parts per upload is 10,000
-const MultipartFileChunkSize = 500 * MB
+const maxMultipartNumber = 10000
+const minMultipartChunkSize = 5 * MB
+const defaultNumOfWorkers = 10
 
 // MaxRetryCount is the maximum retry number per record
 const MaxRetryCount = 5
@@ -246,7 +246,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []string) {
 	fileSizeLimit := FileSizeLimit // 5GB
 	if forceMultipart {
-		fileSizeLimit = MultipartFileChunkSize // 500MB
+		fileSizeLimit = minMultipartChunkSize // 5MB
 	}
 	singlepartFilePaths := make([]string, 0)
 	multipartFilePaths := make([]string, 0)
@@ -379,6 +379,26 @@ func getNumberOfWorkers(numParallel int, inputSliceLen int) int {
 		workers = inputSliceLen
 	}
 	return workers
+}
+func calculateChunksAndWorkers(fileSize int64) (int, int, int64) {
+	maxChunkSize := int64(math.Ceil(float64(MultipartFileSizeLimit) / float64(maxMultipartNumber)))
+	var numOfChunks int
+	var numOfWorkers = defaultNumOfWorkers
+	var chunkSize int64
+	if fileSize >= maxChunkSize {
+		numOfWorkers = 1
+		chunkSize = maxChunkSize
+		numOfChunks = int(math.Ceil(float64(fileSize) / float64(maxChunkSize)))
+	} else if fileSize > minMultipartChunkSize*defaultNumOfWorkers && fileSize < maxChunkSize {
+		chunkSize = int64(math.Ceil(float64(fileSize) / float64(numOfWorkers)))
+		numOfChunks = numOfWorkers
+	} else {
+		chunkSize = minMultipartChunkSize
+		numOfWorkers = int(math.Ceil(float64(fileSize) / float64(minMultipartChunkSize)))
+		numOfChunks = numOfWorkers
+	}
+
+	return numOfWorkers, numOfChunks, chunkSize
 }
 
 func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *http.Response, chan error, []commonUtils.FileUploadRequestObject) {

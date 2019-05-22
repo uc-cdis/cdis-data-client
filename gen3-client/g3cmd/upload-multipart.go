@@ -67,23 +67,18 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 		return err
 	}
 
-	totalChunks := int(fi.Size() / MultipartFileChunkSize) // this casting should be safe
-	if fi.Size()%MultipartFileChunkSize != 0 {
-		totalChunks++
-	}
-
-	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(filename + " ")
-	bar.Start()
 	key := guid + "/" + filename
 	var parts []MultipartPartObject
+	numOfWorkers, numOfChunks, chunkSize := calculateChunksAndWorkers(fi.Size())
+	chunkIndexCh := make(chan int, numOfChunks)
+	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(filename + " ")
+	bar.Start()
 
 	wg := sync.WaitGroup{}
-	workers := getNumberOfWorkers(numParallel, totalChunks)
-	chunkIndexCh := make(chan int, totalChunks)
-	buf := make([]byte, MultipartFileChunkSize) // one shared buf...
-	for i := 0; i < workers; i++ {
+	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
 		go func() {
+			buf := make([]byte, chunkSize)
 			for chunkIndex := range chunkIndexCh {
 				var presignedURL string
 				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
@@ -97,9 +92,8 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 				}
 
 				var n int
-				multipartUploadLock.Lock() // to avoid racing conditions on buf
 				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
-					n, err = file.ReadAt(buf[:cap(buf)], int64((chunkIndex-1))*MultipartFileChunkSize)
+					n, err = file.ReadAt(buf[:cap(buf)], int64((chunkIndex-1))*chunkSize)
 					buf = buf[:n]
 					if err == io.EOF { // finished reading
 						err = nil
@@ -139,6 +133,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 					continue
 				}
 
+				multipartUploadLock.Lock() // to avoid racing conditions
 				parts = append(parts, (MultipartPartObject{PartNumber: chunkIndex, ETag: etag}))
 				bar.Add(n)
 				multipartUploadLock.Unlock()
@@ -147,7 +142,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 		}()
 	}
 
-	for i := 1; i <= totalChunks; i++ {
+	for i := 1; i <= numOfChunks; i++ {
 		chunkIndexCh <- i
 	}
 	close(chunkIndexCh)
@@ -155,7 +150,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 	wg.Wait()
 	bar.Finish()
 
-	if len(parts) != totalChunks {
+	if len(parts) != numOfChunks {
 		logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: Total number of received ETags doesn't match the total number of chunks", filename)
 		return err
