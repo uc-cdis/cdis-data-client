@@ -84,8 +84,8 @@ const defaultNumOfWorkers = 10
 const MaxRetryCount = 5
 const maxWaitTime = 300
 
-// InitMultpartUpload helps sending requests to fence to init a multipart upload
-func InitMultpartUpload(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
+// InitMultipartUpload helps sending requests to fence to init a multipart upload
+func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)

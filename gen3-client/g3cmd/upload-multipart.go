@@ -60,7 +60,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 		return err
 	}
 
-	uploadID, guid, filename, err := InitMultpartUpload(uploadPath, filePath, includeSubDirName)
+	uploadID, guid, filename, err := InitMultipartUpload(uploadPath, filePath, includeSubDirName)
 	if err != nil {
 		logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", filename, err.Error())
