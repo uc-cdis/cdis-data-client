@@ -112,8 +112,8 @@ func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName b
 	return msg.UploadID, msg.GUID, fileinfo.Filename, err
 }
 
-// GenerateMultpartPresignedURL helps sending requests to fence to get a presigned URL for a part during a multipart upload
-func GenerateMultpartPresignedURL(key string, uploadID string, partNumber int) (string, error) {
+// GenerateMultipartPresignedURL helps sending requests to fence to get a presigned URL for a part during a multipart upload
+func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -136,8 +136,8 @@ func GenerateMultpartPresignedURL(key string, uploadID string, partNumber int) (
 	return msg.PresignedURL, err
 }
 
-// CompleteMultpartUpload helps sending requests to fence to complete a multipart upload
-func CompleteMultpartUpload(key string, uploadID string, parts []MultipartPartObject) error {
+// CompleteMultipartUpload helps sending requests to fence to complete a multipart upload
+func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartObject) error {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)

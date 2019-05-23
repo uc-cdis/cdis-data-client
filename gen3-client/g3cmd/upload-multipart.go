@@ -82,7 +82,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 			for chunkIndex := range chunkIndexCh {
 				var presignedURL string
 				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
-					presignedURL, err = GenerateMultpartPresignedURL(key, uploadID, chunkIndex)
+					presignedURL, err = GenerateMultipartPresignedURL(key, uploadID, chunkIndex)
 					return
 				})
 				if err != nil {
@@ -160,7 +160,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 		return parts[i].PartNumber < parts[j].PartNumber // sort parts in ascending order
 	})
 
-	if err = CompleteMultpartUpload(key, uploadID, parts); err != nil {
+	if err = CompleteMultipartUpload(key, uploadID, parts); err != nil {
 		logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", filename, err.Error())
 		return err
