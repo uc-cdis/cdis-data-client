@@ -136,7 +136,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	return msg, nil
 }
 
-func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
+func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
 
 	var resp *http.Response
 	var err error
@@ -148,10 +148,6 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
 	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
-	method := "GET"
-	if bodyBytes != nil {
-		method = "POST"
-	}
 	isExpiredToken := false
 	if cred.AccessKey != "" {
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
@@ -190,7 +186,12 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 	var err error
 	var msg JsonMessage
 
-	_, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	method := "GET"
+	if bodyBytes != nil {
+		method = "POST"
+	}
+
+	_, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, method, contentType, bodyBytes)
 	if err != nil {
 		return msg, err
 	}
@@ -208,7 +209,7 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 
 	endPointPostfix := "/user/user" // Information about current user
 
-	host, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "", nil)
+	host, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "GET", "", nil)
 	if err != nil {
 		return "", nil, err
 	}
@@ -226,4 +227,21 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 	}
 
 	return host, projectAccess, err
+}
+
+func (f *Functions) DeleteRecord(profile string, configFileType string, guid string) (string, error) {
+	var err error
+	var msg string
+
+	endPointPostfix := "/user/data/" + guid
+
+	_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
+
+	if resp.StatusCode == 204 {
+		msg = "Record with GUID " + guid + " has been deleted"
+	} else if resp.StatusCode == 500 {
+		err = errors.New("Internal server error occurred when deleting " + guid + "; could not delete stored files, or not able to delete indexd record")
+	}
+
+	return msg, err
 }

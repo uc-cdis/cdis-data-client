@@ -67,7 +67,12 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 		time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
 
 		if ro.GUID != "" {
-			//TODO: delete record
+			msg, err := DeleteRecord(ro.GUID)
+			if err == nil {
+				log.Println(msg)
+			} else {
+				log.Println(err.Error())
+			}
 		}
 
 		if ro.Multipart {

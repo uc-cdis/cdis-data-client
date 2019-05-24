@@ -243,6 +243,19 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	return furObject, err
 }
 
+// DeleteRecord helps sending requests to fence to delete a record from indexd as well as its storage locations
+func DeleteRecord(guid string) (string, error) {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	msg, err := function.DeleteRecord(profile, "", guid)
+	return msg, err
+}
+
 func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []string) {
 	fileSizeLimit := FileSizeLimit // 5GB
 	if forceMultipart {
