@@ -42,27 +42,27 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 	file, err := os.Open(filePath)
 	defer file.Close()
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, "", "", retryCount, true, true)
+		logs.AddToFailedLogMap(filePath, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s due to file open error: %s", filePath, err.Error())
 		return err
 	}
 
 	fi, err := file.Stat()
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, "", "", retryCount, true, true)
+		logs.AddToFailedLogMap(filePath, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: file stat error, file may be missing or unreadable because of permissions", fi.Name())
 		return err
 	}
 
 	if fi.Size() > MultipartFileSizeLimit {
-		logs.AddToFailedLogMap(filePath, "", "", retryCount, true, true)
+		logs.AddToFailedLogMap(filePath, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: the file size has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is 5TB", fi.Name())
 		return err
 	}
 
 	uploadID, guid, filename, err := InitMultipartUpload(uploadPath, filePath, includeSubDirName)
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
+		logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", filename, err.Error())
 		return err
 	}
@@ -86,7 +86,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
+					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 					log.Println(err.Error())
 					continue
 				}
@@ -101,7 +101,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
+					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 					log.Println(err.Error())
 					multipartUploadLock.Unlock()
 					continue
@@ -127,7 +127,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
+					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 					log.Println(err.Error())
 					multipartUploadLock.Unlock()
 					continue
@@ -151,7 +151,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 	bar.Finish()
 
 	if len(parts) != numOfChunks {
-		logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
+		logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: Total number of received ETags doesn't match the total number of chunks", filename)
 		return err
 	}
@@ -161,7 +161,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 	})
 
 	if err = CompleteMultipartUpload(key, uploadID, parts); err != nil {
-		logs.AddToFailedLogMap(filePath, guid, "", retryCount, true, true)
+		logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", filename, err.Error())
 		return err
 	}

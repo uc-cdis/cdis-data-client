@@ -199,14 +199,16 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 	return msg, err
 }
 
-func (f *Functions) CheckPrivileges(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, map[string]interface{}, error) {
+func (f *Functions) CheckPrivileges(profile string, configFileType string) (string, map[string]interface{}, error) {
 	/*
 	   Return user privileges from specified profile
 	*/
 	var err error
 	var data map[string]interface{}
 
-	host, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	endPointPostfix := "/user/user" // Information about current user
+
+	host, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "", nil)
 	if err != nil {
 		return "", nil, err
 	}

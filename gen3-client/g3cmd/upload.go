@@ -76,21 +76,21 @@ func init() {
 				for _, filePath := range singlepartFilePaths {
 					file, err := os.Open(filePath)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+						logs.AddToFailedLogMap(filePath, "", 0, false, true)
 						log.Println("File open error: " + err.Error())
 						continue
 					}
 
 					fi, err := file.Stat()
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+						logs.AddToFailedLogMap(filePath, "", 0, false, true)
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
 					// The following flow is for singlepart upload flow
 					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false, true)
+						logs.AddToFailedLogMap(filePath, guid, 0, false, true)
 						log.Println(err.Error())
 						continue
 					}

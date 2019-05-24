@@ -24,9 +24,7 @@ func init() {
 			function.Request = request
 			function.Config = configure
 
-			endPointPostfix := "/user/user" // Information about current user
-
-			host, projectAccess, err := function.CheckPrivileges(profile, "", endPointPostfix, "application/json", nil)
+			host, projectAccess, err := function.CheckPrivileges(profile, "")
 
 			if err != nil {
 				log.Fatalf("Fatal authentication error: %s\n", err)

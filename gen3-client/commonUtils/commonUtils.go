@@ -29,11 +29,10 @@ type FileUploadRequestObject struct {
 
 // RetryObject defines a object for retry upload
 type RetryObject struct {
-	FilePath     string
-	GUID         string
-	PresignedURL string
-	RetryCount   int
-	Multipart    bool
+	FilePath   string
+	GUID       string
+	RetryCount int
+	Multipart  bool
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning
