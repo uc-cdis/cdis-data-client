@@ -103,7 +103,6 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 				if err != nil {
 					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 					log.Println(err.Error())
-					multipartUploadLock.Unlock()
 					continue
 				}
 
@@ -129,7 +128,6 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 				if err != nil {
 					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
 					log.Println(err.Error())
-					multipartUploadLock.Unlock()
 					continue
 				}
 
