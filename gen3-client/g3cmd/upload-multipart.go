@@ -106,7 +106,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 					continue
 				}
 
-				var etag string
+				var eTag string
 				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
 					req, err := http.NewRequest(http.MethodPut, presignedURL, bytes.NewReader(buf))
 					req.ContentLength = int64(n)
@@ -119,7 +119,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 					if resp.StatusCode != 200 {
 						err = errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
 						return
-					} else if etag = resp.Header.Get("ETag"); etag == "" {
+					} else if eTag = resp.Header.Get("ETag"); eTag == "" {
 						err = errors.New("No ETag found in header")
 						return
 					}
@@ -132,7 +132,7 @@ func multipartUpload(uploadPath string, filePath string, numParallel int, includ
 				}
 
 				multipartUploadLock.Lock() // to avoid racing conditions
-				parts = append(parts, (MultipartPartObject{PartNumber: chunkIndex, ETag: etag}))
+				parts = append(parts, (MultipartPartObject{PartNumber: chunkIndex, ETag: eTag}))
 				bar.Add(n)
 				multipartUploadLock.Unlock()
 			}
