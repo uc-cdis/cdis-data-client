@@ -116,7 +116,7 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				log.Println("Multipart uploading....")
 				for _, filePath := range multipartFilePaths {
-					err = multipartUpload(uploadPath, filePath, numParallel, includeSubDirName, 0)
+					err = multipartUpload(uploadPath, filePath, includeSubDirName, 0)
 					if err != nil {
 						log.Println(err.Error())
 					} else {
@@ -126,7 +126,7 @@ func init() {
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
-				retryUpload(logs.GetFailedLogMap(), uploadPath, numParallel, includeSubDirName)
+				retryUpload(logs.GetFailedLogMap(), uploadPath, includeSubDirName)
 			}
 			logs.CloseAll()
 			logs.PrintScoreBoard()

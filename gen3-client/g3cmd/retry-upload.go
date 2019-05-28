@@ -35,7 +35,7 @@ func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.R
 	}
 }
 
-func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath string, numParallel int, includeSubDirName bool) {
+func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath string, includeSubDirName bool) {
 	var guid string
 	var filename string
 	var presignedURL string
@@ -76,7 +76,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 		}
 
 		if ro.Multipart {
-			err = multipartUpload(uploadPath, ro.FilePath, numParallel, includeSubDirName, ro.RetryCount)
+			err = multipartUpload(uploadPath, ro.FilePath, includeSubDirName, ro.RetryCount)
 			if err != nil {
 				updateRetryObject(ro, ro.FilePath, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
@@ -143,7 +143,6 @@ func init() {
 	var failedLogPath string
 	var includeSubDirName bool
 	var uploadPath string
-	var numParallel int
 	var retryUploadCmd = &cobra.Command{
 		Use:     "retry-upload",
 		Short:   "Retry upload file(s) to object storage.",
@@ -157,7 +156,7 @@ func init() {
 			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
 			logs.LoadFailedLogFile(failedLogPath)
 			logs.InitScoreBoard(MaxRetryCount)
-			retryUpload(logs.GetFailedLogMap(), uploadPath, numParallel, includeSubDirName)
+			retryUpload(logs.GetFailedLogMap(), uploadPath, includeSubDirName)
 			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},
@@ -166,7 +165,6 @@ func init() {
 	retryUploadCmd.Flags().StringVar(&failedLogPath, "failed-log-path", "", "The path to the failed log file.")
 	retryUploadCmd.MarkFlagRequired("failed-log-path")
 	retryUploadCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
-	retryUploadCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	retryUploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	RootCmd.AddCommand(retryUploadCmd)
 }

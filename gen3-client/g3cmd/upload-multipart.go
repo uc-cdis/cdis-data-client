@@ -38,7 +38,7 @@ func retry(attempts int, filePath string, guid string, f func() error) (err erro
 	return fmt.Errorf("After %d attempts, last error: %s", attempts, err)
 }
 
-func multipartUpload(uploadPath string, filePath string, numParallel int, includeSubDirName bool, retryCount int) error {
+func multipartUpload(uploadPath string, filePath string, includeSubDirName bool, retryCount int) error {
 	file, err := os.Open(filePath)
 	defer file.Close()
 	if err != nil {
