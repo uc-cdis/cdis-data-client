@@ -3,6 +3,7 @@ package g3cmd
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -60,7 +61,8 @@ type FileInfo struct {
 }
 
 const (
-	_ = iota
+	// B is bytes
+	B int64 = iota
 	// KB is kilobytes
 	KB int64 = 1 << (10 * iota)
 	// MB is megabytes
@@ -70,6 +72,14 @@ const (
 	// TB is terrabytes
 	TB
 )
+
+var unitMap = map[int64]string{
+	B:  "B",
+	KB: "KB",
+	MB: "MB",
+	GB: "GB",
+	TB: "TB",
+}
 
 // FileSizeLimit is the maximun single file size for non-multipart upload (5GB)
 const FileSizeLimit = 5 * GB
@@ -104,10 +114,10 @@ func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName b
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 	if err != nil {
-		return "", "", "", errors.New("You don't have permission to initialize multipart upload, detailed error message: " + err.Error())
+		return "", "", fileinfo.Filename, errors.New("You don't have permission to initialize multipart upload, detailed error message: " + err.Error())
 	}
 	if msg.UploadID == "" || msg.GUID == "" {
-		return "", "", "", errors.New("Unknown error has occurred during multipart upload initialization. Please check logs from Gen3 services")
+		return "", "", fileinfo.Filename, errors.New("Unknown error has occurred during multipart upload initialization. Please check logs from Gen3 services")
 	}
 	return msg.UploadID, msg.GUID, fileinfo.Filename, err
 }
@@ -212,7 +222,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	}
 
 	if fi.Size() > FileSizeLimit {
-		return furObject, errors.New("The file size of file " + furObject.Filename + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5GB.\n")
+		return furObject, errors.New("The file size of file " + furObject.Filename + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is " + FormatSize(FileSizeLimit) + ".\n")
 	}
 
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(furObject.Filename + " ")
@@ -290,7 +300,7 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 		}
 
 		if fi.Size() > MultipartFileSizeLimit {
-			log.Println("The file size of file " + fi.Name() + " exceeds the limit allowed and cannot be uploaded. The maximum allowed file size is 5TB.\n")
+			log.Printf("The file size of %s has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s\n", fi.Name(), FormatSize(MultipartFileSizeLimit))
 			continue
 		} else if fi.Size() > int64(fileSizeLimit) {
 			multipartFilePaths = append(multipartFilePaths, filePath)
@@ -520,4 +530,23 @@ func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonU
 func GetWaitTime(retryCount int) time.Duration {
 	exponentialWaitTime := math.Pow(2, float64(retryCount))
 	return time.Duration(math.Min(exponentialWaitTime, float64(maxWaitTime))) * time.Second
+}
+
+// FormatSize helps to parse a int64 size into string
+func FormatSize(size int64) string {
+	var unitSize int64
+	switch {
+	case size >= TB:
+		unitSize = TB
+	case size >= GB:
+		unitSize = GB
+	case size >= MB:
+		unitSize = MB
+	case size >= KB:
+		unitSize = KB
+	default:
+		unitSize = B
+	}
+
+	return fmt.Sprintf("%.1f"+unitMap[unitSize], float64(size)/float64(unitSize))
 }

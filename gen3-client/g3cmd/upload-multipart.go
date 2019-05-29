@@ -56,7 +56,7 @@ func multipartUpload(uploadPath string, filePath string, includeSubDirName bool,
 
 	if fi.Size() > MultipartFileSizeLimit {
 		logs.AddToFailedLogMap(filePath, "", retryCount, true, true)
-		err = fmt.Errorf("FAILED multipart upload for %s: the file size has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is 5TB", fi.Name())
+		err = fmt.Errorf("FAILED multipart upload for %s: the file size has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s", fi.Name(), FormatSize(MultipartFileSizeLimit))
 		return err
 	}
 
