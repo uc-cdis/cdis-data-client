@@ -15,6 +15,7 @@ func init() {
 	var includeSubDirName bool
 	var uploadPath string
 	var batch bool
+	var forceMultipart bool
 	var numParallel int
 	var uploadNewCmd = &cobra.Command{
 		Use:   "upload",
@@ -45,11 +46,11 @@ func init() {
 			}
 			fmt.Println()
 
-			validatedFilePaths := validateFilePath(filePaths)
+			singlepartFilePaths, multipartFilePaths := validateFilePath(filePaths, forceMultipart)
 
 			if batch {
-				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(validatedFilePaths))
-				for _, filePath := range validatedFilePaths {
+				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
+				for _, filePath := range singlepartFilePaths {
 					if len(batchFURObjects) < workers {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
@@ -72,20 +73,28 @@ func init() {
 				}
 				logs.WriteToFailedLog()
 			} else {
-				for _, filePath := range validatedFilePaths {
+				for _, filePath := range singlepartFilePaths {
+					file, err := os.Open(filePath)
+					if err != nil {
+						logs.AddToFailedLogMap(filePath, "", 0, false, true)
+						log.Println("File open error: " + err.Error())
+						continue
+					}
+
+					fi, err := file.Stat()
+					if err != nil {
+						logs.AddToFailedLogMap(filePath, "", 0, false, true)
+						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
+						continue
+					}
+					// The following flow is for singlepart upload flow
 					respURL, guid, filename, err := GeneratePresignedURL(uploadPath, filePath, includeSubDirName)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
+						logs.AddToFailedLogMap(filePath, guid, 0, false, true)
 						log.Println(err.Error())
 						continue
 					}
 					furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filename, GUID: guid, PresignedURL: respURL}
-					file, err := os.Open(filePath)
-					if err != nil {
-						logs.AddToFailedLogMap(filePath, guid, respURL, 0, false)
-						log.Println("File open error: " + err.Error())
-						continue
-					}
 					furObject, err = GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
@@ -103,8 +112,21 @@ func init() {
 				logs.WriteToFailedLog()
 			}
 
+			// multipart upload for large files here
+			if len(multipartFilePaths) > 0 {
+				log.Println("Multipart uploading....")
+				for _, filePath := range multipartFilePaths {
+					err = multipartUpload(uploadPath, filePath, includeSubDirName, 0)
+					if err != nil {
+						log.Println(err.Error())
+					} else {
+						logs.IncrementScore(0)
+					}
+				}
+			}
+
 			if !logs.IsFailedLogMapEmpty() {
-				retryUpload(logs.GetFailedLogMap(), includeSubDirName, uploadPath)
+				retryUpload(logs.GetFailedLogMap(), uploadPath, includeSubDirName)
 			}
 			logs.CloseAll()
 			logs.PrintScoreBoard()
@@ -116,5 +138,6 @@ func init() {
 	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
 	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	uploadNewCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
+	uploadNewCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
 	RootCmd.AddCommand(uploadNewCmd)
 }

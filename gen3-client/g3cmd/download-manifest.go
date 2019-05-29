@@ -107,7 +107,7 @@ func init() {
 				reqs := make([]*grab.Request, 0)
 				for _, object := range objects {
 					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+					msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {
@@ -115,10 +115,11 @@ func init() {
 						} else {
 							log.Fatalf("Fatal download error: %s\n", err)
 						}
+					} else if msg.URL == "" {
+						log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
 					} else {
-						req, _ := grab.NewRequest(downloadPath+"/"+object.ObjectID, respURL)
-
-						if strings.Contains(respURL, "X-Amz-Signature") {
+						req, _ := grab.NewRequest(downloadPath+"/"+object.ObjectID, msg.URL)
+						if strings.Contains(msg.URL, "X-Amz-Signature") {
 							req.NoResume = true
 						}
 						reqs = append(reqs, req)
@@ -129,7 +130,7 @@ func init() {
 			} else {
 				for _, object := range objects {
 					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					respURL, _, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+					msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
 					if err != nil {
 						if strings.Contains(err.Error(), "The provided guid") {
@@ -137,8 +138,10 @@ func init() {
 						} else {
 							log.Fatalf("Fatal download error: %s\n", err)
 						}
+					} else if msg.URL == "" {
+						log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
 					} else {
-						downloadFile(object.ObjectID, downloadPath+"/"+object.ObjectID, respURL)
+						downloadFile(object.ObjectID, downloadPath+"/"+object.ObjectID, msg.URL)
 					}
 				}
 			}

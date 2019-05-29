@@ -24,8 +24,8 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	DoRequestWithSignedHeader(DoRequest, string, string, string, string, []byte) *http.Response
-	ParseFenceURLResponse(*http.Response)
+	DoRequestWithSignedHeader(DoRequest, string, string, string, string, []byte) (JsonMessage, error)
+	ParseFenceURLResponse(*http.Response) (JsonMessage, error)
 }
 
 type Request struct {
@@ -47,7 +47,7 @@ func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey stri
 	if contentType != "" {
 		headers["Content-Type"] = contentType
 	}
-	client := &http.Client{}
+	client := &http.Client{Timeout: commonUtils.DefaultTimeout}
 	req, err := http.NewRequest(method, apiEndpoint, body)
 	if err != nil {
 		return nil, errors.New("Error occurred during generating HTTP request: " + err.Error())
@@ -93,10 +93,10 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) erro
 		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
-	if m.Access_token == "" {
+	if m.AccessToken == "" {
 		return errors.New("Could not get new access key from response string: " + str)
 	}
-	cred.AccessKey = m.Access_token
+	cred.AccessKey = m.AccessToken
 	return nil
 }
 
@@ -136,7 +136,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	return msg, nil
 }
 
-func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
+func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
 
 	var resp *http.Response
 	var err error
@@ -148,10 +148,6 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	host, _ := url.Parse(cred.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
 	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
-	method := "GET"
-	if bodyBytes != nil {
-		method = "POST"
-	}
 	isExpiredToken := false
 	if cred.AccessKey != "" {
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
@@ -183,30 +179,37 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	return prefixEndPoint, resp, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, string, error) {
+func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
 	/*
 	   Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
 	var err error
 	var msg JsonMessage
 
-	_, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	method := "GET"
+	if bodyBytes != nil {
+		method = "POST"
+	}
+
+	_, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, method, contentType, bodyBytes)
 	if err != nil {
-		return "", "", err
+		return msg, err
 	}
 
 	msg, err = f.ParseFenceURLResponse(resp)
-	return msg.Url, msg.GUID, err
+	return msg, err
 }
 
-func (f *Functions) CheckPrivileges(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (string, map[string]interface{}, error) {
+func (f *Functions) CheckPrivileges(profile string, configFileType string) (string, map[string]interface{}, error) {
 	/*
 	   Return user privileges from specified profile
 	*/
 	var err error
 	var data map[string]interface{}
 
-	host, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, contentType, bodyBytes)
+	endPointPostfix := "/user/user" // Information about current user
+
+	host, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "GET", "", nil)
 	if err != nil {
 		return "", nil, err
 	}
@@ -224,4 +227,21 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string, endpo
 	}
 
 	return host, projectAccess, err
+}
+
+func (f *Functions) DeleteRecord(profile string, configFileType string, guid string) (string, error) {
+	var err error
+	var msg string
+
+	endPointPostfix := "/user/data/" + guid
+
+	_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
+
+	if resp.StatusCode == 204 {
+		msg = "Record with GUID " + guid + " has been deleted"
+	} else if resp.StatusCode == 500 {
+		err = errors.New("Internal server error occurred when deleting " + guid + "; could not delete stored files, or not able to delete indexd record")
+	}
+
+	return msg, err
 }

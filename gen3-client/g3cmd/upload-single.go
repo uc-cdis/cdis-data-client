@@ -38,7 +38,7 @@ func init() {
 				filePath = filePaths[0]
 			}
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				logs.AddToFailedLogMap(filePath, "", "", 0, false)
+				logs.AddToFailedLogMap(filePath, "", 0, false, true)
 				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
@@ -48,7 +48,7 @@ func init() {
 
 			file, err := os.Open(filePath)
 			if err != nil {
-				logs.AddToFailedLogMap(filePath, "", "", 0, false)
+				logs.AddToFailedLogMap(filePath, "", 0, false, true)
 				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
@@ -62,7 +62,7 @@ func init() {
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
 				file.Close()
-				logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, furObject.PresignedURL, 0, false)
+				logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
 				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
