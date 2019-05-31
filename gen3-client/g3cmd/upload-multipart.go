@@ -110,7 +110,7 @@ func multipartUpload(uploadPath string, filePath string, includeSubDirName bool,
 				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
 					req, err := http.NewRequest(http.MethodPut, presignedURL, bytes.NewReader(buf))
 					req.ContentLength = int64(n)
-					client := &http.Client{Timeout: commonUtils.DefaultTimeout}
+					client := &http.Client{Timeout: commonUtils.MultipartTimeout}
 					resp, err := client.Do(req)
 					if err != nil {
 						err = errors.New("Error occurred during upload: " + err.Error())
