@@ -27,6 +27,14 @@ func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.R
 	if ro.RetryCount < MaxRetryCount { // try another time
 		retryObjCh <- ro
 	} else {
+		if ro.GUID != "" {
+			msg, err := DeleteRecord(ro.GUID)
+			if err == nil {
+				log.Println(msg)
+			} else {
+				log.Println(err.Error())
+			}
+		}
 		logs.IncrementScore(logs.ScoreBoardLen - 1) // inevitable failure
 		if (len(retryObjCh)) == 0 {
 			close(retryObjCh)
