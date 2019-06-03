@@ -106,42 +106,41 @@ func init() {
 			if batch {
 				reqs := make([]*grab.Request, 0)
 				for _, object := range objects {
-					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+					if object.ObjectID != "" {
+						endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
+						msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
-					if err != nil {
-						if strings.Contains(err.Error(), "The provided guid") {
+						if err != nil {
 							log.Printf("Download error: %s\n", err)
+						} else if msg.URL == "" {
+							log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
 						} else {
-							log.Fatalf("Fatal download error: %s\n", err)
+							req, _ := grab.NewRequest(downloadPath+"/"+object.ObjectID, msg.URL)
+							if strings.Contains(msg.URL, "X-Amz-Signature") {
+								req.NoResume = true
+							}
+							reqs = append(reqs, req)
 						}
-					} else if msg.URL == "" {
-						log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
 					} else {
-						req, _ := grab.NewRequest(downloadPath+"/"+object.ObjectID, msg.URL)
-						if strings.Contains(msg.URL, "X-Amz-Signature") {
-							req.NoResume = true
-						}
-						reqs = append(reqs, req)
-
+						log.Println("Download error: empty object_id (GUID)")
 					}
 				}
 				batchDownload(numParallel, reqs)
 			} else {
 				for _, object := range objects {
-					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-					msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+					if object.ObjectID != "" {
+						endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
+						msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
-					if err != nil {
-						if strings.Contains(err.Error(), "The provided guid") {
+						if err != nil {
 							log.Printf("Download error: %s\n", err)
+						} else if msg.URL == "" {
+							log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
 						} else {
-							log.Fatalf("Fatal download error: %s\n", err)
+							downloadFile(object.ObjectID, downloadPath+"/"+object.ObjectID, msg.URL)
 						}
-					} else if msg.URL == "" {
-						log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
 					} else {
-						downloadFile(object.ObjectID, downloadPath+"/"+object.ObjectID, msg.URL)
+						log.Println("Download error: empty object_id (GUID)")
 					}
 				}
 			}
