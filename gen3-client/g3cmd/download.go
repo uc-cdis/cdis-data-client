@@ -85,11 +85,7 @@ func init() {
 			msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
 			if err != nil {
-				if strings.Contains(err.Error(), "The provided guid") {
-					log.Printf("Download error: %s\n", err)
-				} else {
-					log.Fatalf("Fatal download error: %s\n", err)
-				}
+				log.Printf("Download error: %s\n", err)
 			} else if msg.URL == "" {
 				log.Printf("Error in getting download URL for object %s\n", guid)
 			} else {
