@@ -84,7 +84,7 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) erro
 		if resp.StatusCode == 401 {
 			fmt.Println("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials.")
 		}
-		return errors.New("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check fence log for more details.")
+		return errors.New("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check FENCE log for more details.")
 	}
 
 	str := ResponseToString(resp)
@@ -114,7 +114,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		case 403:
 			return msg, errors.New("403 Forbidden error has occurred! You don't have permission to access the requested url \"" + resp.Request.URL.String() + "\"")
 		case 404:
-			return msg, errors.New("Can't find provided GUID at url \"" + resp.Request.URL.String() + "\"")
+			return msg, errors.New("404 Not found error has occurred! The the requested url \"" + resp.Request.URL.String() + "\" cannot be found")
 		case 500:
 			return msg, errors.New("500 Internal Server error has occurred! Please try again later")
 		case 503:
@@ -152,7 +152,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	if cred.AccessKey != "" {
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
 
-		// 401 code is general error code from fence. the error message is also not clear for the case
+		// 401 code is general error code from FENCE. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.
 		if resp != nil && resp.StatusCode == 401 {
 			isExpiredToken = true
@@ -240,7 +240,7 @@ func (f *Functions) DeleteRecord(profile string, configFileType string, guid str
 	if resp.StatusCode == 204 {
 		msg = "Record with GUID " + guid + " has been deleted"
 	} else if resp.StatusCode == 500 {
-		err = errors.New("Internal server error occurred when deleting " + guid + "; could not delete stored files, or not able to delete indexd record")
+		err = errors.New("Internal server error occurred when deleting " + guid + "; could not delete stored files, or not able to delete INDEXD record")
 	}
 
 	return msg, err

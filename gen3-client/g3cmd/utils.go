@@ -29,19 +29,19 @@ type ManifestObject struct {
 	SubjectID string `json:"subject_id"`
 }
 
-// InitRequestObject represents the payload that sends to fence for getting a singlepart upload presignedURL or init a multipart upload for new object file
+// InitRequestObject represents the payload that sends to FENCE for getting a singlepart upload presignedURL or init a multipart upload for new object file
 type InitRequestObject struct {
 	Filename string `json:"file_name"`
 }
 
-// MultipartUploadRequestObject represents the payload that sends to fence for getting a presignedURL for a part
+// MultipartUploadRequestObject represents the payload that sends to FENCE for getting a presignedURL for a part
 type MultipartUploadRequestObject struct {
 	Key        string `json:"key"`
 	UploadID   string `json:"uploadId"`
 	PartNumber int    `json:"partNumber"`
 }
 
-// MultipartCompleteRequestObject represents the payload that sends to fence for completeing a multipart upload
+// MultipartCompleteRequestObject represents the payload that sends to FENCE for completeing a multipart upload
 type MultipartCompleteRequestObject struct {
 	Key      string                `json:"key"`
 	UploadID string                `json:"uploadId"`
@@ -94,7 +94,7 @@ const defaultNumOfWorkers = 10
 const MaxRetryCount = 5
 const maxWaitTime = 300
 
-// InitMultipartUpload helps sending requests to fence to init a multipart upload
+// InitMultipartUpload helps sending requests to FENCE to init a multipart upload
 func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -114,7 +114,10 @@ func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName b
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 	if err != nil {
-		return "", "", fileinfo.Filename, errors.New("You don't have permission to initialize multipart upload, detailed error message: " + err.Error())
+		if strings.Contains(err.Error(), "404") {
+			return "", "", fileinfo.Filename, errors.New(err.Error() + "\nPlease check to ensure FENCE version is at 2.8.0 or beyond")
+		}
+		return "", "", fileinfo.Filename, errors.New("Error has occurred during multipart upload initialization, detailed error message: " + err.Error())
 	}
 	if msg.UploadID == "" || msg.GUID == "" {
 		return "", "", fileinfo.Filename, errors.New("Unknown error has occurred during multipart upload initialization. Please check logs from Gen3 services")
@@ -122,7 +125,7 @@ func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName b
 	return msg.UploadID, msg.GUID, fileinfo.Filename, err
 }
 
-// GenerateMultipartPresignedURL helps sending requests to fence to get a presigned URL for a part during a multipart upload
+// GenerateMultipartPresignedURL helps sending requests to FENCE to get a presigned URL for a part during a multipart upload
 func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -138,7 +141,7 @@ func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) 
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 	if err != nil {
-		return "", errors.New("You don't have permission to generate presigned url for multipart upload, detailed error message: " + err.Error())
+		return "", errors.New("Error has occurred during multipart upload presigned url generation, detailed error message: " + err.Error())
 	}
 	if msg.PresignedURL == "" {
 		return "", errors.New("Unknown error has occurred during multipart upload presigned url generation. Please check logs from Gen3 services")
@@ -146,7 +149,7 @@ func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) 
 	return msg.PresignedURL, err
 }
 
-// CompleteMultipartUpload helps sending requests to fence to complete a multipart upload
+// CompleteMultipartUpload helps sending requests to FENCE to complete a multipart upload
 func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartObject) error {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -162,12 +165,12 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 	_, err = function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 	if err != nil {
-		return errors.New("Error occurred during completing multipart upload, detailed error message: " + err.Error())
+		return errors.New("Error has occurred during completing multipart upload, detailed error message: " + err.Error())
 	}
 	return nil
 }
 
-// GeneratePresignedURL helps sending requests to fence and parsing the response
+// GeneratePresignedURL helps sending requests to FENCE and parsing the response
 func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -253,7 +256,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	return furObject, err
 }
 
-// DeleteRecord helps sending requests to fence to delete a record from indexd as well as its storage locations
+// DeleteRecord helps sending requests to FENCE to delete a record from INDEXD as well as its storage locations
 func DeleteRecord(guid string) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
