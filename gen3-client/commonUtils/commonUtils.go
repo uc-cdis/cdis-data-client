@@ -17,12 +17,6 @@ const PathSeparator = string(os.PathSeparator)
 // DefaultTimeout is used to set timeout value for http client
 const DefaultTimeout = 120 * time.Second
 
-// MultipartUploadTimeout is used to set timeout value for http client doing multipart upload for one chunk
-const MultipartUploadTimeout = 3600 * time.Second
-
-// SinglepartUploadTimeout is used to set timeout value for http client doing singlepart upload
-const SinglepartUploadTimeout = 10 * 3600 * time.Second
-
 // FileUploadRequestObject defines a object for file upload
 type FileUploadRequestObject struct {
 	FilePath     string
