@@ -377,7 +377,7 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	log.Println("Uploading data ...")
 	furObject.Bar.Start()
 
-	client := &http.Client{Timeout: commonUtils.UploadTimeout}
+	client := &http.Client{}
 	resp, err := client.Do(furObject.Request)
 	if err != nil {
 		logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, retryCount, false, true)
@@ -487,7 +487,7 @@ func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonU
 		return
 	}
 
-	client := &http.Client{Timeout: commonUtils.UploadTimeout}
+	client := &http.Client{}
 	wg := sync.WaitGroup{}
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
