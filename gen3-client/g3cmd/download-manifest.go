@@ -17,7 +17,7 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func batchDownload(numParallel int, reqs []*grab.Request) {
+func downloadFile(numParallel int, reqs []*grab.Request) {
 
 	client := grab.NewClient()
 	respch := client.DoBatch(numParallel, reqs...)
@@ -65,14 +65,13 @@ func batchDownload(numParallel int, reqs []*grab.Request) {
 	t.Stop()
 
 	fmt.Printf("%d files downloaded.\n", len(reqs))
-
 }
 
 func init() {
 	var manifest string
 	var downloadPath string
+	var filenameFormat string
 	var protocol string
-	var batch bool
 	var numParallel int
 
 	var downloadManifestCmd = &cobra.Command{
@@ -89,12 +88,20 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
+			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
+			if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
+				log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
+			}
+
 			protocolText := ""
 			if protocol != "" {
 				protocolText = "?protocol=" + protocol
 			}
 
 			downloadPath = commonUtils.ParseRootPath(downloadPath)
+			if !strings.HasSuffix(downloadPath, "/") {
+				downloadPath += "/"
+			}
 
 			var objects []ManifestObject
 			manifestBytes, err := ioutil.ReadFile(manifest)
@@ -103,57 +110,36 @@ func init() {
 			}
 			json.Unmarshal(manifestBytes, &objects)
 
-			if batch {
-				reqs := make([]*grab.Request, 0)
-				for _, object := range objects {
-					if object.ObjectID != "" {
-						endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-						msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+			reqs := make([]*grab.Request, 0)
+			for _, object := range objects {
+				if object.ObjectID != "" {
+					endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
+					msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
-						if err != nil {
-							log.Printf("Download error: %s\n", err)
-						} else if msg.URL == "" {
-							log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
-						} else {
-							req, _ := grab.NewRequest(downloadPath+"/"+object.ObjectID, msg.URL)
-							if strings.Contains(msg.URL, "X-Amz-Signature") {
-								req.NoResume = true
-							}
-							reqs = append(reqs, req)
-						}
+					if err != nil {
+						log.Printf("Download error: %s\n", err)
+					} else if msg.URL == "" {
+						log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
 					} else {
-						log.Println("Download error: empty object_id (GUID)")
-					}
-				}
-				batchDownload(numParallel, reqs)
-			} else {
-				for _, object := range objects {
-					if object.ObjectID != "" {
-						endPointPostfix := "/user/data/download/" + object.ObjectID + protocolText
-						msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
-
-						if err != nil {
-							log.Printf("Download error: %s\n", err)
-						} else if msg.URL == "" {
-							log.Printf("Error in getting download URL for object %s\n", object.ObjectID)
-						} else {
-							downloadFile(object.ObjectID, downloadPath+"/"+object.ObjectID, msg.URL)
+						req, _ := grab.NewRequest(downloadPath, msg.URL)
+						if strings.Contains(msg.URL, "X-Amz-Signature") {
+							req.NoResume = true
 						}
-					} else {
-						log.Println("Download error: empty object_id (GUID)")
+						reqs = append(reqs, req)
 					}
+				} else {
+					log.Println("Download error: empty object_id (GUID)")
 				}
 			}
-
+			downloadFile(numParallel, reqs)
 		},
 	}
 
 	downloadManifestCmd.Flags().StringVar(&manifest, "manifest", "", "The manifest file to read from")
 	downloadManifestCmd.MarkFlagRequired("manifest")
-	downloadManifestCmd.Flags().StringVar(&downloadPath, "download-path", "", "The directory in which to store the downloaded files")
-	downloadManifestCmd.MarkFlagRequired("download-path")
+	downloadManifestCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
+	downloadManifestCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "format of filename to be used, including \"original\", \"guid\" and \"combined\"")
 	downloadManifestCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
-	downloadManifestCmd.Flags().BoolVar(&batch, "batch", true, "Download in parallel")
-	downloadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of downloads to run in parallel")
+	downloadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel")
 	RootCmd.AddCommand(downloadManifestCmd)
 }
