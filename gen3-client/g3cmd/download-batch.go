@@ -69,17 +69,17 @@ func batchDownload(numParallel int, reqs []*grab.Request) {
 }
 
 func init() {
-	var manifest string
+	var manifestPath string
 	var downloadPath string
 	var protocol string
 	var batch bool
 	var numParallel int
 
-	var downloadManifestCmd = &cobra.Command{
-		Use:     "download-manifest",
-		Short:   "Download files from a specified manifest",
-		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
-		Example: `./gen3-client download-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
+	var downloadBatchCmd = &cobra.Command{
+		Use:     "download-batch",
+		Short:   "Download a batch of files from a specified manifest",
+		Long:    `Get presigned URLs for a batch of files specified in a manifest file and then download all of them.`,
+		Example: `./gen3-client download-batch --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
@@ -89,6 +89,16 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
+			host, err := function.GetHost(profile, "")
+			if err != nil {
+				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
+			}
+			dataExplorerURL := host.Scheme + "://" + host.Host + "/explorer"
+			if manifestPath == "" {
+				log.Println("Required flag \"manifest\" not set")
+				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
+			}
+
 			protocolText := ""
 			if protocol != "" {
 				protocolText = "?protocol=" + protocol
@@ -97,9 +107,10 @@ func init() {
 			downloadPath = commonUtils.ParseRootPath(downloadPath)
 
 			var objects []ManifestObject
-			manifestBytes, err := ioutil.ReadFile(manifest)
+			manifestBytes, err := ioutil.ReadFile(manifestPath)
 			if err != nil {
-				log.Fatalf("Failed reading manifest %s, %v\n", manifest, err)
+				log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
+				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
 			}
 			json.Unmarshal(manifestBytes, &objects)
 
@@ -148,12 +159,11 @@ func init() {
 		},
 	}
 
-	downloadManifestCmd.Flags().StringVar(&manifest, "manifest", "", "The manifest file to read from")
-	downloadManifestCmd.MarkFlagRequired("manifest")
-	downloadManifestCmd.Flags().StringVar(&downloadPath, "download-path", "", "The directory in which to store the downloaded files")
-	downloadManifestCmd.MarkFlagRequired("download-path")
-	downloadManifestCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
-	downloadManifestCmd.Flags().BoolVar(&batch, "batch", true, "Download in parallel")
-	downloadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of downloads to run in parallel")
-	RootCmd.AddCommand(downloadManifestCmd)
+	downloadBatchCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
+	downloadBatchCmd.Flags().StringVar(&downloadPath, "download-path", "", "The directory in which to store the downloaded files")
+	downloadBatchCmd.MarkFlagRequired("download-path")
+	downloadBatchCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
+	downloadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Download in parallel")
+	downloadBatchCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of downloads to run in parallel")
+	RootCmd.AddCommand(downloadBatchCmd)
 }

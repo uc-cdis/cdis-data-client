@@ -179,6 +179,15 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	return prefixEndPoint, resp, nil
 }
 
+func (f *Functions) GetHost(profile string, configFileType string) (*url.URL, error) {
+	cred := f.Config.ParseConfig(profile)
+	if cred.APIEndpoint == "" {
+		return nil, errors.New("No APIEndpoint found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
+	}
+	host, _ := url.Parse(cred.APIEndpoint)
+	return host, nil
+}
+
 func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
 	/*
 	   Do request with signed header. User may have more than one profile and use a profile to make a request
