@@ -164,7 +164,7 @@ func init() {
 	downloadManifestCmd.Flags().StringVar(&manifest, "manifest", "", "The manifest file to read from")
 	downloadManifestCmd.MarkFlagRequired("manifest")
 	downloadManifestCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
-	downloadManifestCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "format of filename to be used, including \"guid\", \"original\" and \"combined\"")
+	downloadManifestCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "format of filename to be used, including \"original\", \"guid\" and \"combined\"")
 	downloadManifestCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
 	downloadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel")
 	RootCmd.AddCommand(downloadManifestCmd)

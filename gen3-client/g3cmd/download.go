@@ -42,7 +42,7 @@ func init() {
 	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	downloadCmd.MarkFlagRequired("guid")
 	downloadCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
-	downloadCmd.Flags().StringVar(&filenameFormat, "filename-format", "combined", "format of filename to be used, including \"guid\", \"original\" and \"combined\"")
+	downloadCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "format of filename to be used, including \"original\", \"guid\" and \"combined\"")
 	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs")
 	RootCmd.AddCommand(downloadCmd)
 }
