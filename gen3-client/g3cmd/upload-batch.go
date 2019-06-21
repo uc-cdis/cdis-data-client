@@ -127,7 +127,7 @@ func init() {
 	uploadBatchCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
 	uploadBatchCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
 	uploadBatchCmd.MarkFlagRequired("upload-path")
-	uploadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
-	uploadBatchCmd.Flags().IntVar(&numParallel, "numparallel", 2, "Number of uploads to run in parallel")
+	uploadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel (default: true)")
+	uploadBatchCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel (default: 3)")
 	RootCmd.AddCommand(uploadBatchCmd)
 }

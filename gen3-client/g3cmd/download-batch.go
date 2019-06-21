@@ -162,8 +162,8 @@ func init() {
 	downloadBatchCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
 	downloadBatchCmd.Flags().StringVar(&downloadPath, "download-path", "", "The directory in which to store the downloaded files")
 	downloadBatchCmd.MarkFlagRequired("download-path")
-	downloadBatchCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
-	downloadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Download in parallel")
-	downloadBatchCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of downloads to run in parallel")
+	downloadBatchCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
+	downloadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Download in parallel (default: true)")
+	downloadBatchCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of downloads to run in parallel (default: 3)")
 	RootCmd.AddCommand(downloadBatchCmd)
 }
