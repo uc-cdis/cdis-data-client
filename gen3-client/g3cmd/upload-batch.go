@@ -125,7 +125,6 @@ func init() {
 	}
 
 	uploadBatchCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
-	uploadBatchCmd.MarkFlagRequired("manifest")
 	uploadBatchCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
 	uploadBatchCmd.MarkFlagRequired("upload-path")
 	uploadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
