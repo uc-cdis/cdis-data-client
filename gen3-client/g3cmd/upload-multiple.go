@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -26,20 +27,38 @@ func init() {
 	var errCh chan error
 	var batchFURObjects []commonUtils.FileUploadRequestObject
 
-	var uploadManifestCmd = &cobra.Command{
-		Use:     "upload-manifest",
-		Short:   "Upload files from a specified manifest",
-		Long:    `Gets a presigned URL for a file from a GUID and then uploads the specified file.`,
-		Example: `./gen3-client upload-manifest --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
+	var uploadMultipleCmd = &cobra.Command{
+		Use:     "upload-multiple",
+		Short:   "Upload multiple of files from a specified manifest",
+		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then upload all of them.`,
+		Example: `./gen3-client upload-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n\n")
+
+			request := new(jwt.Request)
+			configure := new(jwt.Configure)
+			function := new(jwt.Functions)
+
+			function.Config = configure
+			function.Request = request
+
+			host, err := function.GetHost(profile, "")
+			if err != nil {
+				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
+			}
+			dataExplorerURL := host.Scheme + "://" + host.Host + "/explorer"
+			if manifestPath == "" {
+				log.Println("Required flag \"manifest\" not set")
+				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
+			}
 
 			var objects []ManifestObject
 
 			logs.InitScoreBoard(0)
 			manifestFile, err := os.Open(manifestPath)
 			if err != nil {
-				log.Fatalf("Failed to open manifest file\n")
+				log.Println("Failed to open manifest file")
+				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
 			}
 			defer manifestFile.Close()
 
@@ -47,11 +66,13 @@ func init() {
 			case strings.EqualFold(filepath.Ext(manifestPath), ".json"):
 				manifestBytes, err := ioutil.ReadFile(manifestPath)
 				if err != nil {
-					log.Fatalf("Failed reading manifest %s, %v\n", manifestPath, err)
+					log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
+					log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
 				}
 				json.Unmarshal(manifestBytes, &objects)
 			default:
-				log.Fatalf("Unsupported manifast format")
+				log.Println("Unsupported manifast format")
+				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
 			}
 
 			furObjects := validateObject(objects, uploadPath)
@@ -103,11 +124,10 @@ func init() {
 		},
 	}
 
-	uploadManifestCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
-	uploadManifestCmd.MarkFlagRequired("manifest")
-	uploadManifestCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
-	uploadManifestCmd.MarkFlagRequired("upload-path")
-	uploadManifestCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
-	uploadManifestCmd.Flags().IntVar(&numParallel, "numparallel", 2, "Number of uploads to run in parallel")
-	RootCmd.AddCommand(uploadManifestCmd)
+	uploadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
+	uploadMultipleCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
+	uploadMultipleCmd.MarkFlagRequired("upload-path")
+	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel (default: true)")
+	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel (default: 3)")
+	RootCmd.AddCommand(uploadMultipleCmd)
 }
