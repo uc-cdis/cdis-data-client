@@ -62,10 +62,10 @@ func init() {
 	var protocol string
 
 	var downloadCmd = &cobra.Command{
-		Use:     "download",
-		Short:   "Download a file from a GUID",
+		Use:     "download-single",
+		Short:   "Download a single file from a GUID",
 		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
-		Example: `./gen3-client download --profile=<profile-name> --guid=206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json`,
+		Example: `./gen3-client download-single --profile=<profile-name> --guid=206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
@@ -96,7 +96,7 @@ func init() {
 
 	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	downloadCmd.MarkFlagRequired("guid")
-	downloadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to download to with --file=~/path/to/file")
-	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs")
+	downloadCmd.Flags().StringVar(&filePath, "file", ".", "Specify file to download to with --file=~/path/to/file (default: .)")
+	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs (default: \"\")")
 	RootCmd.AddCommand(downloadCmd)
 }
