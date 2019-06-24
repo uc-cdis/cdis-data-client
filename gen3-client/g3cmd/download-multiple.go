@@ -75,11 +75,11 @@ func init() {
 	var batch bool
 	var numParallel int
 
-	var downloadBatchCmd = &cobra.Command{
-		Use:     "download-batch",
-		Short:   "Download a batch of files from a specified manifest",
-		Long:    `Get presigned URLs for a batch of files specified in a manifest file and then download all of them.`,
-		Example: `./gen3-client download-batch --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
+	var downloadMultipleCmd = &cobra.Command{
+		Use:     "download-multiple",
+		Short:   "Download multiple of files from a specified manifest",
+		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then download all of them.`,
+		Example: `./gen3-client download-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
@@ -159,11 +159,11 @@ func init() {
 		},
 	}
 
-	downloadBatchCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
-	downloadBatchCmd.Flags().StringVar(&downloadPath, "download-path", "", "The directory in which to store the downloaded files")
-	downloadBatchCmd.MarkFlagRequired("download-path")
-	downloadBatchCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
-	downloadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Download in parallel (default: true)")
-	downloadBatchCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of downloads to run in parallel (default: 3)")
-	RootCmd.AddCommand(downloadBatchCmd)
+	downloadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
+	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", "", "The directory in which to store the downloaded files")
+	downloadMultipleCmd.MarkFlagRequired("download-path")
+	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
+	downloadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Download in parallel (default: true)")
+	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of downloads to run in parallel (default: 3)")
+	RootCmd.AddCommand(downloadMultipleCmd)
 }

@@ -27,11 +27,11 @@ func init() {
 	var errCh chan error
 	var batchFURObjects []commonUtils.FileUploadRequestObject
 
-	var uploadBatchCmd = &cobra.Command{
-		Use:     "upload-batch",
-		Short:   "Upload a batch of files from a specified manifest",
-		Long:    `Get presigned URLs for a batch of files specified in a manifest file and then upload all of them.`,
-		Example: `./gen3-client upload-batch --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
+	var uploadMultipleCmd = &cobra.Command{
+		Use:     "upload-multiple",
+		Short:   "Upload multiple of files from a specified manifest",
+		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then upload all of them.`,
+		Example: `./gen3-client upload-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n\n")
 
@@ -124,10 +124,10 @@ func init() {
 		},
 	}
 
-	uploadBatchCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
-	uploadBatchCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
-	uploadBatchCmd.MarkFlagRequired("upload-path")
-	uploadBatchCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel (default: true)")
-	uploadBatchCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel (default: 3)")
-	RootCmd.AddCommand(uploadBatchCmd)
+	uploadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
+	uploadMultipleCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
+	uploadMultipleCmd.MarkFlagRequired("upload-path")
+	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel (default: true)")
+	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel (default: 3)")
+	RootCmd.AddCommand(uploadMultipleCmd)
 }
