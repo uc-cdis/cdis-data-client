@@ -90,7 +90,7 @@ func AskForConfirmation(s string) bool {
 
 		response, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error occurred during parsing user's confirmation: " + err.Error())
 		}
 
 		response = strings.ToLower(strings.TrimSpace(response))
