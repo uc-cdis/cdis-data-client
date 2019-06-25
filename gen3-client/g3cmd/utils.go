@@ -60,6 +60,13 @@ type FileInfo struct {
 	Filename string
 }
 
+// RenamedFileInfo is a helper struct for recording renamed files
+type RenamedFileInfo struct {
+	GUID        string
+	OldFilename string
+	NewFilename string
+}
+
 const (
 	// B is bytes
 	B int64 = iota

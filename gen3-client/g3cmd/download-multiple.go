@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,15 +23,40 @@ func lastString(ss []string) string {
 	return ss[len(ss)-1]
 }
 
-func processS3URLForFilename(presignedURL string, guid string, filenameFormat string) string {
+func processOriginalFilename(downloadPath string, actualFilename string) string {
+	_, err := os.Stat(downloadPath + actualFilename)
+	if os.IsNotExist(err) {
+		return actualFilename
+	}
+	extension := filepath.Ext(actualFilename)
+	filename := strings.TrimSuffix(actualFilename, extension)
+	counter := 2
+	for {
+		newFilename := filename + "_" + strconv.Itoa(counter) + extension
+		_, err := os.Stat(downloadPath + newFilename)
+		if os.IsNotExist(err) {
+			return newFilename
+		}
+		counter++
+	}
+}
+
+func processS3URLForFilename(presignedURL string, guid string, downloadPath string, filenameFormat string, overwrite bool, renamedFiles *[]RenamedFileInfo) string {
 	if filenameFormat != "guid" {
 		urlWithFilename := strings.Split(presignedURL, "?")[0]
 		actualFilename := lastString(strings.Split(urlWithFilename, guid+"/"))
 		if actualFilename != "" {
 			if filenameFormat == "original" {
+				if !overwrite {
+					newFilename := processOriginalFilename(downloadPath, actualFilename)
+					if actualFilename != newFilename {
+						*renamedFiles = append(*renamedFiles, RenamedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
+					}
+					return newFilename
+				}
 				return actualFilename
 			} else if filenameFormat == "combined" {
-				return guid + "." + actualFilename
+				return guid + "_" + actualFilename
 			}
 		}
 	}
@@ -73,6 +100,8 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 		log.Fatal("Cannot create folder \"" + downloadPath + "\"")
 	}
 
+	renamedFiles := make([]RenamedFileInfo, 0)
+
 	reqs := make([]*grab.Request, 0)
 	for _, guid := range guids {
 		endPointPostfix := "/user/data/download/" + guid + protocolText
@@ -85,7 +114,7 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 		} else {
 			filename := guid
 			if strings.Contains(msg.URL, "X-Amz-Signature") {
-				filename = processS3URLForFilename(msg.URL, guid, filenameFormat)
+				filename = processS3URLForFilename(msg.URL, guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
 			}
 			req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
 			if strings.Contains(msg.URL, "X-Amz-Signature") {
@@ -141,6 +170,13 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 	t.Stop()
 
 	fmt.Printf("%d files downloaded.\n", len(reqs))
+
+	if len(renamedFiles) > 0 {
+		fmt.Printf("\n%d files has been renamed as the following:\n", len(renamedFiles))
+		for _, rfi := range renamedFiles {
+			fmt.Printf("File \"%s\" (GUID %s) has been renamed as: %s\n", rfi.OldFilename, rfi.GUID, rfi.NewFilename)
+		}
+	}
 }
 
 func init() {
