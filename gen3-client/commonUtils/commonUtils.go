@@ -82,6 +82,7 @@ func ParseFilePaths(filePath string) ([]string, error) {
 	return filePaths, err
 }
 
+// AskForConfirmation asks user for confirmation before proceed, will wait if user entered garbage
 func AskForConfirmation(s string) bool {
 	reader := bufio.NewReader(os.Stdin)
 
