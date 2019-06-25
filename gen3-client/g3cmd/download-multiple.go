@@ -36,7 +36,26 @@ func processS3URLForFilename(presignedURL string, guid string, filenameFormat st
 	return guid
 }
 
-func downloadFile(guids []string, downloadPath string, filenameFormat string, protocol string, numParallel int) {
+func validateFilenameFormat(downloadPath string, filenameFormat string, overwrite bool) {
+	if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
+		log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
+	}
+	if filenameFormat == "guid" || filenameFormat == "combined" {
+		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" will be overwritten!\n", downloadPath)
+		if !commonUtils.AskForConfirmation("Proceed?") {
+			log.Println("Aborted by user")
+			os.Exit(0)
+		}
+	} else if overwrite {
+		fmt.Printf("WARNING: flag \"overwrite\" was set to true in \"original\" mode, duplicated files under \"%s\" will be overwritten!\n", downloadPath)
+		if !commonUtils.AskForConfirmation("Proceed?") {
+			log.Println("Aborted by user")
+			os.Exit(0)
+		}
+	}
+}
+
+func downloadFile(guids []string, downloadPath string, filenameFormat string, overwrite bool, protocol string, numParallel int) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -49,9 +68,9 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, pr
 		protocolText = "?protocol=" + protocol
 	}
 
-	downloadPath = commonUtils.ParseRootPath(downloadPath)
-	if !strings.HasSuffix(downloadPath, "/") {
-		downloadPath += "/"
+	err := os.MkdirAll(downloadPath, 0766)
+	if err != nil {
+		log.Fatal("Cannot create folder \"" + downloadPath + "\"")
 	}
 
 	reqs := make([]*grab.Request, 0)
@@ -128,6 +147,7 @@ func init() {
 	var manifestPath string
 	var downloadPath string
 	var filenameFormat string
+	var overwrite bool
 	var protocol string
 	var numParallel int
 
@@ -154,10 +174,12 @@ func init() {
 				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
 			}
 
-			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
-			if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
-				log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
+			downloadPath = commonUtils.ParseRootPath(downloadPath)
+			if !strings.HasSuffix(downloadPath, "/") {
+				downloadPath += "/"
 			}
+			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
+			validateFilenameFormat(downloadPath, filenameFormat, overwrite)
 
 			var objects []ManifestObject
 			manifestBytes, err := ioutil.ReadFile(manifestPath)
@@ -175,13 +197,14 @@ func init() {
 					log.Println("Download error: empty object_id (GUID)")
 				}
 			}
-			downloadFile(guids, downloadPath, filenameFormat, protocol, numParallel)
+			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, numParallel)
 		},
 	}
 
 	downloadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
 	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
 	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
+	downloadMultipleCmd.Flags().BoolVar(&overwrite, "overwrite", false, "only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true (default: false)")
 	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
 	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel (default: 1)")
 	RootCmd.AddCommand(downloadMultipleCmd)

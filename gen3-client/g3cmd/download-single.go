@@ -1,10 +1,10 @@
 package g3cmd
 
 import (
-	"log"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
@@ -13,6 +13,7 @@ func init() {
 	var downloadPath string
 	var protocol string
 	var filenameFormat string
+	var overwrite bool
 
 	var downloadCmd = &cobra.Command{
 		Use:     "download-single",
@@ -28,14 +29,16 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
-			if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
-				log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
+			downloadPath = commonUtils.ParseRootPath(downloadPath)
+			if !strings.HasSuffix(downloadPath, "/") {
+				downloadPath += "/"
 			}
+			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
+			validateFilenameFormat(downloadPath, filenameFormat, overwrite)
 
 			guids := make([]string, 0)
 			guids = append(guids, guid)
-			downloadFile(guids, downloadPath, filenameFormat, protocol, 1)
+			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, 1)
 		},
 	}
 
@@ -43,6 +46,7 @@ func init() {
 	downloadCmd.MarkFlagRequired("guid")
 	downloadCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
 	downloadCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
+	downloadCmd.Flags().BoolVar(&overwrite, "overwrite", false, "only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true (default: false)")
 	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs (default: \"\")")
 	RootCmd.AddCommand(downloadCmd)
 }
