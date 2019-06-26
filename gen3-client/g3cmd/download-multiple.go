@@ -75,7 +75,7 @@ func validateFilenameFormat(downloadPath string, filenameFormat string, overwrit
 			os.Exit(0)
 		}
 	} else {
-		fmt.Printf("NOTICE: flag \"overwrite\" was set to false in \"original\" mode, duplicated files under \"%s\" will be renamed by appending a counter value to its original filename!\n", downloadPath)
+		fmt.Printf("NOTICE: flag \"overwrite\" was set to false in \"original\" mode, duplicated files under \"%s\" will be renamed by appending a counter value to the original filenames!\n", downloadPath)
 	}
 }
 
