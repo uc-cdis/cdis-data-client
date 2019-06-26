@@ -19,10 +19,6 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func lastString(ss []string) string {
-	return ss[len(ss)-1]
-}
-
 func processOriginalFilename(downloadPath string, actualFilename string) string {
 	_, err := os.Stat(downloadPath + actualFilename)
 	if os.IsNotExist(err) {
@@ -42,25 +38,24 @@ func processOriginalFilename(downloadPath string, actualFilename string) string 
 }
 
 func processS3URLForFilename(presignedURL string, guid string, downloadPath string, filenameFormat string, overwrite bool, renamedFiles *[]RenamedFileInfo) string {
-	if filenameFormat != "guid" {
-		urlWithFilename := strings.Split(presignedURL, "?")[0]
-		actualFilename := lastString(strings.Split(urlWithFilename, guid+"/"))
-		if actualFilename != "" {
-			if filenameFormat == "original" {
-				if !overwrite {
-					newFilename := processOriginalFilename(downloadPath, actualFilename)
-					if actualFilename != newFilename {
-						*renamedFiles = append(*renamedFiles, RenamedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
-					}
-					return newFilename
-				}
-				return actualFilename
-			} else if filenameFormat == "combined" {
-				return guid + "_" + actualFilename
-			}
-		}
+	if filenameFormat == "guid" {
+		return guid
 	}
-	return guid
+	urlWithFilename := strings.Split(presignedURL, "?")[0]
+	splittedFilename := strings.Split(urlWithFilename, guid+"/")
+	actualFilename := splittedFilename[len(splittedFilename)-1]
+	if filenameFormat == "original" {
+		if overwrite {
+			return actualFilename
+		}
+		newFilename := processOriginalFilename(downloadPath, actualFilename)
+		if actualFilename != newFilename {
+			*renamedFiles = append(*renamedFiles, RenamedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
+		}
+		return newFilename
+	}
+	// filenameFormat == "combined"
+	return guid + "_" + actualFilename
 }
 
 func validateFilenameFormat(downloadPath string, filenameFormat string, overwrite bool) {
@@ -79,6 +74,8 @@ func validateFilenameFormat(downloadPath string, filenameFormat string, overwrit
 			log.Println("Aborted by user")
 			os.Exit(0)
 		}
+	} else {
+		fmt.Printf("NOTICE: flag \"overwrite\" was set to false in \"original\" mode, duplicated files under \"%s\" will be renamed by appending a counter value to its original filename!\n", downloadPath)
 	}
 }
 
@@ -113,13 +110,14 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 			log.Printf("Error in getting download URL for object %s\n", guid)
 		} else {
 			filename := guid
-			if strings.Contains(msg.URL, "X-Amz-Signature") {
+			if strings.Contains(msg.URL, "X-Amz-Signature") { // S3 presigned URL
 				filename = processS3URLForFilename(msg.URL, guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
+			} else {
+				fmt.Println("WARNING: cannot parse URL to get actually filename, will use GUID as its filename by default.")
 			}
 			req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
-			if strings.Contains(msg.URL, "X-Amz-Signature") {
-				req.NoResume = true
-			}
+			// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
+			req.NoResume = true
 			reqs = append(reqs, req)
 		}
 	}
@@ -172,7 +170,7 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 	fmt.Printf("%d files downloaded.\n", len(reqs))
 
 	if len(renamedFiles) > 0 {
-		fmt.Printf("\n%d files has been renamed as the following:\n", len(renamedFiles))
+		fmt.Printf("\n%d files have been renamed as the following:\n", len(renamedFiles))
 		for _, rfi := range renamedFiles {
 			fmt.Printf("File \"%s\" (GUID %s) has been renamed as: %s\n", rfi.OldFilename, rfi.GUID, rfi.NewFilename)
 		}
@@ -239,8 +237,8 @@ func init() {
 
 	downloadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
 	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
-	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
-	downloadMultipleCmd.Flags().BoolVar(&overwrite, "overwrite", false, "only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true (default: false)")
+	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
+	downloadMultipleCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
 	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
 	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel (default: 1)")
 	RootCmd.AddCommand(downloadMultipleCmd)
