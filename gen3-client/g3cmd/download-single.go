@@ -1,71 +1,25 @@
 package g3cmd
 
 import (
-	"fmt"
-	"log"
 	"strings"
-	"time"
 
-	"github.com/cavaliercoder/grab"
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func downloadFile(guid string, filePath string, signedURL string) {
-	filePath = commonUtils.ParseRootPath(filePath)
-	client := grab.NewClient()
-	req, _ := grab.NewRequest(filePath, signedURL)
-
-	if strings.Contains(signedURL, "X-Amz-Signature") {
-		req.NoResume = true
-	}
-	// start download
-	fmt.Printf("Downloading %v...\n", guid)
-	resp := client.Do(req)
-
-	// start UI loop
-	t := time.NewTicker(500 * time.Millisecond)
-	defer t.Stop()
-
-Loop:
-	for {
-		select {
-		case <-t.C:
-			fmt.Printf("\033[1A  transferred %v / %v bytes (%.2f%%)\033[K\n",
-				resp.BytesComplete(),
-				resp.Size,
-				100*resp.Progress())
-
-		case <-resp.Done:
-			// download is complete
-			break Loop
-		}
-	}
-	fmt.Printf("\033[1A\033[K")
-
-	// check for errors
-	if err := resp.Err(); err != nil {
-		if resp != nil && resp.HTTPResponse != nil && resp.HTTPResponse.StatusCode >= 400 && resp.HTTPResponse.StatusCode < 500 {
-			log.Printf("Download failed: %v\n", err)
-			return
-		}
-		log.Fatalf("Fatal download failed: %v\n", err)
-	}
-
-	fmt.Printf("Successfully downloaded %v \n", resp.Filename)
-}
-
 func init() {
 	var guid string
-	var filePath string
+	var downloadPath string
 	var protocol string
+	var filenameFormat string
+	var overwrite bool
 
 	var downloadCmd = &cobra.Command{
 		Use:     "download-single",
 		Short:   "Download a single file from a GUID",
 		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
-		Example: `./gen3-client download-single --profile=<profile-name> --guid=206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc --file=~/Documents/file_to_download.json`,
+		Example: `./gen3-client download-single --profile=<profile-name> --guid=206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			request := new(jwt.Request)
@@ -75,28 +29,24 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			protocolText := ""
-			if protocol != "" {
-				protocolText = "?protocol=" + protocol
+			downloadPath = commonUtils.ParseRootPath(downloadPath)
+			if !strings.HasSuffix(downloadPath, "/") {
+				downloadPath += "/"
 			}
+			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
+			validateFilenameFormat(downloadPath, filenameFormat, overwrite)
 
-			endPointPostfix := "/user/data/download/" + guid + protocolText
-
-			msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
-
-			if err != nil {
-				log.Printf("Download error: %s\n", err)
-			} else if msg.URL == "" {
-				log.Printf("Error in getting download URL for object %s\n", guid)
-			} else {
-				downloadFile(guid, filePath, msg.URL)
-			}
+			guids := make([]string, 0)
+			guids = append(guids, guid)
+			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, 1)
 		},
 	}
 
 	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	downloadCmd.MarkFlagRequired("guid")
-	downloadCmd.Flags().StringVar(&filePath, "file", ".", "Specify file to download to with --file=~/path/to/file (default: .)")
+	downloadCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
+	downloadCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
+	downloadCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
 	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs (default: \"\")")
 	RootCmd.AddCommand(downloadCmd)
 }

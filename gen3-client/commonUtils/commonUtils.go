@@ -1,10 +1,13 @@
 package commonUtils
 
 import (
+	"bufio"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -77,4 +80,26 @@ func ParseFilePaths(filePath string) ([]string, error) {
 	}
 	log.Println("Finish parsing all file paths for \"" + filePath + "\"")
 	return filePaths, err
+}
+
+// AskForConfirmation asks user for confirmation before proceed, will wait if user entered garbage
+func AskForConfirmation(s string) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Printf("%s [y/n]: ", s)
+
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal("Error occurred during parsing user's confirmation: " + err.Error())
+		}
+
+		response = strings.ToLower(strings.TrimSpace(response))
+
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		}
+	}
 }
