@@ -47,10 +47,6 @@ func init() {
 				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
 			}
 			dataExplorerURL := host.Scheme + "://" + host.Host + "/explorer"
-			if manifestPath == "" {
-				log.Println("Required flag \"manifest\" not set")
-				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
-			}
 
 			var objects []ManifestObject
 
@@ -124,10 +120,10 @@ func init() {
 		},
 	}
 
-	uploadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
+	uploadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from. A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer for Common portal")
 	uploadMultipleCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
 	uploadMultipleCmd.MarkFlagRequired("upload-path")
-	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel (default: true)")
-	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel (default: 3)")
+	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
+	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	RootCmd.AddCommand(uploadMultipleCmd)
 }

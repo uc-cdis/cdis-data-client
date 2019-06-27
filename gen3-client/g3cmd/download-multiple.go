@@ -203,10 +203,6 @@ func init() {
 				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
 			}
 			dataExplorerURL := host.Scheme + "://" + host.Host + "/explorer"
-			if manifestPath == "" {
-				log.Println("Required flag \"manifest\" not set")
-				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
-			}
 
 			downloadPath = commonUtils.ParseRootPath(downloadPath)
 			if !strings.HasSuffix(downloadPath, "/") {
@@ -235,11 +231,12 @@ func init() {
 		},
 	}
 
-	downloadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from")
+	downloadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from. A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer for Common portal")
+	downloadMultipleCmd.MarkFlagRequired("manifest")
 	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
-	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
+	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\"")
 	downloadMultipleCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
 	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
-	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel (default: 1)")
+	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel")
 	RootCmd.AddCommand(downloadMultipleCmd)
 }
