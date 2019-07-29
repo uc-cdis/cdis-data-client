@@ -290,20 +290,21 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 		}
 
 		file, err := os.Open(filePath)
-		defer file.Close()
 		if err != nil {
-			log.Printf("File open error")
+			log.Println("File open error occurred when validating file path: " + err.Error())
 			continue
 		}
 
 		fi, _ := file.Stat()
 
 		if fi.IsDir() {
+			file.Close()
 			continue
 		}
 
 		if logs.ExistsInSucceededLog(filePath) {
 			log.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
+			file.Close()
 			continue
 		} else {
 			logs.AddToFailedLogMap(filePath, "", 0, false, true)
@@ -311,12 +312,14 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 
 		if fi.Size() > MultipartFileSizeLimit {
 			log.Printf("The file size of %s has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s\n", fi.Name(), FormatSize(MultipartFileSizeLimit))
+			file.Close()
 			continue
 		} else if fi.Size() > int64(fileSizeLimit) {
 			multipartFilePaths = append(multipartFilePaths, filePath)
 		} else {
 			singlepartFilePaths = append(singlepartFilePaths, filePath)
 		}
+		file.Close()
 	}
 	logs.WriteToFailedLog()
 	return singlepartFilePaths, multipartFilePaths
