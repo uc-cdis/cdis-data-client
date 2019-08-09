@@ -36,7 +36,6 @@ func init() {
 
 	// Define flags and configuration settings.
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "", "Specify profile to add or edit with --profile=<profile-name>")
-	RootCmd.MarkPersistentFlagRequired("profile")
 }
 
 // initConfig reads in config file and ENV variables if set.
