@@ -121,6 +121,7 @@ func init() {
 	}
 
 	uploadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from. A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer for Common portal")
+	uploadMultipleCmd.MarkFlagRequired("manifest")
 	uploadMultipleCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
 	uploadMultipleCmd.MarkFlagRequired("upload-path")
 	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
