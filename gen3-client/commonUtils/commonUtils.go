@@ -33,6 +33,7 @@ type FileUploadRequestObject struct {
 // RetryObject defines a object for retry upload
 type RetryObject struct {
 	FilePath   string
+	Filename   string
 	GUID       string
 	RetryCount int
 	Multipart  bool
@@ -50,33 +51,48 @@ func ParseRootPath(filePath string) string {
 	return filePath
 }
 
+// GetAbsolutePath parses input file path to its absolute path and removes the "~" in the beginning
+func GetAbsolutePath(filePath string) (string, error) {
+	fullFilePath := ParseRootPath(filePath)
+	fullFilePath, err := filepath.Abs(fullFilePath)
+	return fullFilePath, err
+}
+
 // ParseFilePaths generates all possible file paths
 func ParseFilePaths(filePath string) ([]string, error) {
-	fullFilePath := ParseRootPath(filePath)
+	fullFilePath, err := GetAbsolutePath(filePath)
+	if err != nil {
+		return nil, err
+	}
 	filePaths, err := filepath.Glob(fullFilePath) // Generating all possible file paths
+	if err != nil {
+		return nil, err
+	}
 
 	for _, filePath := range filePaths {
-		file, err := os.Open(filePath)
-		if err != nil {
-			log.Fatal("File error for " + filePath)
-		}
+		func() {
+			file, err := os.Open(filePath)
+			if err != nil {
+				log.Fatal("File error for " + filePath)
+			}
+			defer file.Close()
 
-		if fi, _ := file.Stat(); fi.IsDir() {
-			err = filepath.Walk(filePath, func(path string, fileInfo os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				isHidden, err := IsHidden(path)
-				if err != nil {
-					return err
-				}
-				if !fileInfo.IsDir() && !isHidden {
-					filePaths = append(filePaths, path)
-				}
-				return nil
-			})
-		}
-		file.Close()
+			if fi, _ := file.Stat(); fi.IsDir() {
+				err = filepath.Walk(filePath, func(path string, fileInfo os.FileInfo, err error) error {
+					if err != nil {
+						return err
+					}
+					isHidden, err := IsHidden(path)
+					if err != nil {
+						return err
+					}
+					if !fileInfo.IsDir() && !isHidden {
+						filePaths = append(filePaths, path)
+					}
+					return nil
+				})
+			}
+		}()
 	}
 	log.Println("Finish parsing all file paths for \"" + filePath + "\"")
 	return filePaths, err

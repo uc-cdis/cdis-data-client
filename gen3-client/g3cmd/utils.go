@@ -102,7 +102,7 @@ const MaxRetryCount = 5
 const maxWaitTime = 300
 
 // InitMultipartUpload helps sending requests to FENCE to init a multipart upload
-func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
+func InitMultipartUpload(filename string) (string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -110,26 +110,22 @@ func InitMultipartUpload(uploadPath string, filePath string, includeSubDirName b
 	function.Config = configure
 	function.Request = request
 
-	fileinfo, err := processFilename(uploadPath, filePath, includeSubDirName)
-	if err != nil {
-		log.Println(err.Error())
-	}
 	endPointPostfix := "/user/data/multipart/init"
-	multipartInitObject := InitRequestObject{Filename: fileinfo.Filename}
+	multipartInitObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(multipartInitObject)
 
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
-			return "", "", fileinfo.Filename, errors.New(err.Error() + "\nPlease check to ensure FENCE version is at 2.8.0 or beyond")
+			return "", "", errors.New(err.Error() + "\nPlease check to ensure FENCE version is at 2.8.0 or beyond")
 		}
-		return "", "", fileinfo.Filename, errors.New("Error has occurred during multipart upload initialization, detailed error message: " + err.Error())
+		return "", "", errors.New("Error has occurred during multipart upload initialization, detailed error message: " + err.Error())
 	}
 	if msg.UploadID == "" || msg.GUID == "" {
-		return "", "", fileinfo.Filename, errors.New("Unknown error has occurred during multipart upload initialization. Please check logs from Gen3 services")
+		return "", "", errors.New("Unknown error has occurred during multipart upload initialization. Please check logs from Gen3 services")
 	}
-	return msg.UploadID, msg.GUID, fileinfo.Filename, err
+	return msg.UploadID, msg.GUID, err
 }
 
 // GenerateMultipartPresignedURL helps sending requests to FENCE to get a presigned URL for a part during a multipart upload
@@ -178,7 +174,7 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 }
 
 // GeneratePresignedURL helps sending requests to FENCE and parsing the response
-func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName bool) (string, string, string, error) {
+func GeneratePresignedURL(filename string) (string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -186,23 +182,19 @@ func GeneratePresignedURL(uploadPath string, filePath string, includeSubDirName 
 	function.Config = configure
 	function.Request = request
 
-	fileinfo, err := processFilename(uploadPath, filePath, includeSubDirName)
-	if err != nil {
-		log.Println(err.Error())
-	}
 	endPointPostfix := "/user/data/upload"
-	purObject := InitRequestObject{Filename: fileinfo.Filename}
+	purObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(purObject)
 
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
 
 	if err != nil {
-		return "", "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
+		return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
 	}
 	if msg.URL == "" || msg.GUID == "" {
-		return "", "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
+		return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
 	}
-	return msg.URL, msg.GUID, fileinfo.Filename, err
+	return msg.URL, msg.GUID, err
 }
 
 // GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar for single part upload
@@ -310,7 +302,7 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 				log.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 				return
 			}
-			logs.AddToFailedLogMap(filePath, "", 0, false, true)
+			logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
 
 			if fi.Size() > MultipartFileSizeLimit {
 				log.Printf("The file size of %s has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s\n", fi.Name(), FormatSize(MultipartFileSizeLimit))
@@ -325,11 +317,14 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 	return singlepartFilePaths, multipartFilePaths
 }
 
-func processFilename(uploadPath string, filePath string, includeSubDirName bool) (FileInfo, error) {
+// ProcessFilename returns an FileInfo object which has the information about the path and name to be used for upload of a file
+func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool) (FileInfo, error) {
 	var err error
+	filePath, err = commonUtils.GetAbsolutePath(filePath)
 	filename := filepath.Base(filePath)
 	if includeSubDirName {
-		presentDirname := strings.TrimSuffix(commonUtils.ParseRootPath(uploadPath), commonUtils.PathSeparator+"*")
+		uploadPath, err = commonUtils.GetAbsolutePath(uploadPath)
+		presentDirname := strings.TrimSuffix(uploadPath, commonUtils.PathSeparator+"*")
 		subFilename := strings.TrimPrefix(filePath, presentDirname)
 		dir, _ := filepath.Split(subFilename)
 		if dir != "" && dir != commonUtils.PathSeparator {
@@ -343,6 +338,7 @@ func processFilename(uploadPath string, filePath string, includeSubDirName bool)
 }
 
 func getFullFilePath(filePath string, filename string) (string, error) {
+	filePath, err := commonUtils.GetAbsolutePath(filePath)
 	fi, err := os.Stat(filePath)
 	if err != nil {
 		log.Println(err)
@@ -390,13 +386,13 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	client := &http.Client{}
 	resp, err := client.Do(furObject.Request)
 	if err != nil {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, retryCount, false, true)
+		logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
 		logs.WriteToFailedLog()
 		furObject.Bar.Finish()
 		return errors.New("Error occurred during upload: " + err.Error())
 	}
 	if resp.StatusCode != 200 {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, retryCount, false, true)
+		logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
 		logs.WriteToFailedLog()
 		furObject.Bar.Finish()
 		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
@@ -445,29 +441,27 @@ func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *htt
 	return workers, respCh, errCh, batchFURSlice
 }
 
-func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
+func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
 	var guid string
-	var filename string
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, filename, err = GeneratePresignedURL(uploadPath, furObjects[i].FilePath, includeSubDirName)
+			respURL, guid, err = GeneratePresignedURL(furObjects[i].Filename)
 			if err != nil {
-				logs.AddToFailedLogMap(furObjects[i].FilePath, guid, 0, false, true)
+				logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
 				logs.WriteToFailedLog()
 				errCh <- err
 				continue
 			}
 			furObjects[i].PresignedURL = respURL
 			furObjects[i].GUID = guid
-			furObjects[i].Filename = filename
 		}
 		file, err := os.Open(furObjects[i].FilePath)
 		if err != nil {
-			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].GUID, 0, false, true)
+			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
 			logs.WriteToFailedLog()
 			errCh <- errors.New("File open error: " + err.Error())
 			continue
@@ -477,7 +471,7 @@ func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonU
 		furObjects[i], err = GenerateUploadRequest(furObjects[i], file)
 		if err != nil {
 			file.Close()
-			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].GUID, 0, false, true)
+			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
 			logs.WriteToFailedLog()
 			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
@@ -490,7 +484,7 @@ func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonU
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
 		for _, furObject := range furObjects {
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
+			logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 			logs.WriteToFailedLog()
 		}
 		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
@@ -506,12 +500,12 @@ func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonU
 				if furObject.Request != nil {
 					resp, err := client.Do(furObject.Request)
 					if err != nil {
-						logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 						logs.WriteToFailedLog()
 						errCh <- err
 					} else {
 						if resp.StatusCode != 200 {
-							logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
+							logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 							logs.WriteToFailedLog()
 						} else { // Succeeded
 							respCh <- resp
@@ -522,7 +516,7 @@ func batchUpload(uploadPath string, includeSubDirName bool, furObjects []commonU
 						}
 					}
 				} else if furObject.FilePath != "" {
-					logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
+					logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 					logs.WriteToFailedLog()
 				}
 			}

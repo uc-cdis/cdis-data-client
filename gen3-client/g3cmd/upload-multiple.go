@@ -86,7 +86,7 @@ func init() {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(uploadPath, false, batchFURObjects, workers, respCh, errCh)
+						batchUpload(batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
@@ -94,7 +94,7 @@ func init() {
 					file, err := os.Open(furObject.FilePath)
 					if err != nil {
 						log.Println("File open error: " + err.Error())
-						logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						continue
 					}
@@ -103,7 +103,7 @@ func init() {
 					furObject, err := GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
-						logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
+						logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue

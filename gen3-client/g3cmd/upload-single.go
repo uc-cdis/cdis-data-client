@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 
@@ -37,8 +37,9 @@ func init() {
 			if len(filePaths) == 1 {
 				filePath = filePaths[0]
 			}
+			filename := filepath.Base(filePath)
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				logs.AddToFailedLogMap(filePath, "", 0, false, true)
+				logs.AddToFailedLogMap(filePath, filename, "", 0, false, true)
 				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
@@ -48,7 +49,7 @@ func init() {
 
 			file, err := os.Open(filePath)
 			if err != nil {
-				logs.AddToFailedLogMap(filePath, "", 0, false, true)
+				logs.AddToFailedLogMap(filePath, filename, "", 0, false, true)
 				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
@@ -57,12 +58,12 @@ func init() {
 			}
 			defer file.Close()
 
-			furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: path.Base(filePath), GUID: guid}
+			furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filename, GUID: guid}
 
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
 				file.Close()
-				logs.AddToFailedLogMap(furObject.FilePath, furObject.GUID, 0, false, true)
+				logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 				logs.WriteToFailedLog()
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()

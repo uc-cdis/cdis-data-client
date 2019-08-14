@@ -11,8 +11,9 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
-func updateRetryObject(ro commonUtils.RetryObject, filePath string, guid string, retryCount int, isMultipart bool) {
+func updateRetryObject(ro commonUtils.RetryObject, filePath string, filename string, guid string, retryCount int, isMultipart bool) {
 	ro.FilePath = filePath
+	ro.Filename = filename
 	ro.GUID = guid
 	ro.RetryCount = retryCount
 	ro.Multipart = isMultipart
@@ -20,7 +21,7 @@ func updateRetryObject(ro commonUtils.RetryObject, filePath string, guid string,
 
 func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.RetryObject, err error, isMuted bool) {
 	ro.RetryCount++
-	logs.AddToFailedLogMap(ro.FilePath, ro.GUID, ro.RetryCount, ro.Multipart, isMuted)
+	logs.AddToFailedLogMap(ro.FilePath, ro.Filename, ro.GUID, ro.RetryCount, ro.Multipart, isMuted)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -43,9 +44,8 @@ func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.R
 	}
 }
 
-func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath string, includeSubDirName bool) {
+func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 	var guid string
-	var filename string
 	var presignedURL string
 	var err error
 	fmt.Println()
@@ -84,9 +84,10 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 		}
 
 		if ro.Multipart {
-			err = multipartUpload(uploadPath, ro.FilePath, includeSubDirName, ro.RetryCount)
+			fileInfo := FileInfo{FilePath: ro.FilePath, Filename: ro.Filename}
+			err = multipartUpload(fileInfo, ro.RetryCount)
 			if err != nil {
-				updateRetryObject(ro, ro.FilePath, ro.GUID, ro.RetryCount, true)
+				updateRetryObject(ro, ro.FilePath, ro.Filename, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
 				continue
 			} else { // succeeded
@@ -97,23 +98,23 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 				}
 			}
 		} else {
-			presignedURL, guid, filename, err = GeneratePresignedURL(uploadPath, ro.FilePath, includeSubDirName)
+			presignedURL, guid, err = GeneratePresignedURL(ro.Filename)
 			if err != nil {
-				updateRetryObject(ro, ro.FilePath, guid, ro.RetryCount, false)
+				updateRetryObject(ro, ro.FilePath, ro.Filename, guid, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, true)
 				continue
 			}
-			furObject := commonUtils.FileUploadRequestObject{FilePath: ro.FilePath, Filename: filename, GUID: guid, PresignedURL: presignedURL}
+			furObject := commonUtils.FileUploadRequestObject{FilePath: ro.FilePath, Filename: ro.Filename, GUID: guid, PresignedURL: presignedURL}
 			file, err := os.Open(ro.FilePath)
 			fi, err := file.Stat()
 			if err != nil {
-				updateRetryObject(ro, furObject.FilePath, furObject.GUID, ro.RetryCount, false)
+				updateRetryObject(ro, furObject.FilePath, furObject.Filename, furObject.GUID, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
 				continue
 			}
 			if fi.Size() > FileSizeLimit { // guard for files, always check file size during retry upload
-				updateRetryObject(ro, furObject.FilePath, guid, ro.RetryCount, true)
+				updateRetryObject(ro, furObject.FilePath, furObject.Filename, guid, ro.RetryCount, true)
 				err = fmt.Errorf("File size for %s is greater than the single part upload limit, will retry using multipart upload", furObject.Filename)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
@@ -122,7 +123,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
-				updateRetryObject(ro, furObject.FilePath, furObject.GUID, ro.RetryCount, false)
+				updateRetryObject(ro, furObject.FilePath, furObject.Filename, furObject.GUID, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
 				continue
@@ -130,7 +131,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 
 			err = uploadFile(furObject, ro.RetryCount)
 			if err != nil {
-				updateRetryObject(ro, furObject.FilePath, furObject.GUID, ro.RetryCount, false)
+				updateRetryObject(ro, furObject.FilePath, furObject.Filename, furObject.GUID, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
 				continue
@@ -149,22 +150,16 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject, uploadPath str
 
 func init() {
 	var failedLogPath string
-	var includeSubDirName bool
-	var uploadPath string
 	var retryUploadCmd = &cobra.Command{
 		Use:     "retry-upload",
 		Short:   "Retry upload file(s) to object storage.",
 		Long:    `Re-submit files found in a given failed log by using sequential (non-batching) uploading and exponential backoff.`,
 		Example: "For retrying file upload:\n./gen3-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
 		Run: func(cmd *cobra.Command, args []string) {
-			if includeSubDirName && uploadPath == "" {
-				fmt.Println("Error: in retry upload mode, you need to specify --uploadPath option to the parent directory of data files if you set --includeSubDirName=true")
-				return
-			}
 			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
 			logs.LoadFailedLogFile(failedLogPath)
 			logs.InitScoreBoard(MaxRetryCount)
-			retryUpload(logs.GetFailedLogMap(), uploadPath, includeSubDirName)
+			retryUpload(logs.GetFailedLogMap())
 			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},
@@ -172,7 +167,5 @@ func init() {
 
 	retryUploadCmd.Flags().StringVar(&failedLogPath, "failed-log-path", "", "The path to the failed log file.")
 	retryUploadCmd.MarkFlagRequired("failed-log-path")
-	retryUploadCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
-	retryUploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	RootCmd.AddCommand(retryUploadCmd)
 }

@@ -37,40 +37,40 @@ func retry(attempts int, filePath string, guid string, f func() error) (err erro
 	return fmt.Errorf("After %d attempts, last error: %s", attempts, err)
 }
 
-func multipartUpload(uploadPath string, filePath string, includeSubDirName bool, retryCount int) error {
-	file, err := os.Open(filePath)
+func multipartUpload(fileInfo FileInfo, retryCount int) error {
+	file, err := os.Open(fileInfo.FilePath)
 	defer file.Close()
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, "", retryCount, true, true)
-		err = fmt.Errorf("FAILED multipart upload for %s due to file open error: %s", filePath, err.Error())
+		logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, "", retryCount, true, true)
+		err = fmt.Errorf("FAILED multipart upload for %s due to file open error: %s", fileInfo.FilePath, err.Error())
 		return err
 	}
 
 	fi, err := file.Stat()
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, "", retryCount, true, true)
-		err = fmt.Errorf("FAILED multipart upload for %s: file stat error, file may be missing or unreadable because of permissions", fi.Name())
+		logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, "", retryCount, true, true)
+		err = fmt.Errorf("FAILED multipart upload for %s: file stat error, file may be missing or unreadable because of permissions", fileInfo.Filename)
 		return err
 	}
 
 	if fi.Size() > MultipartFileSizeLimit {
-		logs.AddToFailedLogMap(filePath, "", retryCount, true, true)
+		logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: the file size has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s", fi.Name(), FormatSize(MultipartFileSizeLimit))
 		return err
 	}
 
-	uploadID, guid, filename, err := InitMultipartUpload(uploadPath, filePath, includeSubDirName)
+	uploadID, guid, err := InitMultipartUpload(fileInfo.Filename)
 	if err != nil {
-		logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
-		err = fmt.Errorf("FAILED multipart upload for %s: %s", filename, err.Error())
+		logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+		err = fmt.Errorf("FAILED multipart upload for %s: %s", fileInfo.Filename, err.Error())
 		return err
 	}
 
-	key := guid + "/" + filename
+	key := guid + "/" + fileInfo.Filename
 	var parts []MultipartPartObject
 	numOfWorkers, numOfChunks, chunkSize := calculateChunksAndWorkers(fi.Size())
 	chunkIndexCh := make(chan int, numOfChunks)
-	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(filename + " ")
+	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fileInfo.Filename + " ")
 	bar.Start()
 
 	wg := sync.WaitGroup{}
@@ -80,18 +80,18 @@ func multipartUpload(uploadPath string, filePath string, includeSubDirName bool,
 			buf := make([]byte, chunkSize)
 			for chunkIndex := range chunkIndexCh {
 				var presignedURL string
-				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
+				err = retry(MaxRetryCount, fileInfo.FilePath, guid, func() (err error) {
 					presignedURL, err = GenerateMultipartPresignedURL(key, uploadID, chunkIndex)
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
+					logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
 					log.Println(err.Error())
 					continue
 				}
 
 				var n int
-				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
+				err = retry(MaxRetryCount, fileInfo.FilePath, guid, func() (err error) {
 					n, err = file.ReadAt(buf[:cap(buf)], int64((chunkIndex-1))*chunkSize)
 					buf = buf[:n]
 					if err == io.EOF { // finished reading
@@ -100,13 +100,13 @@ func multipartUpload(uploadPath string, filePath string, includeSubDirName bool,
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
+					logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
 					log.Println(err.Error())
 					continue
 				}
 
 				var eTag string
-				err = retry(MaxRetryCount, filePath, guid, func() (err error) {
+				err = retry(MaxRetryCount, fileInfo.FilePath, guid, func() (err error) {
 					req, err := http.NewRequest(http.MethodPut, presignedURL, bytes.NewReader(buf))
 					req.ContentLength = int64(n)
 					client := &http.Client{}
@@ -125,7 +125,7 @@ func multipartUpload(uploadPath string, filePath string, includeSubDirName bool,
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
+					logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
 					log.Println(err.Error())
 					continue
 				}
@@ -148,8 +148,8 @@ func multipartUpload(uploadPath string, filePath string, includeSubDirName bool,
 	bar.Finish()
 
 	if len(parts) != numOfChunks {
-		logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
-		err = fmt.Errorf("FAILED multipart upload for %s: Total number of received ETags doesn't match the total number of chunks", filename)
+		logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+		err = fmt.Errorf("FAILED multipart upload for %s: Total number of received ETags doesn't match the total number of chunks", fileInfo.Filename)
 		return err
 	}
 
@@ -158,14 +158,14 @@ func multipartUpload(uploadPath string, filePath string, includeSubDirName bool,
 	})
 
 	if err = CompleteMultipartUpload(key, uploadID, parts); err != nil {
-		logs.AddToFailedLogMap(filePath, guid, retryCount, true, true)
-		err = fmt.Errorf("FAILED multipart upload for %s: %s", filename, err.Error())
+		logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+		err = fmt.Errorf("FAILED multipart upload for %s: %s", fileInfo.Filename, err.Error())
 		return err
 	}
 
-	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", filePath, guid)
-	logs.DeleteFromFailedLogMap(filePath, true)
-	logs.WriteToSucceededLog(filePath, guid, true)
+	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", fileInfo.FilePath, guid)
+	logs.DeleteFromFailedLogMap(fileInfo.FilePath, true)
+	logs.WriteToSucceededLog(fileInfo.FilePath, guid, true)
 	logs.WriteToFailedLog()
 	return nil
 }
