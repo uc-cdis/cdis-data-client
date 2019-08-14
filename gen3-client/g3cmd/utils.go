@@ -9,7 +9,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -373,7 +372,7 @@ func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.F
 			continue
 		}
 
-		furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: path.Base(filePath), GUID: guid}
+		furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filepath.Base(filePath), GUID: guid}
 		furObjects = append(furObjects, furObject)
 	}
 	return furObjects
