@@ -49,19 +49,19 @@ func init() {
 			if batch {
 				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
 				for _, filePath := range singlepartFilePaths {
-					fileinfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
 						log.Println("Process filename error: " + err.Error())
 						continue
 					}
 					if len(batchFURObjects) < workers {
-						furObject := commonUtils.FileUploadRequestObject{FilePath: fileinfo.FilePath, Filename: fileinfo.Filename, GUID: ""}
+						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
 						batchUpload(batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
-						furObject := commonUtils.FileUploadRequestObject{FilePath: fileinfo.FilePath, Filename: fileinfo.Filename, GUID: ""}
+						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
@@ -91,20 +91,20 @@ func init() {
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
-					fileinfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
 					// The following flow is for singlepart upload flow
-					respURL, guid, err := GeneratePresignedURL(fileinfo.Filename)
+					respURL, guid, err := GeneratePresignedURL(fileInfo.Filename)
 					if err != nil {
-						logs.AddToFailedLogMap(fileinfo.FilePath, fileinfo.Filename, guid, 0, false, true)
+						logs.AddToFailedLogMap(fileInfo.FilePath, fileInfo.Filename, guid, 0, false, true)
 						log.Println(err.Error())
 						continue
 					}
-					furObject := commonUtils.FileUploadRequestObject{FilePath: fileinfo.FilePath, Filename: fileinfo.Filename, GUID: guid, PresignedURL: respURL}
+					furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: guid, PresignedURL: respURL}
 					furObject, err = GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
@@ -126,13 +126,13 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				log.Println("Multipart uploading....")
 				for _, filePath := range multipartFilePaths {
-					fileinfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
 					if err != nil {
 						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
-					err = multipartUpload(fileinfo, 0)
+					err = multipartUpload(fileInfo, 0)
 					if err != nil {
 						log.Println(err.Error())
 					} else {

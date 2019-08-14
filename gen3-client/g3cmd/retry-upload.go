@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -81,6 +82,12 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 			} else {
 				log.Println(err.Error())
 			}
+		}
+
+		if ro.Filename == "" {
+			filePath, _ := commonUtils.GetAbsolutePath(ro.FilePath)
+			filename := filepath.Base(filePath)
+			updateRetryObject(ro, filePath, filename, ro.GUID, ro.RetryCount, true)
 		}
 
 		if ro.Multipart {
