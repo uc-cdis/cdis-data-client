@@ -69,6 +69,8 @@ func ParseFilePaths(filePath string) ([]string, error) {
 		return nil, err
 	}
 
+	filePaths = cleanupHiddenFiles(filePaths)
+
 	for _, filePath := range filePaths {
 		func() {
 			file, err := os.Open(filePath)
@@ -88,13 +90,15 @@ func ParseFilePaths(filePath string) ([]string, error) {
 					}
 					if !fileInfo.IsDir() && !isHidden {
 						filePaths = append(filePaths, path)
+					} else if isHidden {
+						log.Printf("File %s is a hidden file and will be skipped\n", path)
 					}
 					return nil
 				})
 			}
 		}()
 	}
-	log.Println("Finish parsing all file paths for \"" + filePath + "\"")
+	log.Println("Finish parsing all file paths for \"" + fullFilePath + "\"")
 	return filePaths, err
 }
 
@@ -118,4 +122,23 @@ func AskForConfirmation(s string) bool {
 			return false
 		}
 	}
+}
+
+func cleanupHiddenFiles(filePaths []string) []string {
+	i := 0
+	for _, filePath := range filePaths {
+		isHidden, err := IsHidden(filePath)
+		if err != nil {
+			log.Println("Error occurred when checking hidden files: " + err.Error())
+			continue
+		}
+
+		if isHidden {
+			log.Printf("File %s is a hidden file and will be skipped\n", filePath)
+			continue
+		}
+		filePaths[i] = filePath
+		i++
+	}
+	return filePaths[:i]
 }

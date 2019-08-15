@@ -301,7 +301,7 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 				log.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 				return
 			}
-			logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+			logs.AddToFailedLogMap(filePath, filepath.Base(filePath), "", 0, false, true)
 
 			if fi.Size() > MultipartFileSizeLimit {
 				log.Printf("The file size of %s has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s\n", fi.Name(), FormatSize(MultipartFileSizeLimit))
@@ -325,12 +325,12 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool)
 		uploadPath, err = commonUtils.GetAbsolutePath(uploadPath)
 		presentDirname := strings.TrimSuffix(uploadPath, commonUtils.PathSeparator+"*")
 		subFilename := strings.TrimPrefix(filePath, presentDirname)
-		dir, _ := filepath.Split(subFilename)
+		dir, file := filepath.Split(subFilename)
 		if dir != "" && dir != commonUtils.PathSeparator {
 			filename = strings.TrimPrefix(subFilename, commonUtils.PathSeparator)
 			filename = strings.Replace(filename, commonUtils.PathSeparator, ".", -1)
 		} else {
-			err = errors.New("Include subdirectory names will only works if the file is under at least one subdirectory")
+			filename = file
 		}
 	}
 	return FileInfo{filePath, filename}, err

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
@@ -26,6 +27,7 @@ func init() {
 			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
 		Run: func(cmd *cobra.Command, args []string) {
 			logs.InitScoreBoard(MaxRetryCount)
+			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
 			if err != nil {
 				log.Fatalf("Error when parsing file paths: " + err.Error())
@@ -51,7 +53,7 @@ func init() {
 				for _, filePath := range singlepartFilePaths {
 					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+						logs.AddToFailedLogMap(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error: " + err.Error())
 						continue
 					}
@@ -80,20 +82,20 @@ func init() {
 				for _, filePath := range singlepartFilePaths {
 					file, err := os.Open(filePath)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+						logs.AddToFailedLogMap(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("File open error: " + err.Error())
 						continue
 					}
 
 					fi, err := file.Stat()
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+						logs.AddToFailedLogMap(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
 					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+						logs.AddToFailedLogMap(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
@@ -128,7 +130,7 @@ func init() {
 				for _, filePath := range multipartFilePaths {
 					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
 					if err != nil {
-						logs.AddToFailedLogMap(filePath, "", "", 0, false, true)
+						logs.AddToFailedLogMap(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
