@@ -30,6 +30,9 @@ func init() {
 			conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
 		},
 	}
+
+	configureCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
+	configureCmd.MarkFlagRequired("profile")
 	configureCmd.Flags().StringVar(&credFile, "cred", "", "Specify the credential file that you want to use")
 	configureCmd.MarkFlagRequired("cred")
 	configureCmd.Flags().StringVar(&apiEndpoint, "apiendpoint", "", "Specify the API endpoint of the data commons")

@@ -172,6 +172,8 @@ func init() {
 		},
 	}
 
+	retryUploadCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
+	retryUploadCmd.MarkFlagRequired("profile")
 	retryUploadCmd.Flags().StringVar(&failedLogPath, "failed-log-path", "", "The path to the failed log file.")
 	retryUploadCmd.MarkFlagRequired("failed-log-path")
 	RootCmd.AddCommand(retryUploadCmd)
