@@ -16,7 +16,7 @@ func init() {
 	var overwrite bool
 	var noPrompt bool
 
-	var downloadCmd = &cobra.Command{
+	var downloadSingleCmd = &cobra.Command{
 		Use:     "download-single",
 		Short:   "Download a single file from a GUID",
 		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
@@ -43,12 +43,13 @@ func init() {
 		},
 	}
 
-	downloadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
-	downloadCmd.MarkFlagRequired("guid")
-	downloadCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
-	downloadCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\"")
-	downloadCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
-	downloadCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation (default: false)")
-	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs (default: \"\")")
-	RootCmd.AddCommand(downloadCmd)
+	downloadSingleCmd.MarkFlagRequired("profile")
+	downloadSingleCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
+	downloadSingleCmd.MarkFlagRequired("guid")
+	downloadSingleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
+	downloadSingleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\"")
+	downloadSingleCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
+	downloadSingleCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation (default: false)")
+	downloadSingleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs (default: \"\")")
+	RootCmd.AddCommand(downloadSingleCmd)
 }
