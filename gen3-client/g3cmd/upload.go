@@ -17,7 +17,7 @@ func init() {
 	var batch bool
 	var forceMultipart bool
 	var numParallel int
-	var uploadNewCmd = &cobra.Command{
+	var uploadCmd = &cobra.Command{
 		Use:   "upload",
 		Short: "Upload file(s) to object storage.",
 		Long:  `Gets a presigned URL for each file and then uploads the specified file(s).`,
@@ -133,11 +133,11 @@ func init() {
 		},
 	}
 
-	uploadNewCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
-	uploadNewCmd.MarkFlagRequired("upload-path")
-	uploadNewCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
-	uploadNewCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
-	uploadNewCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
-	uploadNewCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
-	RootCmd.AddCommand(uploadNewCmd)
+	uploadCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
+	uploadCmd.MarkFlagRequired("upload-path")
+	uploadCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
+	uploadCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
+	uploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
+	uploadCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
+	RootCmd.AddCommand(uploadCmd)
 }
