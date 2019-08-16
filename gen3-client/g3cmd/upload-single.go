@@ -17,7 +17,7 @@ func init() {
 	var guid string
 	var filePath string
 
-	var uploadCmd = &cobra.Command{
+	var uploadSingleCmd = &cobra.Command{
 		Use:     "upload-single",
 		Short:   "Upload a single file to a GUID",
 		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
@@ -82,9 +82,11 @@ func init() {
 		},
 	}
 
-	uploadCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
-	uploadCmd.MarkFlagRequired("guid")
-	uploadCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
-	uploadCmd.MarkFlagRequired("file")
-	RootCmd.AddCommand(uploadCmd)
+	uploadSingleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
+	uploadSingleCmd.MarkFlagRequired("profile")
+	uploadSingleCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
+	uploadSingleCmd.MarkFlagRequired("guid")
+	uploadSingleCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
+	uploadSingleCmd.MarkFlagRequired("file")
+	RootCmd.AddCommand(uploadSingleCmd)
 }
