@@ -58,19 +58,19 @@ func processS3URLForFilename(presignedURL string, guid string, downloadPath stri
 	return guid + "_" + actualFilename
 }
 
-func validateFilenameFormat(downloadPath string, filenameFormat string, overwrite bool) {
+func validateFilenameFormat(downloadPath string, filenameFormat string, overwrite bool, noPrompt bool) {
 	if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
 		log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
 	}
 	if filenameFormat == "guid" || filenameFormat == "combined" {
 		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" will be overwritten!\n", downloadPath)
-		if !commonUtils.AskForConfirmation("Proceed?") {
+		if !noPrompt && !commonUtils.AskForConfirmation("Proceed?") {
 			log.Println("Aborted by user")
 			os.Exit(0)
 		}
 	} else if overwrite {
 		fmt.Printf("WARNING: flag \"overwrite\" was set to true in \"original\" mode, duplicated files under \"%s\" will be overwritten!\n", downloadPath)
-		if !commonUtils.AskForConfirmation("Proceed?") {
+		if !noPrompt && !commonUtils.AskForConfirmation("Proceed?") {
 			log.Println("Aborted by user")
 			os.Exit(0)
 		}
@@ -182,6 +182,7 @@ func init() {
 	var downloadPath string
 	var filenameFormat string
 	var overwrite bool
+	var noPrompt bool
 	var protocol string
 	var numParallel int
 
@@ -213,7 +214,7 @@ func init() {
 				downloadPath += "/"
 			}
 			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
-			validateFilenameFormat(downloadPath, filenameFormat, overwrite)
+			validateFilenameFormat(downloadPath, filenameFormat, overwrite, noPrompt)
 
 			var objects []ManifestObject
 			manifestBytes, err := ioutil.ReadFile(manifestPath)
@@ -239,6 +240,7 @@ func init() {
 	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
 	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
 	downloadMultipleCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
+	downloadMultipleCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation (default: false)")
 	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
 	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel (default: 1)")
 	RootCmd.AddCommand(downloadMultipleCmd)
