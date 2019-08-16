@@ -14,6 +14,7 @@ func init() {
 	var protocol string
 	var filenameFormat string
 	var overwrite bool
+	var noPrompt bool
 
 	var downloadCmd = &cobra.Command{
 		Use:     "download-single",
@@ -34,7 +35,7 @@ func init() {
 				downloadPath += "/"
 			}
 			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
-			validateFilenameFormat(downloadPath, filenameFormat, overwrite)
+			validateFilenameFormat(downloadPath, filenameFormat, overwrite, noPrompt)
 
 			guids := make([]string, 0)
 			guids = append(guids, guid)
@@ -47,6 +48,7 @@ func init() {
 	downloadCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
 	downloadCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\" (default: original)")
 	downloadCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
+	downloadCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation (default: false)")
 	downloadCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs (default: \"\")")
 	RootCmd.AddCommand(downloadCmd)
 }
