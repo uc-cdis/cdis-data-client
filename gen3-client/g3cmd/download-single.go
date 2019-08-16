@@ -43,6 +43,7 @@ func init() {
 		},
 	}
 
+	downloadSingleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
 	downloadSingleCmd.MarkFlagRequired("profile")
 	downloadSingleCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	downloadSingleCmd.MarkFlagRequired("guid")

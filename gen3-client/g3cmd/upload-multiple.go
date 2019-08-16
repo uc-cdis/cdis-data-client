@@ -120,6 +120,8 @@ func init() {
 		},
 	}
 
+	uploadMultipleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
+	uploadMultipleCmd.MarkFlagRequired("profile")
 	uploadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from. A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer for Common portal")
 	uploadMultipleCmd.MarkFlagRequired("manifest")
 	uploadMultipleCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")

@@ -82,6 +82,8 @@ func init() {
 		},
 	}
 
+	uploadSingleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
+	uploadSingleCmd.MarkFlagRequired("profile")
 	uploadSingleCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
 	uploadSingleCmd.MarkFlagRequired("guid")
 	uploadSingleCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")

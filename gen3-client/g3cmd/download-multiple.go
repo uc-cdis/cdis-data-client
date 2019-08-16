@@ -232,6 +232,8 @@ func init() {
 		},
 	}
 
+	downloadMultipleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
+	downloadMultipleCmd.MarkFlagRequired("profile")
 	downloadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from. A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer from a data common's portal")
 	downloadMultipleCmd.MarkFlagRequired("manifest")
 	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")

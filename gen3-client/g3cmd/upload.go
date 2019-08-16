@@ -133,6 +133,8 @@ func init() {
 		},
 	}
 
+	uploadCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
+	uploadCmd.MarkFlagRequired("profile")
 	uploadCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
 	uploadCmd.MarkFlagRequired("upload-path")
 	uploadCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
