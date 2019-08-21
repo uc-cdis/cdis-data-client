@@ -180,7 +180,6 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 			log.Printf("Error in getting download URL for object %s\n", guid)
 		} else {
 			filename, _ := askIndexDForFileInfo(guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
-			fmt.Println("WARNING: cannot parse URL to get actually filename, will use GUID as its filename by default.")
 			req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
 			// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
 			req.NoResume = true
