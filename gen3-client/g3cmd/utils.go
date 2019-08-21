@@ -172,7 +172,7 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 	return nil
 }
 
-// GeneratePresignedURL helps sending requests to FENCE and parsing the response
+// GeneratePresignedURL helps sending requests to FENCE and parsing the response in order to get presigned URL for the new upload flow
 func GeneratePresignedURL(filename string) (string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)

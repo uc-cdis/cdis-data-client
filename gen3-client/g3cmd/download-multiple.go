@@ -11,13 +11,51 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cavaliercoder/grab"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 
-	"github.com/cavaliercoder/grab"
 	"github.com/spf13/cobra"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
+
+func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat string, overwrite bool, renamedFiles *[]RenamedFileInfo) (string, int64) {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	endPointPostfix := "/index/index/" + guid
+	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+	if err != nil {
+		log.Println("Error occurred when querying filename from IndexD: " + err.Error())
+		log.Println("Using GUID for filename instead.")
+		return guid, 0
+
+	}
+
+	if filenameFormat == "guid" {
+		return guid, msg.Size
+	}
+
+	actualFilename := msg.FileName
+
+	if filenameFormat == "original" {
+		if overwrite {
+			return actualFilename, msg.Size
+		}
+		newFilename := processOriginalFilename(downloadPath, actualFilename)
+		if actualFilename != newFilename {
+			*renamedFiles = append(*renamedFiles, RenamedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
+		}
+		return newFilename, msg.Size
+	}
+	// filenameFormat == "combined"
+	combinedFilename := guid + "_" + actualFilename
+	return combinedFilename, msg.Size
+}
 
 func processOriginalFilename(downloadPath string, actualFilename string) string {
 	_, err := os.Stat(downloadPath + actualFilename)
@@ -35,27 +73,6 @@ func processOriginalFilename(downloadPath string, actualFilename string) string 
 		}
 		counter++
 	}
-}
-
-func processS3URLForFilename(presignedURL string, guid string, downloadPath string, filenameFormat string, overwrite bool, renamedFiles *[]RenamedFileInfo) string {
-	if filenameFormat == "guid" {
-		return guid
-	}
-	urlWithFilename := strings.Split(presignedURL, "?")[0]
-	splittedFilename := strings.Split(urlWithFilename, guid+"/")
-	actualFilename := splittedFilename[len(splittedFilename)-1]
-	if filenameFormat == "original" {
-		if overwrite {
-			return actualFilename
-		}
-		newFilename := processOriginalFilename(downloadPath, actualFilename)
-		if actualFilename != newFilename {
-			*renamedFiles = append(*renamedFiles, RenamedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
-		}
-		return newFilename
-	}
-	// filenameFormat == "combined"
-	return guid + "_" + actualFilename
 }
 
 func validateFilenameFormat(downloadPath string, filenameFormat string, overwrite bool, noPrompt bool) {
@@ -79,49 +96,7 @@ func validateFilenameFormat(downloadPath string, filenameFormat string, overwrit
 	}
 }
 
-func downloadFile(guids []string, downloadPath string, filenameFormat string, overwrite bool, protocol string, numParallel int) {
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	function := new(jwt.Functions)
-
-	function.Config = configure
-	function.Request = request
-
-	protocolText := ""
-	if protocol != "" {
-		protocolText = "?protocol=" + protocol
-	}
-
-	err := os.MkdirAll(downloadPath, 0766)
-	if err != nil {
-		log.Fatal("Cannot create folder \"" + downloadPath + "\"")
-	}
-
-	renamedFiles := make([]RenamedFileInfo, 0)
-
-	reqs := make([]*grab.Request, 0)
-	for _, guid := range guids {
-		endPointPostfix := "/user/data/download/" + guid + protocolText
-		msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
-
-		if err != nil {
-			log.Printf("Download error: %s\n", err)
-		} else if msg.URL == "" {
-			log.Printf("Error in getting download URL for object %s\n", guid)
-		} else {
-			filename := guid
-			if strings.Contains(msg.URL, "X-Amz-Signature") { // S3 presigned URL
-				filename = processS3URLForFilename(msg.URL, guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
-			} else {
-				fmt.Println("WARNING: cannot parse URL to get actually filename, will use GUID as its filename by default.")
-			}
-			req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
-			// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
-			req.NoResume = true
-			reqs = append(reqs, req)
-		}
-	}
-
+func batchDownload(numParallel int, reqs []*grab.Request) int {
 	client := grab.NewClient()
 	respch := client.DoBatch(numParallel, reqs...)
 
@@ -166,8 +141,59 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 	}
 
 	t.Stop()
+	return completed
+}
 
-	fmt.Printf("%d files downloaded.\n", len(reqs))
+func downloadFile(guids []string, downloadPath string, filenameFormat string, overwrite bool, protocol string, numParallel int) {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+
+	if numParallel < 1 {
+		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
+	}
+
+	protocolText := ""
+	if protocol != "" {
+		protocolText = "?protocol=" + protocol
+	}
+
+	err := os.MkdirAll(downloadPath, 0766)
+	if err != nil {
+		log.Fatalln("Cannot create folder \"" + downloadPath + "\"")
+	}
+
+	renamedFiles := make([]RenamedFileInfo, 0)
+
+	reqs := make([]*grab.Request, 0)
+	totalCompeleted := 0
+	for i, guid := range guids {
+		endPointPostfix := "/user/data/download/" + guid + protocolText
+		msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+
+		if err != nil {
+			log.Printf("Download error: %s\n", err)
+		} else if msg.URL == "" {
+			log.Printf("Error in getting download URL for object %s\n", guid)
+		} else {
+			filename, _ := askIndexDForFileInfo(guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
+			fmt.Println("WARNING: cannot parse URL to get actually filename, will use GUID as its filename by default.")
+			req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
+			// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
+			req.NoResume = true
+			reqs = append(reqs, req)
+		}
+
+		if len(reqs) == numParallel || i == len(guids)-1 {
+			totalCompeleted += batchDownload(numParallel, reqs)
+			reqs = make([]*grab.Request, 0)
+		}
+	}
+
+	fmt.Printf("%d files downloaded.\n", totalCompeleted)
 
 	if len(renamedFiles) > 0 {
 		fmt.Printf("\n%d files have been renamed as the following:\n", len(renamedFiles))
@@ -199,12 +225,6 @@ func init() {
 			function.Config = configure
 			function.Request = request
 
-			host, err := function.GetHost(profile, "")
-			if err != nil {
-				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
-			}
-			dataExplorerURL := host.Scheme + "://" + host.Host + "/explorer"
-
 			downloadPath = commonUtils.ParseRootPath(downloadPath)
 			if !strings.HasSuffix(downloadPath, "/") {
 				downloadPath += "/"
@@ -216,7 +236,7 @@ func init() {
 			manifestBytes, err := ioutil.ReadFile(manifestPath)
 			if err != nil {
 				log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
-				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
+				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer from a data common's portal")
 			}
 			json.Unmarshal(manifestBytes, &objects)
 

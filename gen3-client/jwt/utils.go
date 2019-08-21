@@ -19,6 +19,8 @@ type JsonMessage struct {
 	GUID         string `json:"guid"`
 	UploadID     string `json:"uploadId"`
 	PresignedURL string `json:"presigned_url"`
+	FileName     string `json:"file_name"`
+	Size         int64  `json:"size"`
 }
 
 type DoRequest func(*http.Response) *http.Response
