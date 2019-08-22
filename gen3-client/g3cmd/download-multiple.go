@@ -19,7 +19,7 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat string, overwrite bool, renamedFiles *[]RenamedFileInfo) (string, int64) {
+func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedFileInfo) (string, int64) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -43,7 +43,7 @@ func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat strin
 	actualFilename := msg.FileName
 
 	if filenameFormat == "original" {
-		if overwrite {
+		if !rename {
 			return actualFilename, msg.Size
 		}
 		newFilename := processOriginalFilename(downloadPath, actualFilename)
@@ -75,24 +75,24 @@ func processOriginalFilename(downloadPath string, actualFilename string) string 
 	}
 }
 
-func validateFilenameFormat(downloadPath string, filenameFormat string, overwrite bool, noPrompt bool) {
+func validateFilenameFormat(downloadPath string, filenameFormat string, rename bool, noPrompt bool) {
 	if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
 		log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
 	}
 	if filenameFormat == "guid" || filenameFormat == "combined" {
-		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" will be overwritten!\n", downloadPath)
+		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" may be overwritten\n", downloadPath)
 		if !noPrompt && !commonUtils.AskForConfirmation("Proceed?") {
 			log.Println("Aborted by user")
 			os.Exit(0)
 		}
-	} else if overwrite {
-		fmt.Printf("WARNING: flag \"overwrite\" was set to true in \"original\" mode, duplicated files under \"%s\" will be overwritten!\n", downloadPath)
+	} else if !rename {
+		fmt.Printf("WARNING: flag \"rename\" was set to false in \"original\" mode, duplicated files under \"%s\" may be overwritten\n", downloadPath)
 		if !noPrompt && !commonUtils.AskForConfirmation("Proceed?") {
 			log.Println("Aborted by user")
 			os.Exit(0)
 		}
 	} else {
-		fmt.Printf("NOTICE: flag \"overwrite\" was set to false in \"original\" mode, duplicated files under \"%s\" will be renamed by appending a counter value to the original filenames!\n", downloadPath)
+		fmt.Printf("NOTICE: flag \"rename\" was set to true in \"original\" mode, duplicated files under \"%s\" will be renamed by appending a counter value to the original filenames\n", downloadPath)
 	}
 }
 
@@ -146,7 +146,7 @@ func batchDownload(numParallel int, reqs []*grab.Request) int {
 	return succeeded
 }
 
-func downloadFile(guids []string, downloadPath string, filenameFormat string, overwrite bool, protocol string, numParallel int, skipExisting bool) {
+func downloadFile(guids []string, downloadPath string, filenameFormat string, rename bool, protocol string, numParallel int, skipExisting bool) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -169,26 +169,30 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 	reqs := make([]*grab.Request, 0)
 	totalCompeleted := 0
 	for i, guid := range guids {
-		endPointPostfix := "/user/data/download/" + guid + protocolText
-		msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+		filename, filesize := askIndexDForFileInfo(guid, downloadPath, filenameFormat, rename, &renamedFiles)
 
-		if err != nil {
-			log.Printf("Download error: %s\n", err)
-		} else if msg.URL == "" {
-			log.Printf("Error in getting download URL for object %s\n", guid)
-		} else {
-			filename, _ := askIndexDForFileInfo(guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
-			req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
-			// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
-			// req.NoResume = false
-			// req.SkipExisting = skipExisting
-			reqs = append(reqs, req)
-		}
+		/*
+			endPointPostfix := "/user/data/download/" + guid + protocolText
+			msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
-		if len(reqs) == numParallel || i == len(guids)-1 {
-			totalCompeleted += batchDownload(numParallel, reqs)
-			reqs = make([]*grab.Request, 0)
-		}
+			if err != nil {
+				log.Printf("Download error: %s\n", err)
+			} else if msg.URL == "" {
+				log.Printf("Error in getting download URL for object %s\n", guid)
+			} else {
+				filename, _ := askIndexDForFileInfo(guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
+				req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
+				// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
+				// req.NoResume = false
+				// req.SkipExisting = skipExisting
+				reqs = append(reqs, req)
+			}
+
+			if len(reqs) == numParallel || i == len(guids)-1 {
+				totalCompeleted += batchDownload(numParallel, reqs)
+				reqs = make([]*grab.Request, 0)
+			}
+		*/
 	}
 
 	fmt.Printf("%d files downloaded.\n", totalCompeleted)
@@ -205,11 +209,11 @@ func init() {
 	var manifestPath string
 	var downloadPath string
 	var filenameFormat string
-	var overwrite bool
+	var rename bool
 	var noPrompt bool
 	var protocol string
 	var numParallel int
-	var skipExisting bool
+	var skipCompleted bool
 
 	var downloadMultipleCmd = &cobra.Command{
 		Use:     "download-multiple",
@@ -233,7 +237,7 @@ func init() {
 				downloadPath += "/"
 			}
 			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
-			validateFilenameFormat(downloadPath, filenameFormat, overwrite, noPrompt)
+			validateFilenameFormat(downloadPath, filenameFormat, rename, noPrompt)
 
 			var objects []ManifestObject
 			manifestBytes, err := ioutil.ReadFile(manifestPath)
@@ -251,7 +255,7 @@ func init() {
 					log.Println("Download error: empty object_id (GUID)")
 				}
 			}
-			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, numParallel, skipExisting)
+			downloadFile(guids, downloadPath, filenameFormat, rename, protocol, numParallel, skipCompleted)
 		},
 	}
 
@@ -261,10 +265,10 @@ func init() {
 	downloadMultipleCmd.MarkFlagRequired("manifest")
 	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
 	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\"")
-	downloadMultipleCmd.Flags().BoolVar(&overwrite, "overwrite", false, "Only useful when \"--filename-format=original\", will overwrite any duplicates in \"download-path\" if set to true, will rename file by appending a counter value to its filename otherwise (default: false)")
-	downloadMultipleCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation (default: false)")
-	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
+	downloadMultipleCmd.Flags().BoolVar(&rename, "rename", false, "Only useful when \"--filename-format=original\", will rename file by appending a counter value to its filename if set to true, otherwise the same filename will be used")
+	downloadMultipleCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation")
+	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
 	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel")
-	downloadMultipleCmd.Flags().BoolVar(&skipExisting, "skip-existing", false, "If set to true, will check for filename and size before download and skip any files in \"download-path\" that matches both")
+	downloadMultipleCmd.Flags().BoolVar(&skipCompleted, "skip-completed", false, "If set to true, will check for filename and size before download and skip any files in \"download-path\" that matches both")
 	RootCmd.AddCommand(downloadMultipleCmd)
 }
