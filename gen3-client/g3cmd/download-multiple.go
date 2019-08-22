@@ -103,6 +103,7 @@ func batchDownload(numParallel int, reqs []*grab.Request) int {
 	t := time.NewTicker(200 * time.Millisecond)
 
 	completed := 0
+	succeeded := 0
 	inProgress := 0
 	responses := make([]*grab.Response, 0)
 	for completed < len(reqs) {
@@ -123,6 +124,7 @@ func batchDownload(numParallel int, reqs []*grab.Request) int {
 						fmt.Fprintf(os.Stderr, "Error downloading %s: %v\n", resp.Request.URL(), resp.Err())
 					} else {
 						fmt.Printf("Finished %s %d / %d bytes (%d%%)\n", resp.Filename, resp.BytesComplete(), resp.Size, int(100*resp.Progress()))
+						succeeded++
 					}
 
 					responses[i] = nil
@@ -141,20 +143,16 @@ func batchDownload(numParallel int, reqs []*grab.Request) int {
 	}
 
 	t.Stop()
-	return completed
+	return succeeded
 }
 
-func downloadFile(guids []string, downloadPath string, filenameFormat string, overwrite bool, protocol string, numParallel int) {
+func downloadFile(guids []string, downloadPath string, filenameFormat string, overwrite bool, protocol string, numParallel int, skipExisting bool) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
 
 	function.Config = configure
 	function.Request = request
-
-	if numParallel < 1 {
-		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
-	}
 
 	protocolText := ""
 	if protocol != "" {
@@ -182,7 +180,8 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, ov
 			filename, _ := askIndexDForFileInfo(guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
 			req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
 			// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
-			req.NoResume = true
+			// req.NoResume = false
+			// req.SkipExisting = skipExisting
 			reqs = append(reqs, req)
 		}
 
@@ -210,6 +209,7 @@ func init() {
 	var noPrompt bool
 	var protocol string
 	var numParallel int
+	var skipExisting bool
 
 	var downloadMultipleCmd = &cobra.Command{
 		Use:     "download-multiple",
@@ -223,6 +223,10 @@ func init() {
 
 			function.Config = configure
 			function.Request = request
+
+			if numParallel < 1 {
+				log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
+			}
 
 			downloadPath = commonUtils.ParseRootPath(downloadPath)
 			if !strings.HasSuffix(downloadPath, "/") {
@@ -247,7 +251,7 @@ func init() {
 					log.Println("Download error: empty object_id (GUID)")
 				}
 			}
-			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, numParallel)
+			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, numParallel, skipExisting)
 		},
 	}
 
@@ -261,5 +265,6 @@ func init() {
 	downloadMultipleCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation (default: false)")
 	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3 (default: \"\")")
 	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel")
+	downloadMultipleCmd.Flags().BoolVar(&skipExisting, "skip-existing", false, "If set to true, will check for filename and size before download and skip any files in \"download-path\" that matches both")
 	RootCmd.AddCommand(downloadMultipleCmd)
 }

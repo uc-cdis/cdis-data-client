@@ -39,7 +39,7 @@ func init() {
 
 			guids := make([]string, 0)
 			guids = append(guids, guid)
-			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, 1)
+			downloadFile(guids, downloadPath, filenameFormat, overwrite, protocol, 1, false)
 		},
 	}
 
