@@ -2,24 +2,27 @@ package g3cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/cavaliercoder/grab"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedFileInfo) (string, int64) {
+func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -32,8 +35,10 @@ func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat strin
 	if err != nil {
 		log.Println("Error occurred when querying filename from IndexD: " + err.Error())
 		log.Println("Using GUID for filename instead.")
+		if filenameFormat != "guid" {
+			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+		}
 		return guid, 0
-
 	}
 
 	if filenameFormat == "guid" {
@@ -48,7 +53,7 @@ func askIndexDForFileInfo(guid string, downloadPath string, filenameFormat strin
 		}
 		newFilename := processOriginalFilename(downloadPath, actualFilename)
 		if actualFilename != newFilename {
-			*renamedFiles = append(*renamedFiles, RenamedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
+			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
 		}
 		return newFilename, msg.Size
 	}
@@ -96,63 +101,115 @@ func validateFilenameFormat(downloadPath string, filenameFormat string, rename b
 	}
 }
 
-func batchDownload(numParallel int, reqs []*grab.Request) int {
-	client := grab.NewClient()
-	respch := client.DoBatch(numParallel, reqs...)
-
-	t := time.NewTicker(200 * time.Millisecond)
-
-	completed := 0
-	succeeded := 0
-	inProgress := 0
-	responses := make([]*grab.Response, 0)
-	for completed < len(reqs) {
-		select {
-		case resp := <-respch:
-			if resp != nil {
-				responses = append(responses, resp)
-			}
-
-		case <-t.C:
-			if inProgress > 0 {
-				fmt.Printf("\033[%dA\033[K", inProgress)
-			}
-
-			for i, resp := range responses {
-				if resp != nil && resp.IsComplete() {
-					if resp.Err() != nil {
-						fmt.Fprintf(os.Stderr, "Error downloading %s: %v\n", resp.Request.URL(), resp.Err())
-					} else {
-						fmt.Printf("Finished %s %d / %d bytes (%d%%)\n", resp.Filename, resp.BytesComplete(), resp.Size, int(100*resp.Progress()))
-						succeeded++
-					}
-
-					responses[i] = nil
-					completed++
-				}
-			}
-
-			inProgress = 0
-			for _, resp := range responses {
-				if resp != nil {
-					inProgress++
-					fmt.Printf("Downloading %s %d / %d bytes (%d%%)\033[K\n", resp.Filename, resp.BytesComplete(), resp.Size, int(100*resp.Progress()))
-				}
-			}
+func validateLocalFileStat(downloadPath string, filename string, filesize int64, skipCompleted bool) commonUtils.FileDownloadResponseObject {
+	fi, err := os.Stat(downloadPath + filename) // check filename for local existence
+	if err != nil {
+		if os.IsNotExist(err) {
+			return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename} // no local file, normal full length download
 		}
+		log.Printf("Error occurred when getting information for file \"%s\": %s\n", downloadPath+filename, err.Error())
+		log.Println("Will try to download the whole file")
+		return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename} // errorred when trying to get local FI, normal full length download
 	}
 
-	t.Stop()
+	// have existing local file and may want to skip, check more conditions
+	if !skipCompleted {
+		return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Overwrite: true} // not skipping any local files, normal full length download
+	}
+
+	localFilesize := fi.Size()
+	if localFilesize == filesize {
+		return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Skip: true} // both filename and filesize matches, consider as completed
+	}
+	if localFilesize > filesize {
+		return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Overwrite: true} // local filesize greater than INDEXD record, overwrite local existing
+	}
+	// local filesize greater less than INDEXD record, try ranged download
+	return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Range: filesize - localFilesize}
+}
+
+func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
+	bars := make([]*pb.ProgressBar, 0)
+	fdrs := make([]*commonUtils.FileDownloadResponseObject, 0)
+	for _, fdrObject := range batchFDRSlice {
+		err := GetDownloadResponse(&fdrObject, protocolText)
+		if err != nil {
+			errCh <- err
+			continue
+		}
+
+		fileFlag := os.O_CREATE | os.O_WRONLY
+		if fdrObject.Range != 0 {
+			fileFlag = os.O_APPEND | os.O_WRONLY
+		} else if fdrObject.Overwrite {
+			fileFlag = os.O_TRUNC | os.O_WRONLY
+		}
+
+		if fileFlag == os.O_CREATE|os.O_WRONLY {
+			log.Println("")
+		}
+		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0644)
+		if err != nil {
+			errCh <- errors.New("Error occurred during opening local file: " + err.Error())
+			continue
+		}
+		defer file.Close()
+		defer fdrObject.Response.Body.Close()
+		bar := pb.New64(fdrObject.Response.ContentLength).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fdrObject.Filename + " ")
+		writer := io.MultiWriter(file, bar)
+		bars = append(bars, bar)
+		fdrObject.Writer = writer
+		fdrs = append(fdrs, &fdrObject)
+	}
+
+	fdrCh := make(chan *commonUtils.FileDownloadResponseObject, len(fdrs))
+	pool, err := pb.StartPool(bars...)
+	if err != nil {
+		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
+		return 0
+	}
+
+	wg := sync.WaitGroup{}
+	succeeded := 0
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			for fdr := range fdrCh {
+				if _, err = io.Copy(fdr.Writer, fdr.Response.Body); err != nil {
+					errCh <- errors.New("io.Copy error: " + err.Error())
+					return
+				}
+				succeeded++
+			}
+			wg.Done()
+		}()
+	}
+
+	for _, fdr := range fdrs {
+		fdrCh <- fdr
+	}
+	close(fdrCh)
+
+	wg.Wait()
+	pool.Stop()
 	return succeeded
 }
 
-func downloadFile(guids []string, downloadPath string, filenameFormat string, rename bool, protocol string, numParallel int, skipExisting bool) {
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	function := new(jwt.Functions)
+func downloadFile(guids []string, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) {
+	if numParallel < 1 {
+		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
+	}
 
-	function.Config = configure
-	function.Request = request
+	downloadPath = commonUtils.ParseRootPath(downloadPath)
+	if !strings.HasSuffix(downloadPath, "/") {
+		downloadPath += "/"
+	}
+	filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
+	if (filenameFormat == "guid" || filenameFormat == "combined") && rename {
+		fmt.Println("NOTICE: flag \"rename\" only works if flag \"filename-format\" is \"original\"")
+		rename = false
+	}
+	validateFilenameFormat(downloadPath, filenameFormat, rename, noPrompt)
 
 	protocolText := ""
 	if protocol != "" {
@@ -164,35 +221,40 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 		log.Fatalln("Cannot create folder \"" + downloadPath + "\"")
 	}
 
-	renamedFiles := make([]RenamedFileInfo, 0)
+	renamedFiles := make([]RenamedOrSkippedFileInfo, 0)
+	skippedFiles := make([]RenamedOrSkippedFileInfo, 0)
+	fdrObjects := make([]commonUtils.FileDownloadResponseObject, 0)
 
-	reqs := make([]*grab.Request, 0)
-	totalCompeleted := 0
-	for i, guid := range guids {
+	for _, guid := range guids {
+		var fdrObject commonUtils.FileDownloadResponseObject
 		filename, filesize := askIndexDForFileInfo(guid, downloadPath, filenameFormat, rename, &renamedFiles)
+		fdrObject = commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename}
+		if !rename {
+			fdrObject = validateLocalFileStat(downloadPath, filename, filesize, skipCompleted)
+		}
+		fdrObject.GUID = guid
+		fdrObjects = append(fdrObjects, fdrObject)
+	}
 
-		/*
-			endPointPostfix := "/user/data/download/" + guid + protocolText
-			msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+	totalCompeleted := 0
+	workers, _, errCh, _ := initBatchUploadChannels(numParallel, len(fdrObjects))
+	batchFDRSlice := make([]commonUtils.FileDownloadResponseObject, 0)
+	for i, fdrObject := range fdrObjects {
+		if fdrObject.Skip {
+			skippedFiles = append(skippedFiles, RenamedOrSkippedFileInfo{GUID: fdrObject.GUID, OldFilename: fdrObject.Filename})
+			continue
+		}
 
-			if err != nil {
-				log.Printf("Download error: %s\n", err)
-			} else if msg.URL == "" {
-				log.Printf("Error in getting download URL for object %s\n", guid)
-			} else {
-				filename, _ := askIndexDForFileInfo(guid, downloadPath, filenameFormat, overwrite, &renamedFiles)
-				req, _ := grab.NewRequest(downloadPath+filename, msg.URL)
-				// NoResume specifies that a partially completed download will be restarted without attempting to resume any existing file
-				// req.NoResume = false
-				// req.SkipExisting = skipExisting
-				reqs = append(reqs, req)
-			}
-
-			if len(reqs) == numParallel || i == len(guids)-1 {
-				totalCompeleted += batchDownload(numParallel, reqs)
-				reqs = make([]*grab.Request, 0)
-			}
-		*/
+		if len(batchFDRSlice) < workers {
+			batchFDRSlice = append(batchFDRSlice, fdrObject)
+		} else {
+			totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh)
+			batchFDRSlice = make([]commonUtils.FileDownloadResponseObject, 0)
+			batchFDRSlice = append(batchFDRSlice, fdrObject)
+		}
+		if i == len(fdrObjects)-1 { // download remainders
+			totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh)
+		}
 	}
 
 	fmt.Printf("%d files downloaded.\n", totalCompeleted)
@@ -202,6 +264,15 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 		for _, rfi := range renamedFiles {
 			fmt.Printf("File \"%s\" (GUID %s) has been renamed as: %s\n", rfi.OldFilename, rfi.GUID, rfi.NewFilename)
 		}
+	}
+	if len(skippedFiles) > 0 {
+		fmt.Printf("\n%d files have been skipped:\n", len(skippedFiles))
+		for _, sfi := range skippedFiles {
+			fmt.Printf("File \"%s\" (GUID %s) has been skipped\n", sfi.OldFilename, sfi.GUID)
+		}
+	}
+	if len(errCh) > 0 {
+		fmt.Printf("\n%d files have errorred during downloading\n", len(errCh))
 	}
 }
 
@@ -221,23 +292,6 @@ func init() {
 		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then download all of them.`,
 		Example: `./gen3-client download-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
-			request := new(jwt.Request)
-			configure := new(jwt.Configure)
-			function := new(jwt.Functions)
-
-			function.Config = configure
-			function.Request = request
-
-			if numParallel < 1 {
-				log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
-			}
-
-			downloadPath = commonUtils.ParseRootPath(downloadPath)
-			if !strings.HasSuffix(downloadPath, "/") {
-				downloadPath += "/"
-			}
-			filenameFormat = strings.ToLower(strings.TrimSpace(filenameFormat))
-			validateFilenameFormat(downloadPath, filenameFormat, rename, noPrompt)
 
 			var objects []ManifestObject
 			manifestBytes, err := ioutil.ReadFile(manifestPath)
@@ -255,7 +309,7 @@ func init() {
 					log.Println("Download error: empty object_id (GUID)")
 				}
 			}
-			downloadFile(guids, downloadPath, filenameFormat, rename, protocol, numParallel, skipCompleted)
+			downloadFile(guids, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
 		},
 	}
 

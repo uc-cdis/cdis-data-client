@@ -3,6 +3,7 @@ package commonUtils
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -28,6 +29,20 @@ type FileUploadRequestObject struct {
 	PresignedURL string
 	Request      *http.Request
 	Bar          *pb.ProgressBar
+}
+
+// FileDownloadResponseObject defines a object for file download
+type FileDownloadResponseObject struct {
+	DownloadPath string
+	Filename     string
+	GUID         string
+	URL          string
+	Range        int64
+	Overwrite    bool
+	Skip         bool
+	Error        bool
+	Response     *http.Response
+	Writer       io.Writer
 }
 
 // RetryObject defines a object for retry upload

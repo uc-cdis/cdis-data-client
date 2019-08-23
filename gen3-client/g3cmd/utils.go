@@ -59,8 +59,8 @@ type FileInfo struct {
 	Filename string
 }
 
-// RenamedFileInfo is a helper struct for recording renamed files
-type RenamedFileInfo struct {
+// RenamedOrSkippedFileInfo is a helper struct for recording renamed or skipped files
+type RenamedOrSkippedFileInfo struct {
 	GUID        string
 	OldFilename string
 	NewFilename string
@@ -169,6 +169,67 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 	if err != nil {
 		return errors.New("Error has occurred during completing multipart upload, detailed error message: " + err.Error())
 	}
+	return nil
+}
+
+// GetDownloadResponse helps grabbing a response for downloading a file specified with GUID
+func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, protocolText string) error {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+	endPointPostfix := "/user/data/download/" + fdrObject.GUID + protocolText
+	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+
+	if err != nil || msg.URL == "" {
+		errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
+		if err != nil {
+			errorMsg += "\n Details of error: " + err.Error() + "\n"
+		}
+		fdrObject.Error = true
+		return errors.New(errorMsg)
+	}
+
+	fdrObject.URL = msg.URL
+	if fdrObject.Range != 0 && !strings.Contains(fdrObject.URL, "X-Amz-Signature") && !strings.Contains(fdrObject.URL, "X-Goog-Signature") { // Not S3 or GS URLs and we want resume, send HEAD req first to check if server supports range
+		resp, err := http.Head(fdrObject.URL)
+		if err != nil {
+			errorMsg := "Error occurred when sending HEAD req to URL " + fdrObject.URL
+			errorMsg += "\n Details of error: " + err.Error() + "\n"
+			fdrObject.Error = true
+			return errors.New(errorMsg)
+		}
+		if resp.Header.Get("Accept-Ranges") != "bytes" { // server does not support range, download without range header
+			fdrObject.Range = 0
+		}
+	}
+	req, err := http.NewRequest(http.MethodGet, fdrObject.URL, nil)
+	if err != nil {
+		errorMsg := "Error occurred when creating GET req for URL " + fdrObject.URL
+		errorMsg += "\n Details of error: " + err.Error() + "\n"
+		fdrObject.Error = true
+		return errors.New(errorMsg)
+	}
+	if fdrObject.Range != 0 {
+		req.Header.Set("Range", "bytes="+strconv.FormatInt(fdrObject.Range, 10)+"-")
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
+		errorMsg += "\n Details of error: " + err.Error() + "\n"
+		fdrObject.Error = true
+		return errors.New(errorMsg)
+	}
+	if resp.StatusCode != 200 {
+		errorMsg := "Got a non-200 response when doing GET req for URL " + fdrObject.URL
+		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode) + "\n"
+		fdrObject.Error = true
+		return errors.New(errorMsg)
+	}
+	fdrObject.Response = resp
 	return nil
 }
 
