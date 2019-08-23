@@ -138,17 +138,18 @@ func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, proto
 			continue
 		}
 
-		fileFlag := os.O_CREATE | os.O_WRONLY
+		fileFlag := os.O_CREATE | os.O_RDWR
 		if fdrObject.Range != 0 {
-			fileFlag = os.O_APPEND | os.O_WRONLY
+			fileFlag = os.O_APPEND | os.O_RDWR
 		} else if fdrObject.Overwrite {
-			fileFlag = os.O_TRUNC | os.O_WRONLY
+			fileFlag = os.O_TRUNC | os.O_RDWR
 		}
 
-		if fileFlag == os.O_CREATE|os.O_WRONLY {
-			log.Println("")
+		subDir := filepath.Dir(fdrObject.Filename)
+		if subDir != "." && subDir != "/" {
+			os.MkdirAll(fdrObject.DownloadPath+subDir, 0766)
 		}
-		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0644)
+		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0766)
 		if err != nil {
 			errCh <- errors.New("Error occurred during opening local file: " + err.Error())
 			continue
