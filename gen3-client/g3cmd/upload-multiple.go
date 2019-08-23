@@ -86,7 +86,7 @@ func init() {
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
-					if i == len(furObjects)-1 { // upload reminders
+					if i == len(furObjects)-1 { // upload remainders
 						batchUpload(batchFURObjects, workers, respCh, errCh)
 					}
 				} else {
