@@ -77,7 +77,7 @@ func init() {
 				workers, respCh, errCh, batchFURObjects = initBatchUploadChannels(numParallel, len(objects))
 			}
 
-			for _, furObject := range furObjects {
+			for i, furObject := range furObjects {
 				if batch {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
@@ -85,6 +85,9 @@ func init() {
 						batchUpload(batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
+					}
+					if i == len(furObjects)-1 { // upload reminders
+						batchUpload(batchFURObjects, workers, respCh, errCh)
 					}
 				} else {
 					file, err := os.Open(furObject.FilePath)
