@@ -130,7 +130,7 @@ func validateLocalFileStat(downloadPath string, filename string, filesize int64,
 
 func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
 	bars := make([]*pb.ProgressBar, 0)
-	fdrs := make([]*commonUtils.FileDownloadResponseObject, 0)
+	fdrs := make([]commonUtils.FileDownloadResponseObject, 0)
 	for _, fdrObject := range batchFDRSlice {
 		err := GetDownloadResponse(&fdrObject, protocolText)
 		if err != nil {
@@ -160,10 +160,10 @@ func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, proto
 		writer := io.MultiWriter(file, bar)
 		bars = append(bars, bar)
 		fdrObject.Writer = writer
-		fdrs = append(fdrs, &fdrObject)
+		fdrs = append(fdrs, fdrObject)
 	}
 
-	fdrCh := make(chan *commonUtils.FileDownloadResponseObject, len(fdrs))
+	fdrCh := make(chan commonUtils.FileDownloadResponseObject, len(fdrs))
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
 		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
