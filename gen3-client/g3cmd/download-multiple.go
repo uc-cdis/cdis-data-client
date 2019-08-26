@@ -152,10 +152,10 @@ func validateLocalFileStat(downloadPath string, filename string, filesize int64,
 		return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Skip: true} // both filename and filesize matches, consider as completed
 	}
 	if localFilesize > filesize {
-		return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Overwrite: true} // local filesize greater than INDEXD record, overwrite local existing
+		return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Overwrite: true} // local filesize is greater than INDEXD record, overwrite local existing
 	}
-	// local filesize greater less than INDEXD record, try ranged download
-	return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Range: filesize - localFilesize}
+	// local filesize is less than INDEXD record, try ranged download
+	return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Range: localFilesize}
 }
 
 func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
@@ -177,7 +177,7 @@ func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, proto
 
 		subDir := filepath.Dir(fdrObject.Filename)
 		if subDir != "." && subDir != "/" {
-			os.MkdirAll(fdrObject.DownloadPath+subDir, 0666)
+			os.MkdirAll(fdrObject.DownloadPath+subDir, 0766)
 		}
 		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0666)
 		if err != nil {
@@ -186,7 +186,8 @@ func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, proto
 		}
 		defer file.Close()
 		defer fdrObject.Response.Body.Close()
-		bar := pb.New64(fdrObject.Response.ContentLength).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fdrObject.Filename + " ")
+		bar := pb.New64(fdrObject.Response.ContentLength + fdrObject.Range).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fdrObject.Filename + " ")
+		bar.Set64(fdrObject.Range)
 		writer := io.MultiWriter(file, bar)
 		bars = append(bars, bar)
 		fdrObject.Writer = writer

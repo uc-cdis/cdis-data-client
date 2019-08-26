@@ -223,7 +223,7 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 		fdrObject.Error = true
 		return errors.New(errorMsg)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 200 && resp.StatusCode != 206 {
 		errorMsg := "Got a non-200 response when doing GET req for URL " + fdrObject.URL
 		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode) + "\n"
 		fdrObject.Error = true
