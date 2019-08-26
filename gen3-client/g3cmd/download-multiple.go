@@ -294,13 +294,13 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	if len(renamedFiles) > 0 {
 		fmt.Printf("\n%d files have been renamed as the following:\n", len(renamedFiles))
 		for _, rfi := range renamedFiles {
-			fmt.Printf("File \"%s\" (GUID %s) has been renamed as: %s\n", rfi.OldFilename, rfi.GUID, rfi.NewFilename)
+			fmt.Printf("File \"%s\" (GUID: %s) has been renamed as: %s\n", rfi.OldFilename, rfi.GUID, rfi.NewFilename)
 		}
 	}
 	if len(skippedFiles) > 0 {
 		fmt.Printf("\n%d files have been skipped:\n", len(skippedFiles))
 		for _, sfi := range skippedFiles {
-			fmt.Printf("File \"%s\" (GUID %s) has been skipped\n", sfi.OldFilename, sfi.GUID)
+			fmt.Printf("File \"%s\" (GUID: %s) has been skipped\n", sfi.OldFilename, sfi.GUID)
 		}
 	}
 	if len(errCh) > 0 {

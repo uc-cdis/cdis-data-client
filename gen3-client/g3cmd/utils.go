@@ -188,7 +188,6 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 		if err != nil {
 			errorMsg += "\n Details of error: " + err.Error() + "\n"
 		}
-		fdrObject.Error = true
 		return errors.New(errorMsg)
 	}
 
@@ -198,7 +197,6 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 		if err != nil {
 			errorMsg := "Error occurred when sending HEAD req to URL " + fdrObject.URL
 			errorMsg += "\n Details of error: " + err.Error() + "\n"
-			fdrObject.Error = true
 			return errors.New(errorMsg)
 		}
 		if resp.Header.Get("Accept-Ranges") != "bytes" { // server does not support range, download without range header
@@ -209,7 +207,6 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 	if err != nil {
 		errorMsg := "Error occurred when creating GET req for URL " + fdrObject.URL
 		errorMsg += "\n Details of error: " + err.Error() + "\n"
-		fdrObject.Error = true
 		return errors.New(errorMsg)
 	}
 	if fdrObject.Range != 0 {
@@ -220,13 +217,11 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 	if err != nil {
 		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
 		errorMsg += "\n Details of error: " + err.Error() + "\n"
-		fdrObject.Error = true
 		return errors.New(errorMsg)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 206 {
 		errorMsg := "Got a non-200 response when doing GET req for URL " + fdrObject.URL
 		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode) + "\n"
-		fdrObject.Error = true
 		return errors.New(errorMsg)
 	}
 	fdrObject.Response = resp

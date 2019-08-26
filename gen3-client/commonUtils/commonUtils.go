@@ -40,7 +40,6 @@ type FileDownloadResponseObject struct {
 	Range        int64
 	Overwrite    bool
 	Skip         bool
-	Error        bool
 	Response     *http.Response
 	Writer       io.Writer
 }
