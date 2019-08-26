@@ -47,31 +47,30 @@ func askGen3ForFileInfo(guid string, protocolText string, downloadPath string, f
 	}
 
 	actualFilename := indexdMsg.FileName
-
-	if filenameFormat == "original" {
-		// INDEXD record is not reliable, try asking FENCE and guessing filename from S3 or GS URL
+	if actualFilename == "" {
+		// INDEXD record is not reliable, try asking FENCE and guessing filename from returned URL
 		// If guessed filename is "", then use GUID instead
-		if actualFilename == "" {
-			endPointPostfix := "/user/data/download/" + guid + protocolText
-			fenceMsg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+		endPointPostfix := "/user/data/download/" + guid + protocolText
+		fenceMsg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
-			if err != nil || fenceMsg.URL == "" {
-				log.Println("Error occurred when getting download URL for object " + guid)
-				log.Println("Using GUID for filename instead.")
-				*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
-				return guid, indexdMsg.Size
-			}
-
-			actualFilename = guessFilenameFromURL(fenceMsg.URL)
-			if actualFilename == "" {
-				log.Println("Error occurred when guessing filename for object " + guid)
-				log.Println("Using GUID for filename instead.")
-				*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
-				return guid, indexdMsg.Size
-			}
+		if err != nil || fenceMsg.URL == "" {
+			log.Println("Error occurred when getting download URL for object " + guid)
+			log.Println("Using GUID for filename instead.")
+			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+			return guid, indexdMsg.Size
 		}
 
-		if !rename {
+		actualFilename = guessFilenameFromURL(fenceMsg.URL)
+		if actualFilename == "" {
+			log.Println("Error occurred when guessing filename for object " + guid)
+			log.Println("Using GUID for filename instead.")
+			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+			return guid, indexdMsg.Size
+		}
+	}
+
+	if filenameFormat == "original" {
+		if !rename { // no renaming in original mode
 			return actualFilename, indexdMsg.Size
 		}
 		newFilename := processOriginalFilename(downloadPath, actualFilename)
