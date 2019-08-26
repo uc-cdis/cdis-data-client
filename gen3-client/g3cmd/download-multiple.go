@@ -147,9 +147,9 @@ func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, proto
 
 		subDir := filepath.Dir(fdrObject.Filename)
 		if subDir != "." && subDir != "/" {
-			os.MkdirAll(fdrObject.DownloadPath+subDir, 0766)
+			os.MkdirAll(fdrObject.DownloadPath+subDir, 0666)
 		}
-		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0766)
+		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0666)
 		if err != nil {
 			errCh <- errors.New("Error occurred during opening local file: " + err.Error())
 			continue
