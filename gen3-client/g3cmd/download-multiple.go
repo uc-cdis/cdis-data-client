@@ -272,7 +272,7 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	batchFDRSlice := make([]commonUtils.FileDownloadResponseObject, 0)
 	for i, fdrObject := range fdrObjects {
 		if fdrObject.Skip {
-			log.Printf("File \"%s\" (GUID: %s) has been skipped\n", fdrObject.Filename, fdrObject.GUID)
+			log.Printf("File \"%s\" (GUID: %s) has been skipped because there is a complete local copy\n", fdrObject.Filename, fdrObject.GUID)
 			skippedFiles = append(skippedFiles, RenamedOrSkippedFileInfo{GUID: fdrObject.GUID, OldFilename: fdrObject.Filename})
 			continue
 		}
