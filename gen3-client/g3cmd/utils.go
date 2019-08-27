@@ -186,7 +186,7 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 	if err != nil || msg.URL == "" {
 		errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
 		if err != nil {
-			errorMsg += "\n Details of error: " + err.Error() + "\n"
+			errorMsg += "\n Details of error: " + err.Error()
 		}
 		return errors.New(errorMsg)
 	}
@@ -196,7 +196,7 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 		resp, err := http.Head(fdrObject.URL)
 		if err != nil {
 			errorMsg := "Error occurred when sending HEAD req to URL " + fdrObject.URL
-			errorMsg += "\n Details of error: " + err.Error() + "\n"
+			errorMsg += "\n Details of error: " + err.Error()
 			return errors.New(errorMsg)
 		}
 		if resp.Header.Get("Accept-Ranges") != "bytes" { // server does not support range, download without range header
@@ -206,7 +206,7 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 	req, err := http.NewRequest(http.MethodGet, fdrObject.URL, nil)
 	if err != nil {
 		errorMsg := "Error occurred when creating GET req for URL " + fdrObject.URL
-		errorMsg += "\n Details of error: " + err.Error() + "\n"
+		errorMsg += "\n Details of error: " + err.Error()
 		return errors.New(errorMsg)
 	}
 	if fdrObject.Range != 0 {
@@ -216,12 +216,12 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 	resp, err := client.Do(req)
 	if err != nil {
 		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
-		errorMsg += "\n Details of error: " + err.Error() + "\n"
+		errorMsg += "\n Details of error: " + err.Error()
 		return errors.New(errorMsg)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 206 {
-		errorMsg := "Got a non-200 response when doing GET req for URL " + fdrObject.URL
-		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode) + "\n"
+		errorMsg := "Got a non-200 or non-206 response when doing GET req for URL " + fdrObject.URL
+		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode)
 		return errors.New(errorMsg)
 	}
 	fdrObject.Response = resp

@@ -270,7 +270,7 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	totalCompeleted := 0
 	workers, _, errCh, _ := initBatchUploadChannels(numParallel, len(fdrObjects))
 	batchFDRSlice := make([]commonUtils.FileDownloadResponseObject, 0)
-	for i, fdrObject := range fdrObjects {
+	for _, fdrObject := range fdrObjects {
 		if fdrObject.Skip {
 			log.Printf("File \"%s\" (GUID: %s) has been skipped because there is a complete local copy\n", fdrObject.Filename, fdrObject.GUID)
 			skippedFiles = append(skippedFiles, RenamedOrSkippedFileInfo{GUID: fdrObject.GUID, OldFilename: fdrObject.Filename})
@@ -284,21 +284,26 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 			batchFDRSlice = make([]commonUtils.FileDownloadResponseObject, 0)
 			batchFDRSlice = append(batchFDRSlice, fdrObject)
 		}
-		if i == len(fdrObjects)-1 { // download remainders
-			totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh)
-		}
 	}
+	totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh) // download remainders
 
 	log.Printf("%d files downloaded.\n", totalCompeleted)
 
 	if len(renamedFiles) > 0 {
-		log.Printf("\n%d files have been renamed as the following:\n", len(renamedFiles))
+		log.Printf("%d files have been renamed as the following:\n", len(renamedFiles))
+		for _, rfi := range renamedFiles {
+			log.Printf("File \"%s\" (GUID: %s) has been renamed as: %s\n", rfi.OldFilename, rfi.GUID, rfi.NewFilename)
+		}
 	}
 	if len(skippedFiles) > 0 {
-		log.Printf("\n%d files have been skipped\n", len(skippedFiles))
+		log.Printf("%d files have been skipped\n", len(skippedFiles))
 	}
 	if len(errCh) > 0 {
-		log.Printf("\n%d files have errorred during downloading\n", len(errCh))
+		close(errCh)
+		log.Printf("%d files have errorred during downloading, detailed errors are:\n", len(errCh))
+		for err := range errCh {
+			log.Println(err.Error())
+		}
 	}
 }
 
