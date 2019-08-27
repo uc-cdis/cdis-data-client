@@ -31,7 +31,7 @@ func askGen3ForFileInfo(guid string, protocolText string, downloadPath string, f
 	function.Request = request
 
 	// ask INDEXD first
-	endPointPostfix := "/index/index/" + guid
+	endPointPostfix := commonUtils.IndexdIndexEndpoint + "/" + guid
 	indexdMsg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 	if err != nil {
 		log.Println("Error occurred when querying filename from IndexD: " + err.Error())
@@ -50,7 +50,7 @@ func askGen3ForFileInfo(guid string, protocolText string, downloadPath string, f
 	if actualFilename == "" {
 		// INDEXD record is not reliable, try asking FENCE and guessing filename from returned URL
 		// If guessed filename is "", then use GUID instead
-		endPointPostfix := "/user/data/download/" + guid + protocolText
+		endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + guid + protocolText
 		fenceMsg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
 		if err != nil || fenceMsg.URL == "" {
@@ -114,13 +114,13 @@ func validateFilenameFormat(downloadPath string, filenameFormat string, rename b
 		log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
 	}
 	if filenameFormat == "guid" || filenameFormat == "combined" {
-		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" may be overwritten\n", downloadPath)
+		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" will be overwritten\n", downloadPath)
 		if !noPrompt && !commonUtils.AskForConfirmation("Proceed?") {
 			log.Println("Aborted by user")
 			os.Exit(0)
 		}
 	} else if !rename {
-		fmt.Printf("WARNING: flag \"rename\" was set to false in \"original\" mode, duplicated files under \"%s\" may be overwritten\n", downloadPath)
+		fmt.Printf("WARNING: flag \"rename\" was set to false in \"original\" mode, duplicated files under \"%s\" will be overwritten\n", downloadPath)
 		if !noPrompt && !commonUtils.AskForConfirmation("Proceed?") {
 			log.Println("Aborted by user")
 			os.Exit(0)
@@ -196,7 +196,7 @@ func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, proto
 	fdrCh := make(chan commonUtils.FileDownloadResponseObject, len(fdrs))
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
-		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
+		errCh <- errors.New("Error occurred during initializing progress bars: " + err.Error())
 		return 0
 	}
 

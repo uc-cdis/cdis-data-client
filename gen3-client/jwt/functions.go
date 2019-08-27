@@ -216,9 +216,7 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 	var err error
 	var data map[string]interface{}
 
-	endPointPostfix := "/user/user" // Information about current user
-
-	host, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "GET", "", nil)
+	host, resp, err := f.GetResponse(profile, configFileType, commonUtils.FenceUserEndpoint, "GET", "", nil)
 	if err != nil {
 		return "", nil, err
 	}
@@ -242,7 +240,7 @@ func (f *Functions) DeleteRecord(profile string, configFileType string, guid str
 	var err error
 	var msg string
 
-	endPointPostfix := "/user/data/" + guid
+	endPointPostfix := commonUtils.FenceDataEndpoint + "/" + guid
 
 	_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
 

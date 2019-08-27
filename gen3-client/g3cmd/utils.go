@@ -109,11 +109,10 @@ func InitMultipartUpload(filename string) (string, string, error) {
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/multipart/init"
 	multipartInitObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(multipartInitObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartInitEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
@@ -136,11 +135,10 @@ func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) 
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/multipart/upload"
 	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber}
 	objectBytes, err := json.Marshal(multipartUploadObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", errors.New("Error has occurred during multipart upload presigned url generation, detailed error message: " + err.Error())
@@ -160,11 +158,10 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/multipart/complete"
 	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts}
 	objectBytes, err := json.Marshal(multipartCompleteObject)
 
-	_, err = function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	_, err = function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartCompleteEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return errors.New("Error has occurred during completing multipart upload, detailed error message: " + err.Error())
@@ -180,7 +177,7 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 
 	function.Config = configure
 	function.Request = request
-	endPointPostfix := "/user/data/download/" + fdrObject.GUID + protocolText
+	endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 
 	if err != nil || msg.URL == "" {
@@ -237,11 +234,10 @@ func GeneratePresignedURL(filename string) (string, string, error) {
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/upload"
 	purObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(purObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
@@ -262,7 +258,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	function.Request = request
 
 	if furObject.PresignedURL == "" {
-		endPointPostfix := "/user/data/upload/" + furObject.GUID
+		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID
 		msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
