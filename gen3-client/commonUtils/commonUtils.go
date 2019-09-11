@@ -3,6 +3,7 @@ package commonUtils
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,30 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
+
+// IndexdIndexEndpoint is the endpoint postfix for INDEXD index
+const IndexdIndexEndpoint = "/index/index"
+
+// FenceUserEndpoint is the endpoint postfix for FENCE user
+const FenceUserEndpoint = "/user/user"
+
+// FenceDataEndpoint is the endpoint postfix for FENCE data
+const FenceDataEndpoint = "/user/data"
+
+// FenceDataUploadEndpoint is the endpoint postfix for FENCE data upload
+const FenceDataUploadEndpoint = FenceDataEndpoint + "/upload"
+
+// FenceDataDownloadEndpoint is the endpoint postfix for FENCE data download
+const FenceDataDownloadEndpoint = FenceDataEndpoint + "/download"
+
+// FenceDataMultipartInitEndpoint is the endpoint postfix for FENCE multipart init
+const FenceDataMultipartInitEndpoint = FenceDataEndpoint + "/multipart/init"
+
+// FenceDataMultipartUploadEndpoint is the endpoint postfix for FENCE multipart upload
+const FenceDataMultipartUploadEndpoint = FenceDataEndpoint + "/multipart/upload"
+
+// FenceDataMultipartCompleteEndpoint is the endpoint postfix for FENCE multipart complete
+const FenceDataMultipartCompleteEndpoint = FenceDataEndpoint + "/multipart/complete"
 
 // PathSeparator is os dependent path separator char
 const PathSeparator = string(os.PathSeparator)
@@ -28,6 +53,19 @@ type FileUploadRequestObject struct {
 	PresignedURL string
 	Request      *http.Request
 	Bar          *pb.ProgressBar
+}
+
+// FileDownloadResponseObject defines a object for file download
+type FileDownloadResponseObject struct {
+	DownloadPath string
+	Filename     string
+	GUID         string
+	URL          string
+	Range        int64
+	Overwrite    bool
+	Skip         bool
+	Response     *http.Response
+	Writer       io.Writer
 }
 
 // RetryObject defines a object for retry upload

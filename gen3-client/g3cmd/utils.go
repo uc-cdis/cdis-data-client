@@ -59,8 +59,8 @@ type FileInfo struct {
 	Filename string
 }
 
-// RenamedFileInfo is a helper struct for recording renamed files
-type RenamedFileInfo struct {
+// RenamedOrSkippedFileInfo is a helper struct for recording renamed or skipped files
+type RenamedOrSkippedFileInfo struct {
 	GUID        string
 	OldFilename string
 	NewFilename string
@@ -109,11 +109,10 @@ func InitMultipartUpload(filename string) (string, string, error) {
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/multipart/init"
 	multipartInitObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(multipartInitObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartInitEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
@@ -136,11 +135,10 @@ func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) 
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/multipart/upload"
 	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber}
 	objectBytes, err := json.Marshal(multipartUploadObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", errors.New("Error has occurred during multipart upload presigned url generation, detailed error message: " + err.Error())
@@ -160,11 +158,10 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/multipart/complete"
 	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts}
 	objectBytes, err := json.Marshal(multipartCompleteObject)
 
-	_, err = function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	_, err = function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartCompleteEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return errors.New("Error has occurred during completing multipart upload, detailed error message: " + err.Error())
@@ -172,7 +169,63 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 	return nil
 }
 
-// GeneratePresignedURL helps sending requests to FENCE and parsing the response
+// GetDownloadResponse helps grabbing a response for downloading a file specified with GUID
+func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, protocolText string) error {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	function := new(jwt.Functions)
+
+	function.Config = configure
+	function.Request = request
+	endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
+	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+
+	if err != nil || msg.URL == "" {
+		errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
+		if err != nil {
+			errorMsg += "\n Details of error: " + err.Error()
+		}
+		return errors.New(errorMsg)
+	}
+
+	fdrObject.URL = msg.URL
+	if fdrObject.Range != 0 && !strings.Contains(fdrObject.URL, "X-Amz-Signature") && !strings.Contains(fdrObject.URL, "X-Goog-Signature") { // Not S3 or GS URLs and we want resume, send HEAD req first to check if server supports range
+		resp, err := http.Head(fdrObject.URL)
+		if err != nil {
+			errorMsg := "Error occurred when sending HEAD req to URL " + fdrObject.URL
+			errorMsg += "\n Details of error: " + err.Error()
+			return errors.New(errorMsg)
+		}
+		if resp.Header.Get("Accept-Ranges") != "bytes" { // server does not support range, download without range header
+			fdrObject.Range = 0
+		}
+	}
+	req, err := http.NewRequest(http.MethodGet, fdrObject.URL, nil)
+	if err != nil {
+		errorMsg := "Error occurred when creating GET req for URL " + fdrObject.URL
+		errorMsg += "\n Details of error: " + err.Error()
+		return errors.New(errorMsg)
+	}
+	if fdrObject.Range != 0 {
+		req.Header.Set("Range", "bytes="+strconv.FormatInt(fdrObject.Range, 10)+"-")
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
+		errorMsg += "\n Details of error: " + err.Error()
+		return errors.New(errorMsg)
+	}
+	if resp.StatusCode != 200 && resp.StatusCode != 206 {
+		errorMsg := "Got a non-200 or non-206 response when doing GET req for URL " + fdrObject.URL
+		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode)
+		return errors.New(errorMsg)
+	}
+	fdrObject.Response = resp
+	return nil
+}
+
+// GeneratePresignedURL helps sending requests to FENCE and parsing the response in order to get presigned URL for the new upload flow
 func GeneratePresignedURL(filename string) (string, string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
@@ -181,11 +234,10 @@ func GeneratePresignedURL(filename string) (string, string, error) {
 	function.Config = configure
 	function.Request = request
 
-	endPointPostfix := "/user/data/upload"
 	purObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(purObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "application/json", objectBytes)
+	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
@@ -206,7 +258,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	function.Request = request
 
 	if furObject.PresignedURL == "" {
-		endPointPostfix := "/user/data/upload/" + furObject.GUID
+		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID
 		msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())

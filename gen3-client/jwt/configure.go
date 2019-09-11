@@ -37,17 +37,9 @@ type ConfigureInterface interface {
 
 func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	//Look in config file
-	fullFilePaths, err := commonUtils.ParseFilePaths(filePath)
-	if len(fullFilePaths) > 1 {
-		log.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
-		return ""
-	}
+	fullFilePath, err := commonUtils.GetAbsolutePath(filePath)
 	if err != nil {
-		panic(err)
-	}
-	var fullFilePath = filePath
-	if len(fullFilePaths) == 1 {
-		fullFilePath = fullFilePaths[0]
+		log.Println("error occurred when parsing config file path: " + err.Error())
 	}
 	if _, err := os.Stat(fullFilePath); err != nil {
 		log.Println("File specified at " + fullFilePath + " not found")
