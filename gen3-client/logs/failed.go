@@ -103,7 +103,7 @@ func WriteToFailedLog() {
 	if len(tempSlice) == 0 {
 		tempSlice = []commonUtils.RetryObject{}
 	}
-	jsonData, err := json.Marshal(tempSlice)
+	jsonData, err := json.MarshalIndent(tempSlice, "", "  ")
 	if err != nil {
 		failedLogFile.Close()
 		log.Fatal("Error occurred when marshaling to JSON objects: " + err.Error())

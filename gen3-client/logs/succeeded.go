@@ -49,7 +49,7 @@ func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 	succeededLogLock.Lock()
 	defer succeededLogLock.Unlock()
 	succeededLogFileMap[filePath] = guid
-	jsonData, err := json.Marshal(succeededLogFileMap)
+	jsonData, err := json.MarshalIndent(succeededLogFileMap, "", "  ")
 	if err != nil {
 		succeededLogFile.Close()
 		log.Fatal("Error occurred when marshaling to JSON objects: " + err.Error())
