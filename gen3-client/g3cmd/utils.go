@@ -355,7 +355,7 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 			}
 
 			if logs.ExistsInSucceededLog(filePath) {
-				log.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
+				log.Println("File \"" + filePath + "\" has been found in local submission history and has been skipped for preventing duplicated submissions.")
 				return
 			}
 			logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
