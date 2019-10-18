@@ -39,8 +39,7 @@ func init() {
 			}
 			filename := filepath.Base(filePath)
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				logs.AddToFailedLogMap(filePath, filename, "", 0, false, true)
-				logs.WriteToFailedLog()
+				logs.AddToFailedLog(filePath, filename, "", 0, false, true)
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -49,8 +48,7 @@ func init() {
 
 			file, err := os.Open(filePath)
 			if err != nil {
-				logs.AddToFailedLogMap(filePath, filename, "", 0, false, true)
-				logs.WriteToFailedLog()
+				logs.AddToFailedLog(filePath, filename, "", 0, false, true)
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -63,8 +61,7 @@ func init() {
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
 				file.Close()
-				logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
-				logs.WriteToFailedLog()
+				logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -77,7 +74,6 @@ func init() {
 			} else {
 				logs.IncrementScore(0) // update succeeded score
 			}
-			logs.WriteToFailedLog()
 			logs.CloseAll()
 			logs.PrintScoreBoard()
 		},

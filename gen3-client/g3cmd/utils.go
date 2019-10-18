@@ -281,6 +281,8 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(furObject.Filename + " ")
 	pr, pw := io.Pipe()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		var writer io.Writer
 		defer pw.Close()
@@ -288,14 +290,17 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 
 		writer = io.MultiWriter(pw, bar)
 		if _, err = io.Copy(writer, file); err != nil {
-			logs.WriteToFailedLog()
-			log.Printf("io.Copy error: %s\n", err)
+			err = errors.New("io.Copy error: " + err.Error() + "\n")
 		}
 		if err = pw.Close(); err != nil {
-			logs.WriteToFailedLog()
-			log.Printf("Pipe writer close error: %s\n", err)
+			err = errors.New("Pipe writer close error: " + err.Error() + "\n")
 		}
+		wg.Done()
 	}()
+	wg.Wait()
+	if err != nil {
+		return furObject, err
+	}
 
 	req, err := http.NewRequest(http.MethodPut, furObject.PresignedURL, pr)
 	req.ContentLength = fi.Size()
@@ -353,7 +358,7 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 				log.Println("File \"" + filePath + "\" has been found in local submission history and has be skipped for preventing duplicated submissions.")
 				return
 			}
-			logs.AddToFailedLogMap(filePath, filepath.Base(filePath), "", 0, false, true)
+			logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
 
 			if fi.Size() > MultipartFileSizeLimit {
 				log.Printf("The file size of %s has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s\n", fi.Name(), FormatSize(MultipartFileSizeLimit))
@@ -364,7 +369,6 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 			}
 		}()
 	}
-	logs.WriteToFailedLog()
 	return singlepartFilePaths, multipartFilePaths
 }
 
@@ -437,22 +441,19 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	client := &http.Client{}
 	resp, err := client.Do(furObject.Request)
 	if err != nil {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
-		logs.WriteToFailedLog()
+		logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
 		furObject.Bar.Finish()
 		return errors.New("Error occurred during upload: " + err.Error())
 	}
 	if resp.StatusCode != 200 {
-		logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
-		logs.WriteToFailedLog()
+		logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
 		furObject.Bar.Finish()
 		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
 	}
 	furObject.Bar.Finish()
 	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
-	logs.DeleteFromFailedLogMap(furObject.FilePath, true)
+	logs.DeleteFromFailedLog(furObject.FilePath, true)
 	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
-	logs.WriteToFailedLog()
 	return nil
 }
 
@@ -502,18 +503,18 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 		if furObjects[i].GUID == "" {
 			respURL, guid, err = GeneratePresignedURL(furObjects[i].Filename)
 			if err != nil {
-				logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
-				logs.WriteToFailedLog()
+				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
 				errCh <- err
 				continue
 			}
 			furObjects[i].PresignedURL = respURL
 			furObjects[i].GUID = guid
+			// update failed log with new guid
+			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
 		}
 		file, err := os.Open(furObjects[i].FilePath)
 		if err != nil {
-			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
-			logs.WriteToFailedLog()
+			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
 			errCh <- errors.New("File open error: " + err.Error())
 			continue
 		}
@@ -522,8 +523,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 		furObjects[i], err = GenerateUploadRequest(furObjects[i], file)
 		if err != nil {
 			file.Close()
-			logs.AddToFailedLogMap(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
-			logs.WriteToFailedLog()
+			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
 			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
 		}
@@ -535,8 +535,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
 		for _, furObject := range furObjects {
-			logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
-			logs.WriteToFailedLog()
+			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 		}
 		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
 		return
@@ -551,24 +550,20 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 				if furObject.Request != nil {
 					resp, err := client.Do(furObject.Request)
 					if err != nil {
-						logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
-						logs.WriteToFailedLog()
+						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 						errCh <- err
 					} else {
 						if resp.StatusCode != 200 {
-							logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
-							logs.WriteToFailedLog()
+							logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 						} else { // Succeeded
 							respCh <- resp
-							logs.DeleteFromFailedLogMap(furObject.FilePath, true)
+							logs.DeleteFromFailedLog(furObject.FilePath, true)
 							logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, true)
-							logs.WriteToFailedLog()
 							logs.IncrementScore(0)
 						}
 					}
 				} else if furObject.FilePath != "" {
-					logs.AddToFailedLogMap(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
-					logs.WriteToFailedLog()
+					logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
 				}
 			}
 			wg.Done()

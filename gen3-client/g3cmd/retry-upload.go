@@ -22,7 +22,7 @@ func updateRetryObject(ro commonUtils.RetryObject, filePath string, filename str
 
 func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.RetryObject, err error, isMuted bool) {
 	ro.RetryCount++
-	logs.AddToFailedLogMap(ro.FilePath, ro.Filename, ro.GUID, ro.RetryCount, ro.Multipart, isMuted)
+	logs.AddToFailedLog(ro.FilePath, ro.Filename, ro.GUID, ro.RetryCount, ro.Multipart, isMuted)
 	if err != nil {
 		log.Println(err.Error())
 	}
@@ -143,7 +143,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				file.Close()
 				continue
 			}
-			logs.DeleteFromFailedLogMap(furObject.FilePath, true)
+			logs.DeleteFromFailedLog(furObject.FilePath, true)
 			logs.IncrementScore(ro.RetryCount)
 			file.Close()
 			if (len(retryObjCh)) == 0 {
@@ -152,7 +152,6 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 			}
 		}
 	}
-	logs.WriteToFailedLog()
 }
 
 func init() {
