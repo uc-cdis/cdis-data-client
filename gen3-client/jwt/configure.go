@@ -29,7 +29,7 @@ type Configure struct{}
 
 type ConfigureInterface interface {
 	ReadFile(string, string) string
-	ValidateUrl(*url.URL, string)
+	ValidateUrl(string) (*url.URL, error)
 	ReadLines(Credential, []byte, string, string) ([]string, bool)
 	UpdateConfigFile(Credential, []byte, string, string, string)
 	ParseKeyValue(str string, expr string, errMsg string) string
