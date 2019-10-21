@@ -75,27 +75,27 @@ func GetFailedLogMap() map[string]commonUtils.RetryObject {
 	return failedLogFileMap
 }
 
-func AddToFailedLogMap(filePath string, filename string, guid string, retryCount int, isMultipart bool, isMuted bool) {
+func AddToFailedLog(filePath string, filename string, guid string, retryCount int, isMultipart bool, isMuted bool) {
 	failedLogLock.Lock()
 	defer failedLogLock.Unlock()
 	failedLogFileMap[filePath] = commonUtils.RetryObject{FilePath: filePath, Filename: filename, GUID: guid, RetryCount: retryCount, Multipart: isMultipart}
 	if !isMuted {
 		log.Printf("Failed file entry added for %s\n", filePath)
 	}
+	writeToFailedLog()
 }
 
-func DeleteFromFailedLogMap(filePath string, isMuted bool) {
+func DeleteFromFailedLog(filePath string, isMuted bool) {
 	failedLogLock.Lock()
 	defer failedLogLock.Unlock()
 	delete(failedLogFileMap, filePath)
 	if !isMuted {
 		log.Printf("Failed file entry deleted for %s\n", filePath)
 	}
+	writeToFailedLog()
 }
 
-func WriteToFailedLog() {
-	failedLogLock.Lock()
-	defer failedLogLock.Unlock()
+func writeToFailedLog() {
 	var tempSlice []commonUtils.RetryObject
 	for _, v := range failedLogFileMap {
 		tempSlice = append(tempSlice, v)
