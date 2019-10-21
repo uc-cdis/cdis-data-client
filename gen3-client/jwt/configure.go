@@ -213,7 +213,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	*/
 	homeDir, err := homedir.Dir()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("Error occurred when getting home directory: " + err.Error())
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 	cred := Credential{
@@ -228,11 +228,11 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
 		return cred
 	}
-	// If profile not in config file, prompt user to set up config first
 
+	// If profile not in config file, prompt user to set up config first
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		panic(err)
+		log.Fatalln("Error occurred when reading config file: " + err.Error())
 	}
 	lines := strings.Split(string(content), "\n")
 
@@ -245,16 +245,14 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	}
 
 	if profileLine == -1 {
-		log.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
-		return cred
-	} else {
-		// Read in access key, secret key, endpoint for given profile
-		cred.KeyId = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)", "key_id not found in profile")
-		cred.APIKey = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)", "api_key not found in profile")
-		cred.AccessKey = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)", "access_key not found in profile")
-		cred.APIEndpoint = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
-		return cred
+		log.Fatalln("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 	}
+	// Read in access key, secret key, endpoint for given profile
+	cred.KeyId = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)", "key_id not found in profile")
+	cred.APIKey = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)", "api_key not found in profile")
+	cred.AccessKey = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)", "access_key not found in profile")
+	cred.APIEndpoint = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
+	return cred
 }
 
 func (conf *Configure) TryReadFile(filePath string) ([]byte, error) {

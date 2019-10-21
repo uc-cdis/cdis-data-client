@@ -15,8 +15,7 @@ func init() {
 		Use:   "configure",
 		Short: "Add or modify a configuration profile to your config file",
 		Long: `Configuration file located at ~/.gen3/config
-	If a field is left empty, the existing value (if it exists) will remain unchanged
-	If no profile is specified, "default" profile is used`,
+	If a field is left empty, the existing value (if it exists) will remain unchanged`,
 		Example: `./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
