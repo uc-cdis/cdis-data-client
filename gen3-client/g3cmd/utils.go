@@ -281,8 +281,6 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 	bar := pb.New64(fi.Size()).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(furObject.Filename + " ")
 	pr, pw := io.Pipe()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
 	go func() {
 		var writer io.Writer
 		defer pw.Close()
@@ -295,9 +293,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 		if err = pw.Close(); err != nil {
 			err = errors.New("Pipe writer close error: " + err.Error() + "\n")
 		}
-		wg.Done()
 	}()
-	wg.Wait()
 	if err != nil {
 		return furObject, err
 	}
