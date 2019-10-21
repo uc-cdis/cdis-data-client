@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -79,12 +78,16 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) erro
 	if err != nil {
 		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
-
-	if resp.StatusCode != 200 {
-		if resp.StatusCode == 401 {
-			fmt.Println("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials.")
+	// parse resp error codes first for profile configuration verification
+	if resp != nil && resp.StatusCode != 200 {
+		switch resp.StatusCode {
+		case 401:
+			return errors.New("Invalid credentials for apiendpoint \\'" + resp.Request.Host + "\\': check if your credentials are expired or incorrect")
+		case 405:
+			return errors.New("The provided apiendpoint \\'" + resp.Request.Host + "\\' is possibly not a valid Gen3 data commons")
+		default:
+			return errors.New("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check FENCE log for more details.")
 		}
-		return errors.New("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check FENCE log for more details.")
 	}
 
 	str := ResponseToString(resp)
@@ -161,13 +164,13 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		}
 	}
 	if cred.AccessKey == "" || isExpiredToken {
-		err := f.Request.RequestNewAccessKey(prefixEndPoint+"/user/credentials/api/access_token", &cred)
+		err := f.Request.RequestNewAccessKey(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &cred)
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}
 		homeDir, err := homedir.Dir()
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalln("Error occurred when getting homeDir: " + err.Error())
 		}
 		configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 		content := f.Config.ReadFile(configPath, configFileType)
@@ -209,6 +212,10 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 	return msg, err
 }
 
+func (f *Functions) CheckProfileConfig(apiKey string, apiEndpoint string) error {
+	return nil
+}
+
 func (f *Functions) CheckPrivileges(profile string, configFileType string) (string, map[string]interface{}, error) {
 	/*
 	   Return user privileges from specified profile
@@ -218,19 +225,19 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 
 	host, resp, err := f.GetResponse(profile, configFileType, commonUtils.FenceUserEndpoint, "GET", "", nil)
 	if err != nil {
-		return "", nil, err
+		return "", nil, errors.New("Error occurred when getting response from remote: " + err.Error())
 	}
 
 	str := ResponseToString(resp)
 
 	err = json.Unmarshal([]byte(str), &data)
 	if err != nil {
-		log.Fatal(err)
+		return "", nil, errors.New("Error occurred when unmarshalling response: " + err.Error())
 	}
 
 	projectAccess, ok := data["project_access"].(map[string]interface{})
 	if !ok {
-		log.Fatal("Not possible to read user access privileges")
+		return "", nil, errors.New("Not possible to read user access privileges")
 	}
 
 	return host, projectAccess, err

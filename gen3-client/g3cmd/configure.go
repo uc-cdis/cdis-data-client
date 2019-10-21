@@ -1,11 +1,15 @@
 package g3cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
 var conf jwt.Configure
+var fun jwt.Functions
 
 func init() {
 	var credFile string
@@ -20,12 +24,21 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cred := conf.ReadCredentials(credFile)
-			conf.ValidateUrl(apiEndpoint)
+			parsedURL, err := conf.ValidateUrl(apiEndpoint)
+			if err != nil {
+				log.Fatalln("Error occurred when validating apiendpoint URL: " + err.Error())
+			}
+
+			prefixEndPoint := parsedURL.Scheme + "://" + parsedURL.Host
+			err = fun.Request.RequestNewAccessKey(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &cred)
+			if err != nil {
+				log.Fatalln("Error occurred when validating profile config: " + err.Error())
+			}
 
 			// Store user info in ~/.gen3/config
 			configPath, content, err := conf.TryReadConfigFile()
 			if err != nil {
-				panic(err)
+				log.Fatalln("Error occurred when trying to read config file: " + err.Error())
 			}
 			conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
 		},
