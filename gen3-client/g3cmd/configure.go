@@ -3,6 +3,7 @@ package g3cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 var conf jwt.Configure
@@ -18,6 +19,8 @@ func init() {
 	If no profile is specified, "default" profile is used`,
 		Example: `./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org`,
 		Run: func(cmd *cobra.Command, args []string) {
+			// don't initialize transmission logs for non-uploading related commands
+			logs.SetToBoth()
 
 			cred := conf.ReadCredentials(credFile)
 			conf.ValidateUrl(apiEndpoint)
@@ -28,6 +31,7 @@ func init() {
 				panic(err)
 			}
 			conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
+			logs.CloseMessageLog()
 		},
 	}
 

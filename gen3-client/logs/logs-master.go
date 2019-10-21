@@ -13,7 +13,7 @@ var MainLogPath string
 func Init() {
 	homeDir, err := homedir.Dir()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("Error occurred when getting home directory: " + err.Error())
 	}
 
 	mainPath := homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator
@@ -39,8 +39,8 @@ func CloseAll() {
 	errorSlice := make([]error, 0)
 	errorSlice = append(errorSlice, closeSucceededLog())
 	errorSlice = append(errorSlice, closeFailedLog())
-	errorSlice = append(errorSlice, closeMessageLog())
-	log.SetOutput(os.Stdout)
+	errorSlice = append(errorSlice, CloseMessageLog())
+	SetToConsole()
 	for _, err := range errorSlice {
 		if err != nil {
 			log.Println(err.Error())
