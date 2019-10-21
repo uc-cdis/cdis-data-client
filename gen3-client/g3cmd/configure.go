@@ -1,6 +1,8 @@
 package g3cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
@@ -27,7 +29,7 @@ func init() {
 			// Store user info in ~/.gen3/config
 			configPath, content, err := conf.TryReadConfigFile()
 			if err != nil {
-				panic(err)
+				log.Fatalln("Error occurred when trying to read config file: " + err.Error())
 			}
 			conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
 			logs.CloseMessageLog()

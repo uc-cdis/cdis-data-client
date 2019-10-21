@@ -40,6 +40,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	fullFilePath, err := commonUtils.GetAbsolutePath(filePath)
 	if err != nil {
 		log.Println("error occurred when parsing config file path: " + err.Error())
+		return ""
 	}
 	if _, err := os.Stat(fullFilePath); err != nil {
 		log.Println("File specified at " + fullFilePath + " not found")
@@ -48,7 +49,8 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 
 	content, err := ioutil.ReadFile(fullFilePath)
 	if err != nil {
-		panic(err)
+		log.Println("error occurred when reading file: " + err.Error())
+		return ""
 	}
 
 	contentStr := string(content[:])
@@ -141,11 +143,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 	if found {
 		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
 		if err != nil {
-			panic(err)
+			log.Fatalln("error occurred when opening config file: " + err.Error())
 		}
 		defer func() {
 			if err := f.Close(); err != nil {
-				panic(err)
+				log.Println("error occurred when closing config file: " + err.Error())
 			}
 		}()
 		for i := 0; i < len(lines)-1; i++ {
@@ -154,11 +156,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 	} else {
 		f, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			panic(err)
+			log.Fatalln("error occurred when opening config file: " + err.Error())
 		}
 		defer func() {
 			if err := f.Close(); err != nil {
-				panic(err)
+				log.Println("error occurred when closing config file: " + err.Error())
 			}
 		}()
 
@@ -169,7 +171,7 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			"api_endpoint=" + apiEndpoint + "\n\n")
 
 		if err != nil {
-			panic(err)
+			log.Println("error occurred when updating config: " + err.Error())
 		}
 	}
 }
@@ -177,11 +179,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 func (conf *Configure) ParseKeyValue(str string, expr string, errMsg string) string {
 	r, err := regexp.Compile(expr)
 	if err != nil {
-		panic(err)
+		log.Fatalln("error occurred when parsing key/value: " + err.Error())
 	}
 	match := r.FindStringSubmatch(str)
 	if len(match) == 0 {
-		log.Fatal(errMsg)
+		log.Fatalln(errMsg)
 	}
 	return match[1]
 }

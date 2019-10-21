@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,7 +21,6 @@ type location struct {
 }
 
 var loc *location
-
 
 // ServiceAndRegion parsers a hostname to find out which ones it is.
 // http://docs.aws.amazon.com/general/latest/gr/rande.html
@@ -102,7 +102,7 @@ func ReadAndReplaceBody(request *http.Request) []byte {
 	}
 	payload, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		panic(err)
+		log.Fatalln("error occurred when reading request body: " + err.Error())
 	}
 	request.Body = ioutil.NopCloser(bytes.NewReader(payload))
 	return payload
