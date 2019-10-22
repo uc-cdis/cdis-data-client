@@ -163,7 +163,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		}
 		homeDir, err := homedir.Dir()
 		if err != nil {
-			log.Fatalln("Error occurred when getting homeDir: " + err.Error())
+			log.Fatalln("Error occurred when getting home directory: " + err.Error())
 		}
 		configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 		content := f.Config.ReadFile(configPath, configFileType)
