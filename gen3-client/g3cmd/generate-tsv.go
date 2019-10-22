@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func computeMD5(file string) string {
@@ -37,6 +38,9 @@ func init() {
 		Example: `./gen3-client generate-tsv --from-template=image_file.tsv files*.dcm`,
 		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			// don't initialize transmission logs for non-uploading related commands
+			logs.SetToBoth()
+
 			outFile, err := os.Create(output)
 			if err != nil {
 				log.Fatalf(err.Error())
@@ -94,7 +98,7 @@ func init() {
 			}
 
 			fmt.Printf("Generated tsv %v from files %v!\n", output, args[0])
-
+			logs.CloseMessageLog()
 		},
 	}
 

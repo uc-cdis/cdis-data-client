@@ -26,7 +26,12 @@ func init() {
 			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
 			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
 		Run: func(cmd *cobra.Command, args []string) {
+			// initialize transmission logs
+			logs.InitSucceededLog(profile)
+			logs.InitFailedLog(profile)
+			logs.SetToBoth()
 			logs.InitScoreBoard(MaxRetryCount)
+
 			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
 			if err != nil {
@@ -147,8 +152,8 @@ func init() {
 			if !logs.IsFailedLogMapEmpty() {
 				retryUpload(logs.GetFailedLogMap())
 			}
-			logs.CloseAll()
 			logs.PrintScoreBoard()
+			logs.CloseAll()
 		},
 	}
 
