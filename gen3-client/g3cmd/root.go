@@ -2,11 +2,13 @@ package g3cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	latest "github.com/tcnksm/go-latest"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -65,5 +67,20 @@ func initConfig() {
 
 	logs.Init()
 	logs.InitMessageLog(profile)
+	logs.SetToBoth()
+	// version checker
+	if gitversion != "" && gitversion != "N/A" {
+		githubTag := &latest.GithubTag{
+			Owner:      "uc-cdis",
+			Repository: "cdis-data-client",
+		}
+		res, err := latest.Check(githubTag, gitversion)
+		if err != nil {
+			log.Println("Error occurred when checking for latest version: " + err.Error())
+		} else if res.Outdated {
+			log.Println("A new version of gen3-client is avaliable! The latest version is " + res.Current + ". You are using version " + gitversion)
+			log.Println("Please download the latest gen3-client release from https://github.com/uc-cdis/cdis-data-client/releases/latest")
+		}
+	}
 	logs.SetToMessageLog()
 }
