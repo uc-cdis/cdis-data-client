@@ -39,7 +39,7 @@ func SetToBoth() {
 	log.SetOutput(multiWriter)
 }
 
-func closeMessageLog() error {
+func CloseMessageLog() error {
 	SetToMessageLog()
 	log.Println("Local message log file \"" + messageLogFilename + "\" has closed")
 	return messageLogFile.Close()

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
@@ -323,6 +324,8 @@ func init() {
 		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then download all of them.`,
 		Example: `./gen3-client download-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
+			// don't initialize transmission logs for non-uploading related commands
+			logs.SetToBoth()
 
 			var objects []ManifestObject
 			manifestBytes, err := ioutil.ReadFile(manifestPath)
@@ -341,6 +344,7 @@ func init() {
 				}
 			}
 			downloadFile(guids, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
+			logs.CloseMessageLog()
 		},
 	}
 

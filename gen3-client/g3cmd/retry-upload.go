@@ -161,12 +161,17 @@ func init() {
 		Long:    `Re-submit files found in a given failed log by using sequential (non-batching) uploading and exponential backoff.`,
 		Example: "For retrying file upload:\n./gen3-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
 		Run: func(cmd *cobra.Command, args []string) {
+			// initialize transmission logs
+			logs.InitSucceededLog(profile)
+			logs.InitFailedLog(profile)
+			logs.SetToBoth()
+			logs.InitScoreBoard(MaxRetryCount)
+
 			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
 			logs.LoadFailedLogFile(failedLogPath)
-			logs.InitScoreBoard(MaxRetryCount)
 			retryUpload(logs.GetFailedLogMap())
-			logs.CloseAll()
 			logs.PrintScoreBoard()
+			logs.CloseAll()
 		},
 	}
 

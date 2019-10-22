@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func init() {
@@ -16,6 +17,8 @@ func init() {
 		Long:    `Gets data access privileges for specified profile.`,
 		Example: `./gen3-client auth --profile=<profile-name>`,
 		Run: func(cmd *cobra.Command, args []string) {
+			// don't initialize transmission logs for non-uploading related commands
+			logs.SetToBoth()
 
 			request := new(jwt.Request)
 			configure := new(jwt.Configure)
@@ -54,6 +57,7 @@ func init() {
 					}
 				}
 			}
+			logs.CloseMessageLog()
 		},
 	}
 

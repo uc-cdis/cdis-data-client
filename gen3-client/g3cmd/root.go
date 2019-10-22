@@ -66,7 +66,4 @@ func initConfig() {
 	logs.Init()
 	logs.InitMessageLog(profile)
 	logs.SetToMessageLog()
-	logs.InitSucceededLog(profile)
-	logs.InitFailedLog(profile)
-	logs.SetToBoth()
 }

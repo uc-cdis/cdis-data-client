@@ -25,7 +25,12 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./gen3-client upload\" instead.\n\n")
 
+			// initialize transmission logs
+			logs.InitSucceededLog(profile)
+			logs.InitFailedLog(profile)
+			logs.SetToBoth()
 			logs.InitScoreBoard(0)
+
 			filePaths, err := commonUtils.ParseFilePaths(filePath)
 			if len(filePaths) > 1 {
 				fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
@@ -74,8 +79,8 @@ func init() {
 			} else {
 				logs.IncrementScore(0) // update succeeded score
 			}
-			logs.CloseAll()
 			logs.PrintScoreBoard()
+			logs.CloseAll()
 		},
 	}
 

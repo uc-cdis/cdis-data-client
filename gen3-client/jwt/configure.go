@@ -40,6 +40,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	fullFilePath, err := commonUtils.GetAbsolutePath(filePath)
 	if err != nil {
 		log.Println("error occurred when parsing config file path: " + err.Error())
+		return ""
 	}
 	if _, err := os.Stat(fullFilePath); err != nil {
 		log.Println("File specified at " + fullFilePath + " not found")
@@ -48,7 +49,8 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 
 	content, err := ioutil.ReadFile(fullFilePath)
 	if err != nil {
-		panic(err)
+		log.Println("error occurred when reading file: " + err.Error())
+		return ""
 	}
 
 	contentStr := string(content[:])
@@ -141,11 +143,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 	if found {
 		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
 		if err != nil {
-			panic(err)
+			log.Fatalln("error occurred when opening config file: " + err.Error())
 		}
 		defer func() {
 			if err := f.Close(); err != nil {
-				panic(err)
+				log.Println("error occurred when closing config file: " + err.Error())
 			}
 		}()
 		for i := 0; i < len(lines)-1; i++ {
@@ -154,11 +156,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 	} else {
 		f, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			panic(err)
+			log.Fatalln("error occurred when opening config file: " + err.Error())
 		}
 		defer func() {
 			if err := f.Close(); err != nil {
-				panic(err)
+				log.Println("error occurred when closing config file: " + err.Error())
 			}
 		}()
 
@@ -169,7 +171,7 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			"api_endpoint=" + apiEndpoint + "\n\n")
 
 		if err != nil {
-			panic(err)
+			log.Println("error occurred when updating config: " + err.Error())
 		}
 	}
 }
@@ -177,11 +179,11 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 func (conf *Configure) ParseKeyValue(str string, expr string, errMsg string) string {
 	r, err := regexp.Compile(expr)
 	if err != nil {
-		panic(err)
+		log.Fatalln("error occurred when parsing key/value: " + err.Error())
 	}
 	match := r.FindStringSubmatch(str)
 	if len(match) == 0 {
-		log.Fatal(errMsg)
+		log.Fatalln(errMsg)
 	}
 	return match[1]
 }
@@ -213,7 +215,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	*/
 	homeDir, err := homedir.Dir()
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("Error occurred when getting home directory: " + err.Error())
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 	cred := Credential{
@@ -228,11 +230,11 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
 		return cred
 	}
-	// If profile not in config file, prompt user to set up config first
 
+	// If profile not in config file, prompt user to set up config first
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		panic(err)
+		log.Fatalln("Error occurred when reading config file: " + err.Error())
 	}
 	lines := strings.Split(string(content), "\n")
 
@@ -245,16 +247,14 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	}
 
 	if profileLine == -1 {
-		log.Println("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
-		return cred
-	} else {
-		// Read in access key, secret key, endpoint for given profile
-		cred.KeyId = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)", "key_id not found in profile")
-		cred.APIKey = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)", "api_key not found in profile")
-		cred.AccessKey = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)", "access_key not found in profile")
-		cred.APIEndpoint = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
-		return cred
+		log.Fatalln("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 	}
+	// Read in access key, secret key, endpoint for given profile
+	cred.KeyId = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)", "key_id not found in profile")
+	cred.APIKey = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)", "api_key not found in profile")
+	cred.AccessKey = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)", "access_key not found in profile")
+	cred.APIEndpoint = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
+	return cred
 }
 
 func (conf *Configure) TryReadFile(filePath string) ([]byte, error) {

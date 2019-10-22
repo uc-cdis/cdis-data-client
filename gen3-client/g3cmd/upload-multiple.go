@@ -50,7 +50,13 @@ func init() {
 
 			var objects []ManifestObject
 
+			// initialize transmission logs
+			logs.InitSucceededLog(profile)
+			logs.InitFailedLog(profile)
+			logs.SetToBoth()
+			logs.InitScoreBoard(MaxRetryCount)
 			logs.InitScoreBoard(0)
+
 			manifestFile, err := os.Open(manifestPath)
 			if err != nil {
 				log.Println("Failed to open manifest file")
@@ -117,8 +123,8 @@ func init() {
 					file.Close()
 				}
 			}
-			logs.CloseAll()
 			logs.PrintScoreBoard()
+			logs.CloseAll()
 		},
 	}
 
