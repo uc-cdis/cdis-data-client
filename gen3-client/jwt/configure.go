@@ -4,6 +4,7 @@ package jwt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -28,7 +29,7 @@ type Configure struct{}
 
 type ConfigureInterface interface {
 	ReadFile(string, string) string
-	ValidateUrl(string)
+	ValidateUrl(string) (*url.URL, error)
 	ReadLines(Credential, []byte, string, string) ([]string, bool)
 	UpdateConfigFile(Credential, []byte, string, string, string)
 	ParseKeyValue(str string, expr string, errMsg string) string
@@ -61,14 +62,15 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	return string(content[:])
 }
 
-func (conf *Configure) ValidateUrl(apiEndpoint string) {
-	parsedUrl, err := url.Parse(apiEndpoint)
+func (conf *Configure) ValidateUrl(apiEndpoint string) (*url.URL, error) {
+	parsedURL, err := url.Parse(apiEndpoint)
 	if err != nil {
-		panic(err)
+		return parsedURL, errors.New("Error occurred when parsing apiendpoint URL: " + err.Error())
 	}
-	if parsedUrl.Host == "" {
-		log.Fatalf("Invalid endpoint. A valid endpoint looks like: https://www.tests.com\n")
+	if parsedURL.Host == "" {
+		return parsedURL, errors.New("Invalid endpoint. A valid endpoint looks like: https://www.tests.com")
 	}
+	return parsedURL, nil
 }
 
 func (conf *Configure) ReadCredentials(filePath string) Credential {
@@ -89,7 +91,7 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 	*/
 	homeDir, err := homedir.Dir()
 	if err != nil {
-		log.Fatalln(err)
+		return "", nil, err
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 
@@ -134,11 +136,6 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			profile: profile name
 
 	*/
-	apiEndpoint = strings.TrimSpace(apiEndpoint)
-	if apiEndpoint[len(apiEndpoint)-1:] == "/" {
-		apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
-	}
-
 	lines, found := conf.ReadLines(cred, configContent, apiEndpoint, profile)
 	if found {
 		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)

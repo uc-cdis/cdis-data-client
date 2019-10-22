@@ -24,6 +24,9 @@ const FenceUserEndpoint = "/user/user"
 // FenceDataEndpoint is the endpoint postfix for FENCE data
 const FenceDataEndpoint = "/user/data"
 
+// FenceAccessTokenEndpoint is the endpoint postfix for FENCE access token
+const FenceAccessTokenEndpoint = "/user/credentials/api/access_token"
+
 // FenceDataUploadEndpoint is the endpoint postfix for FENCE data upload
 const FenceDataUploadEndpoint = FenceDataEndpoint + "/upload"
 
