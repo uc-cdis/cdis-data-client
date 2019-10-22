@@ -25,6 +25,10 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			cred := conf.ReadCredentials(credFile)
+			apiEndpoint = strings.TrimSpace(apiEndpoint)
+			if apiEndpoint[len(apiEndpoint)-1:] == "/" {
+				apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
+			}
 			parsedURL, err := conf.ValidateUrl(apiEndpoint)
 			if err != nil {
 				log.Fatalln("Error occurred when validating apiendpoint URL: " + err.Error())
@@ -49,6 +53,7 @@ func init() {
 				log.Fatalln("Error occurred when trying to read config file: " + err.Error())
 			}
 			conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
+			log.Println(`Profile '` + profile + `' has been configured successfully.`)
 		},
 	}
 
