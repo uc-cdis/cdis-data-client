@@ -75,19 +75,12 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) erro
 	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
 	resp, err := r.MakeARequest("POST", apiEndpoint, "", "application/json", body)
 	var m AccessTokenStruct
-	if err != nil {
-		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
-	}
 	// parse resp error codes first for profile configuration verification
 	if resp != nil && resp.StatusCode != 200 {
-		switch resp.StatusCode {
-		case 401:
-			return errors.New("Invalid credentials for apiendpoint \\'" + resp.Request.Host + "\\': check if your credentials are expired or incorrect")
-		case 405:
-			return errors.New("The provided apiendpoint \\'" + resp.Request.Host + "\\' is possibly not a valid Gen3 data commons")
-		default:
-			return errors.New("Could not get new access key due to error code " + strconv.Itoa(resp.StatusCode) + ", check FENCE log for more details.")
-		}
+		return errors.New("Error occurred in RequestNewAccessKey with error code " + strconv.Itoa(resp.StatusCode) + ", check FENCE log for more details.")
+	}
+	if err != nil {
+		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
 	}
 
 	str := ResponseToString(resp)

@@ -2,6 +2,7 @@ package g3cmd
 
 import (
 	"log"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
@@ -9,7 +10,7 @@ import (
 )
 
 var conf jwt.Configure
-var fun jwt.Functions
+var req jwt.Request
 
 func init() {
 	var credFile string
@@ -30,9 +31,16 @@ func init() {
 			}
 
 			prefixEndPoint := parsedURL.Scheme + "://" + parsedURL.Host
-			err = fun.Request.RequestNewAccessKey(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &cred)
+			err = req.RequestNewAccessKey(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &cred)
 			if err != nil {
-				log.Fatalln("Error occurred when validating profile config: " + err.Error())
+				receivedErrorString := err.Error()
+				errorMessageString := receivedErrorString
+				if strings.Contains(receivedErrorString, "401") {
+					errorMessageString = `Invalid credentials for apiendpoint '` + prefixEndPoint + `': check if your credentials are expired or incorrect`
+				} else if strings.Contains(receivedErrorString, "404") || strings.Contains(receivedErrorString, "405") || strings.Contains(receivedErrorString, "no such host") {
+					errorMessageString = `The provided apiendpoint '` + prefixEndPoint + `' is possibly not a valid Gen3 data commons`
+				}
+				log.Fatalln("Error occurred when validating profile config: " + errorMessageString)
 			}
 
 			// Store user info in ~/.gen3/config
