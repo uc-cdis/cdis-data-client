@@ -22,7 +22,7 @@ func InitMessageLog(profile string) {
 		messageLogFile.Close()
 		log.Fatalln("Error occurred when opening file \"" + messageLogFilename + "\": " + err.Error())
 	}
-	multiWriter = io.MultiWriter(os.Stdout, messageLogFile)
+	multiWriter = io.MultiWriter(os.Stderr, messageLogFile)
 	log.SetOutput(messageLogFile)
 	log.Println("Local message log file \"" + messageLogFilename + "\" has opened")
 }
@@ -32,7 +32,7 @@ func SetToMessageLog() {
 }
 
 func SetToConsole() {
-	log.SetOutput(os.Stdout)
+	log.SetOutput(os.Stderr)
 }
 
 func SetToBoth() {
