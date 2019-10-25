@@ -1,5 +1,6 @@
 # gen3-client
 [![Build Status](https://travis-ci.org/uc-cdis/cdis-data-client.svg?branch=master)](https://travis-ci.org/uc-cdis/cdis-data-client)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/uc-cdis/cdis-data-client?sort=semver)](https://github.com/uc-cdis/cdis-data-client/releases)
 
 `gen3-client` is a command-line tool for downloading, uploading, and submitting data files to and from a Gen3 data commons. 
 
