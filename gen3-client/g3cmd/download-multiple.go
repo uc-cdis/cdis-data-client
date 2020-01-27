@@ -301,7 +301,7 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	}
 	if len(errCh) > 0 {
 		close(errCh)
-		log.Printf("%d files have errorred during downloading, detailed errors are:\n", len(errCh))
+		log.Printf("%d files have encountered an error during downloading, detailed error messages are:\n", len(errCh))
 		for err := range errCh {
 			log.Println(err.Error())
 		}
