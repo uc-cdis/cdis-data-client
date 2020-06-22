@@ -15,6 +15,9 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
+// ShepherdEndpoint is the endpoint postfix for SHEPHERD / the Object Management API
+const ShepherdEndpoint = "/FIXME"
+
 // IndexdIndexEndpoint is the endpoint postfix for INDEXD index
 const IndexdIndexEndpoint = "/index/index"
 

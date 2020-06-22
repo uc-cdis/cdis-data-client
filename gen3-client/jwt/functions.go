@@ -23,7 +23,9 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	DoRequestWithSignedHeader(DoRequest, string, string, string, string, []byte) (JsonMessage, error)
+	CheckForShepherdAPI(string) (bool, error)
+	GetResponse(string, string, string, string, string, []byte) (string, *http.Response, error)
+	DoRequestWithSignedHeader(string, string, string, string, []byte) (JsonMessage, error)
 	ParseFenceURLResponse(*http.Response) (JsonMessage, error)
 }
 
@@ -130,6 +132,11 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		return msg, err
 	}
 	return msg, nil
+}
+
+func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
+	// NOTE @mpingram implement me
+	return true, nil
 }
 
 func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {

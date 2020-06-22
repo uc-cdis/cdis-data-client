@@ -177,8 +177,11 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 
 	function.Config = configure
 	function.Request = request
+
+	// NOTE @mpingram replace with Shepherd request here
 	endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
 	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+	// NOTE @mpingram this should be the only part that needs changing
 
 	if err != nil || msg.URL == "" {
 		errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
