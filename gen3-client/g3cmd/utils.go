@@ -170,28 +170,52 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 }
 
 // GetDownloadResponse helps grabbing a response for downloading a file specified with GUID
-func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, protocolText string) error {
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	function := new(jwt.Functions)
-
-	function.Config = configure
-	function.Request = request
-
-	// NOTE @mpingram replace with Shepherd request here
-	endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
-	msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
-	// NOTE @mpingram this should be the only part that needs changing
-
-	if err != nil || msg.URL == "" {
-		errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
+func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtils.FileDownloadResponseObject, protocolText string) error {
+	// Attempt to get the file download URL from Shepherd if it's deployed in this commons,
+	// otherwise fall back to Fence.
+	var fileDownloadURL string
+	hasShepherd, err := g3.CheckForShepherdAPI(profile)
+	if err != nil {
+		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
+		log.Println("Falling back to Indexd...")
+	} else if hasShepherd {
+		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + fdrObject.GUID + "/download"
+		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "GET", "", nil)
+		// Unmarshal into json
+		urlResponse := struct {
+			URL string `json:"url"`
+		}{}
+		err = json.NewDecoder(r.Body).Decode(&urlResponse)
 		if err != nil {
-			errorMsg += "\n Details of error: " + err.Error()
+			errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
+			if err != nil {
+				errorMsg += "\n Details of error: " + err.Error()
+			}
+			return errors.New(errorMsg)
 		}
-		return errors.New(errorMsg)
+		fileDownloadURL = urlResponse.URL
+		if err != nil || fileDownloadURL == "" {
+			errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
+			if err != nil {
+				errorMsg += "\n Details of error: " + err.Error()
+			}
+			return errors.New(errorMsg)
+		}
+	} else {
+		endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
+		msg, err := g3.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+
+		if err != nil || msg.URL == "" {
+			errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
+			if err != nil {
+				errorMsg += "\n Details of error: " + err.Error()
+			}
+			return errors.New(errorMsg)
+		}
+		fileDownloadURL = msg.URL
 	}
 
-	fdrObject.URL = msg.URL
+	fdrObject.URL = fileDownloadURL
 	if fdrObject.Range != 0 && !strings.Contains(fdrObject.URL, "X-Amz-Signature") && !strings.Contains(fdrObject.URL, "X-Goog-Signature") { // Not S3 or GS URLs and we want resume, send HEAD req first to check if server supports range
 		resp, err := http.Head(fdrObject.URL)
 		if err != nil {
@@ -203,17 +227,11 @@ func GetDownloadResponse(fdrObject *commonUtils.FileDownloadResponseObject, prot
 			fdrObject.Range = 0
 		}
 	}
-	req, err := http.NewRequest(http.MethodGet, fdrObject.URL, nil)
-	if err != nil {
-		errorMsg := "Error occurred when creating GET req for URL " + fdrObject.URL
-		errorMsg += "\n Details of error: " + err.Error()
-		return errors.New(errorMsg)
-	}
+	headers := make(map[string]string)
 	if fdrObject.Range != 0 {
-		req.Header.Set("Range", "bytes="+strconv.FormatInt(fdrObject.Range, 10)+"-")
+		headers["Range"] = "bytes=" + strconv.FormatInt(fdrObject.Range, 10) + "-"
 	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := g3.MakeARequest("GET", fdrObject.URL, "", "", headers, nil)
 	if err != nil {
 		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
 		errorMsg += "\n Details of error: " + err.Error()

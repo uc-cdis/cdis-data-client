@@ -1,6 +1,7 @@
 package g3cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,17 @@ import (
 
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
+
+// mockgen -destination=../mocks/mock_gen3interface.go -package=mocks . Gen3Interface
+
+// Gen3Interface contains methods used to make authorized http requests to Gen3 services.
+type Gen3Interface interface {
+	CheckForShepherdAPI(string) (bool, error)
+	GetResponse(string, string, string, string, string, []byte) (string, *http.Response, error)
+	DoRequestWithSignedHeader(string, string, string, string, []byte) (jwt.JsonMessage, error)
+	MakeARequest(string, string, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
+	// ParseFenceURLResponse(*http.Response) (jwt.JsonMessage, error)
+}
 
 func askGen3ForFileInfo(gen3Interface Gen3Interface, profile string, guid string, protocolText string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
 	var fileName string
@@ -198,11 +210,18 @@ func validateLocalFileStat(downloadPath string, filename string, filesize int64,
 	return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Range: localFilesize}
 }
 
-func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
+func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
 	bars := make([]*pb.ProgressBar, 0)
 	fdrs := make([]commonUtils.FileDownloadResponseObject, 0)
+
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	gen3Interface := new(jwt.Functions)
+	gen3Interface.Config = configure
+	gen3Interface.Request = request
+
 	for _, fdrObject := range batchFDRSlice {
-		err := GetDownloadResponse(&fdrObject, protocolText)
+		err := GetDownloadResponse(g3, profile, &fdrObject, protocolText)
 		if err != nil {
 			errCh <- err
 			continue
@@ -267,13 +286,6 @@ func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, proto
 	return succeeded
 }
 
-type Gen3Interface interface {
-	CheckForShepherdAPI(string) (bool, error)
-	GetResponse(string, string, string, string, string, []byte) (string, *http.Response, error)
-	DoRequestWithSignedHeader(string, string, string, string, []byte) (jwt.JsonMessage, error)
-	// ParseFenceURLResponse(*http.Response) (jwt.JsonMessage, error)
-}
-
 func downloadFile(guids []string, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) {
 	if numParallel < 1 {
 		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
@@ -306,9 +318,17 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
-	gen3Interface := new(jwt.Functions)
-	gen3Interface.Config = configure
-	gen3Interface.Request = request
+	functions := new(jwt.Functions)
+	functions.Config = configure
+	functions.Request = request
+
+	gen3Interface := struct {
+		*jwt.Request
+		*jwt.Functions
+	}{
+		request,
+		functions,
+	}
 
 	for _, guid := range guids {
 		var fdrObject commonUtils.FileDownloadResponseObject
@@ -334,12 +354,12 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 		if len(batchFDRSlice) < workers {
 			batchFDRSlice = append(batchFDRSlice, fdrObject)
 		} else {
-			totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh)
+			totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh)
 			batchFDRSlice = make([]commonUtils.FileDownloadResponseObject, 0)
 			batchFDRSlice = append(batchFDRSlice, fdrObject)
 		}
 	}
-	totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh) // download remainders
+	totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh) // download remainders
 
 	log.Printf("%d files downloaded.\n", totalCompeleted)
 

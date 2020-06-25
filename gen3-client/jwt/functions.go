@@ -33,15 +33,17 @@ type Request struct {
 }
 
 type RequestInterface interface {
-	MakeARequest(string, string, string, string, *bytes.Buffer) (*http.Response, error)
+	MakeARequest(string, string, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
 	RequestNewAccessKey(string, *Credential) error
 }
 
-func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey string, contentType string, body *bytes.Buffer) (*http.Response, error) {
+func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
 	/*
 		Make http request with header and body
 	*/
-	headers := make(map[string]string)
+	if headers == nil {
+		headers = make(map[string]string)
+	}
 	if accessKey != "" {
 		headers["Authorization"] = "Bearer " + accessKey
 	}
@@ -75,7 +77,7 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) erro
 
 	*/
 	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
-	resp, err := r.MakeARequest("POST", apiEndpoint, "", "application/json", body)
+	resp, err := r.MakeARequest("POST", apiEndpoint, "", "application/json", nil, body)
 	var m AccessTokenStruct
 	// parse resp error codes first for profile configuration verification
 	if resp != nil && resp.StatusCode != 200 {
@@ -153,7 +155,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	isExpiredToken := false
 	if cred.AccessKey != "" {
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
 
 		// 401 code is general error code from FENCE. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.
@@ -176,7 +178,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		content := f.Config.ReadFile(configPath, configFileType)
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
 	}
 
 	return prefixEndPoint, resp, nil
