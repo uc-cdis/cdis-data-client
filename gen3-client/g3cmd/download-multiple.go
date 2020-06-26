@@ -316,12 +316,12 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	skippedFiles := make([]RenamedOrSkippedFileInfo, 0)
 	fdrObjects := make([]commonUtils.FileDownloadResponseObject, 0)
 
+	// Instantiate interface to Gen3
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	functions := new(jwt.Functions)
 	functions.Config = configure
 	functions.Request = request
-
 	gen3Interface := struct {
 		*jwt.Request
 		*jwt.Functions

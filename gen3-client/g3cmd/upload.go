@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -31,6 +32,20 @@ func init() {
 			logs.InitFailedLog(profile)
 			logs.SetToBoth()
 			logs.InitScoreBoard(MaxRetryCount)
+
+			// Instantiate interface to Gen3
+			request := new(jwt.Request)
+			configure := new(jwt.Configure)
+			functions := new(jwt.Functions)
+			functions.Config = configure
+			functions.Request = request
+			gen3Interface := struct {
+				*jwt.Request
+				*jwt.Functions
+			}{
+				request,
+				functions,
+			}
 
 			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
@@ -83,6 +98,8 @@ func init() {
 					}
 				}
 			} else {
+				// NOTE @mpingram modify this section to work w Sheepdog
+				// ------------
 				for _, filePath := range singlepartFilePaths {
 					file, err := os.Open(filePath)
 					if err != nil {
@@ -104,7 +121,7 @@ func init() {
 						continue
 					}
 					// The following flow is for singlepart upload flow
-					respURL, guid, err := GeneratePresignedURL(fileInfo.Filename)
+					respURL, guid, err := GeneratePresignedURL(gen3Interface, profile, fileInfo.Filename)
 					if err != nil {
 						logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, 0, false, true)
 						log.Println(err.Error())
@@ -128,6 +145,7 @@ func init() {
 					}
 					file.Close()
 				}
+				// END NOTE ---
 			}
 
 			// multipart upload for large files here

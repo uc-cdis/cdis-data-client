@@ -246,15 +246,8 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 	return nil
 }
 
-// GeneratePresignedURL helps sending requests to FENCE and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(g3 Gen3Interface, filename string) (string, string, error) {
-	// request := new(jwt.Request)
-	// configure := new(jwt.Configure)
-	// function := new(jwt.Functions)
-
-	// function.Config = configure
-	// function.Request = request
-
+// GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
+func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string) (string, string, error) {
 	purObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(purObject)
 
@@ -266,7 +259,6 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string) (string, string, er
 	} else if hasShepherd {
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/"
 		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "POST", "", objectBytes)
-		// Unmarshal into json
 		res := struct {
 			GUID string `json:"guid"`
 			URL  string `json:"upload_url"`
@@ -274,6 +266,9 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string) (string, string, er
 		err = json.NewDecoder(r.Body).Decode(&res)
 		if err != nil {
 			return "", "", fmt.Errorf("Error occurred when creating upload URL for file %v: . Details: %v", filename, err)
+		}
+		if res.URL == "" || res.GUID == "" {
+			return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
 		}
 		return res.URL, res.GUID, nil
 	}
@@ -531,6 +526,20 @@ func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *htt
 }
 
 func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
+	// Instantiate interface to Gen3
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	functions := new(jwt.Functions)
+	functions.Config = configure
+	functions.Request = request
+	gen3Interface := struct {
+		*jwt.Request
+		*jwt.Functions
+	}{
+		request,
+		functions,
+	}
+
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
@@ -538,7 +547,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(furObjects[i].Filename)
+			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename)
 			if err != nil {
 				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
 				errCh <- err

@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -45,6 +46,21 @@ func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.R
 }
 
 func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
+
+	// Instantiate interface to Gen3
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	functions := new(jwt.Functions)
+	functions.Config = configure
+	functions.Request = request
+	gen3Interface := struct {
+		*jwt.Request
+		*jwt.Functions
+	}{
+		request,
+		functions,
+	}
+
 	var guid string
 	var presignedURL string
 	var err error
@@ -104,7 +120,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				}
 			}
 		} else {
-			presignedURL, guid, err = GeneratePresignedURL(ro.Filename)
+			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, profile, ro.Filename)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, guid, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, true)
