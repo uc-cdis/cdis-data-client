@@ -247,18 +247,38 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 }
 
 // GeneratePresignedURL helps sending requests to FENCE and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(filename string) (string, string, error) {
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	function := new(jwt.Functions)
+func GeneratePresignedURL(g3 Gen3Interface, filename string) (string, string, error) {
+	// request := new(jwt.Request)
+	// configure := new(jwt.Configure)
+	// function := new(jwt.Functions)
 
-	function.Config = configure
-	function.Request = request
+	// function.Config = configure
+	// function.Request = request
 
 	purObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(purObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
+	// Attempt to get the presigned URL of this file from Shepherd if it's deployed, otherwise fall back to Fence.
+	hasShepherd, err := g3.CheckForShepherdAPI(profile)
+	if err != nil {
+		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
+		log.Println("Falling back to Fence...")
+	} else if hasShepherd {
+		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/"
+		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "POST", "", objectBytes)
+		// Unmarshal into json
+		res := struct {
+			GUID string `json:"guid"`
+			URL  string `json:"upload_url"`
+		}{}
+		err = json.NewDecoder(r.Body).Decode(&res)
+		if err != nil {
+			return "", "", fmt.Errorf("Error occurred when creating upload URL for file %v: . Details: %v", filename, err)
+		}
+		return res.URL, res.GUID, nil
+	}
+
+	msg, err := g3.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
