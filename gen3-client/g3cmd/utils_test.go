@@ -130,3 +130,89 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 		t.Errorf("Wanted download response to be %v, got %v", mockFileResponse, mockFDRObj.Response)
 	}
 }
+
+// Expect GeneratePresignedURL to hit fence's data upload
+// endpoint and return the presigned URL and guid.
+func TestGeneratePresignedURL_noShepherd(t *testing.T) {
+	// -- SETUP --
+	testProfile := "test-profile"
+	testFilename := "test-file"
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// Mock the request that checks if Shepherd is deployed.
+	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
+	mockGen3Interface.
+		EXPECT().
+		CheckForShepherdAPI(testProfile).
+		Return(false, nil)
+
+	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
+	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v"}`, testFilename))
+	mockPresignedURL := "https://example.com/example.pfb"
+	mockGUID := "000000-0000000-0000000-000000"
+	mockUploadURLResponse := jwt.JsonMessage{
+		URL:  mockPresignedURL,
+		GUID: mockGUID,
+	}
+	mockGen3Interface.
+		EXPECT().
+		DoRequestWithSignedHeader(testProfile, "", commonUtils.FenceDataUploadEndpoint, "application/json", expectedReqBody).
+		Return(mockUploadURLResponse, nil)
+	// ----------
+
+	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename)
+	if err != nil {
+		t.Error(err)
+	}
+	if url != mockPresignedURL {
+		t.Errorf("Wanted the presignedURL to be set to %v, got %v", mockPresignedURL, url)
+	}
+	if guid != mockGUID {
+		t.Errorf("Wanted generated GUID to be %v, got %v", mockGUID, guid)
+	}
+}
+
+func TestGeneratePresignedURL_withShepherd(t *testing.T) {
+	// -- SETUP --
+	testProfile := "test-profile"
+	testFilename := "test-file"
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// Mock the request that checks if Shepherd is deployed.
+	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
+	mockGen3Interface.
+		EXPECT().
+		CheckForShepherdAPI(testProfile).
+		Return(true, nil)
+
+	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
+	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v"}`, testFilename))
+	mockPresignedURL := "https://example.com/example.pfb"
+	mockGUID := "000000-0000000-0000000-000000"
+	presignedURLBody := fmt.Sprintf(`{
+		"guid": "%v",
+		"upload_url": "%v"
+	}`, mockGUID, mockPresignedURL)
+	mockUploadURLResponse := http.Response{
+		StatusCode: 200,
+		Body:       ioutil.NopCloser(strings.NewReader(presignedURLBody)),
+	}
+	mockGen3Interface.
+		EXPECT().
+		GetResponse(testProfile, "", commonUtils.ShepherdEndpoint+"/objects/", "POST", "", expectedReqBody).
+		Return("", &mockUploadURLResponse, nil)
+	// ----------
+
+	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename)
+	if err != nil {
+		t.Error(err)
+	}
+	if url != mockPresignedURL {
+		t.Errorf("Wanted the presignedURL to be set to %v, got %v", mockPresignedURL, url)
+	}
+	if guid != mockGUID {
+		t.Errorf("Wanted generated GUID to be %v, got %v", mockGUID, guid)
+	}
+}
