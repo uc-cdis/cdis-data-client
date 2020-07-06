@@ -16,7 +16,7 @@ import (
 )
 
 // ShepherdEndpoint is the endpoint postfix for SHEPHERD / the Object Management API
-const ShepherdEndpoint = "/FIXME"
+const ShepherdEndpoint = "/mds"
 
 // IndexdIndexEndpoint is the endpoint postfix for INDEXD index
 const IndexdIndexEndpoint = "/index/index"

@@ -1,6 +1,7 @@
 package g3cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -257,8 +258,17 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string) (st
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
 		log.Println("Falling back to Fence...")
 	} else if hasShepherd {
-		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/"
+		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects"
 		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "POST", "", objectBytes)
+		if err != nil {
+			return "", "", fmt.Errorf("Error occurred when requesting upload URL from %v for file %v. Details: %v", endPointPostfix, filename, err)
+		}
+		if r.StatusCode != 200 {
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(r.Body)
+			body := buf.String()
+			return "", "", fmt.Errorf("Error when requesting upload URL at %v for file %v: Shepherd returned non-200 status code %v. Request body: %v", endPointPostfix, filename, r.StatusCode, body)
+		}
 		res := struct {
 			GUID string `json:"guid"`
 			URL  string `json:"upload_url"`

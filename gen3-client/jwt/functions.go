@@ -159,7 +159,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 
 		// 401 code is general error code from FENCE. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.
-		if resp != nil && resp.StatusCode == 401 {
+		if resp != nil && resp.StatusCode == 401 /* FIXME @mpingram -- temporary workaround for Shepherd returning 403 instead of 401. Delete before checking in */ || resp.StatusCode == 403 /* END FIXME */ {
 			isExpiredToken = true
 		} else {
 			return prefixEndPoint, resp, err
