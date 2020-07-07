@@ -198,25 +198,26 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 	} else if hasShepherd {
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + fdrObject.GUID + "/download"
 		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "GET", "", nil)
+		if err != nil {
+			return fmt.Errorf("Error occurred when getting download URL for object %v from endpoint %v. Details: %v", fdrObject.GUID, endPointPostfix, err)
+		}
+		if r.StatusCode != 200 {
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(r.Body)
+			body := buf.String()
+			return fmt.Errorf("Error when getting download URL at %v for file %v: Shepherd returned non-200 status code %v. Request body: %v", endPointPostfix, fdrObject.GUID, r.StatusCode, body)
+		}
 		// Unmarshal into json
 		urlResponse := struct {
 			URL string `json:"url"`
 		}{}
 		err = json.NewDecoder(r.Body).Decode(&urlResponse)
 		if err != nil {
-			errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
-			if err != nil {
-				errorMsg += "\n Details of error: " + err.Error()
-			}
-			return errors.New(errorMsg)
+			return fmt.Errorf("Error occurred when getting download URL for object %v from endpoint %v. Details: %v", fdrObject.GUID, endPointPostfix, err)
 		}
 		fileDownloadURL = urlResponse.URL
-		if err != nil || fileDownloadURL == "" {
-			errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
-			if err != nil {
-				errorMsg += "\n Details of error: " + err.Error()
-			}
-			return errors.New(errorMsg)
+		if fileDownloadURL == "" {
+			return fmt.Errorf("Unknown error occurred when getting download URL for object %v from endpoint %v: No URL found in response body. Check the Shepherd logs", fdrObject.GUID, endPointPostfix)
 		}
 	} else {
 		endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
