@@ -18,6 +18,7 @@ func init() {
 	var batch bool
 	var forceMultipart bool
 	var numParallel int
+	var includeMetadata bool
 	var uploadCmd = &cobra.Command{
 		Use:   "upload",
 		Short: "Upload file(s) to object storage.",
@@ -25,11 +26,11 @@ func init() {
 		Example: "For uploading a single file:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/data.bam>\n" +
 			"For uploading all files within an folder:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/>\n" +
 			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
-			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
+			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>\n" +
+			"This command can also upload file metadata using the --metadata flag. If the --metadata flag is passed, the gen3-client will look for a file called [filename]_metadata.json in the same folder, which contains the metadata to upload.\n" +
+			"For example, if uploading the file `folder/file.bam`, the gen3-client will look for a metadata file at `folder/file_metadata.json`.\n" +
+			"Use the gen3-client generate-metadata command to quickly generate template metadata files.\n",
 		Run: func(cmd *cobra.Command, args []string) {
-			// FIXME @mpingram add a cmd flag for this
-			includeMetadata := true
-
 			// initialize transmission logs
 			logs.InitSucceededLog(profile)
 			logs.InitFailedLog(profile)
@@ -186,5 +187,6 @@ func init() {
 	uploadCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	uploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	uploadCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
+	uploadCmd.Flags().BoolVar(&includeMetadata, "metadata", false, "Search for and upload file metadata alongside the file")
 	RootCmd.AddCommand(uploadCmd)
 }

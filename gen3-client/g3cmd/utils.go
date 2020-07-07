@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
@@ -285,7 +286,6 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fil
 			Metadata: fileMetadata.Metadata,
 		}
 		objectBytes, err := json.Marshal(purObject)
-		fmt.Printf("%v", string(objectBytes))
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects"
 		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "POST", "", objectBytes)
 		if err != nil {
@@ -464,8 +464,22 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 		}
 	}
 	if includeMetadata {
-		// FIXME @mpingram this is a stub, actually implement parsing the metadata file
-		metadata = FileMetadata{Authz: []string{"/programs/DEV/projects/test"}}
+		// The metadata path is the file name plus '_metadata.json'
+		metadataFilePath := strings.TrimSuffix(filePath, filepath.Ext(filePath)) + "_metadata.json"
+		var metadataFileBytes []byte
+		if _, err := os.Stat(metadataFilePath); err == nil {
+			metadataFileBytes, err = ioutil.ReadFile(metadataFilePath)
+			if err != nil {
+				return FileInfo{}, fmt.Errorf("Error reading metadata file %v: %v", metadataFilePath, err)
+			}
+			err := json.Unmarshal(metadataFileBytes, &metadata)
+			if err != nil {
+				return FileInfo{}, fmt.Errorf("Error parsing metadata file %v: %v", metadataFilePath, err)
+			}
+		} else {
+			// No metadata file was found for this file -- proceed, but warn the user.
+			log.Printf("WARNING: File metadata is enabled, but could not find the metadata file %v for file %v. Execute `gen3-client upload --help` for more info on file metadata.\n", metadataFilePath, filePath)
+		}
 	}
 	return FileInfo{filePath, filename, metadata}, err
 }
