@@ -27,6 +27,9 @@ func init() {
 			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
 			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>",
 		Run: func(cmd *cobra.Command, args []string) {
+			// FIXME @mpingram add a cmd flag for this
+			includeMetadata := true
+
 			// initialize transmission logs
 			logs.InitSucceededLog(profile)
 			logs.InitFailedLog(profile)
@@ -71,7 +74,7 @@ func init() {
 			if batch {
 				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
 				for _, filePath := range singlepartFilePaths {
-					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, includeMetadata)
 					if err != nil {
 						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error: " + err.Error())
@@ -114,14 +117,14 @@ func init() {
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
-					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, includeMetadata)
 					if err != nil {
 						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
 					// The following flow is for singlepart upload flow
-					respURL, guid, err := GeneratePresignedURL(gen3Interface, profile, fileInfo.Filename)
+					respURL, guid, err := GeneratePresignedURL(gen3Interface, profile, fileInfo.Filename, fileInfo.FileMetadata)
 					if err != nil {
 						logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, 0, false, true)
 						log.Println(err.Error())
@@ -152,7 +155,7 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				log.Println("Multipart uploading....")
 				for _, filePath := range multipartFilePaths {
-					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, includeMetadata)
 					if err != nil {
 						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())

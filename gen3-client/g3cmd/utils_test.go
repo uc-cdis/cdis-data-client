@@ -161,7 +161,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 		Return(mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename)
+	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename, FileMetadata{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -205,7 +205,7 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 		Return("", &mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename)
+	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename, FileMetadata{})
 	if err != nil {
 		t.Error(err)
 	}

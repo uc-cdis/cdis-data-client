@@ -32,6 +32,13 @@ type ManifestObject struct {
 // InitRequestObject represents the payload that sends to FENCE for getting a singlepart upload presignedURL or init a multipart upload for new object file
 type InitRequestObject struct {
 	Filename string `json:"file_name"`
+	Authz    struct {
+		Version       string   `json:"version"`
+		ResourcePaths []string `json:"resource_paths"`
+	} `json:"authz"`
+	Aliases []string `json:"aliases"`
+	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
+	Metadata string `json:"metadata"`
 }
 
 // MultipartUploadRequestObject represents the payload that sends to FENCE for getting a presignedURL for a part
@@ -54,10 +61,19 @@ type MultipartPartObject struct {
 	ETag       string `json:"ETag"`
 }
 
+// FileMetadata defines the metadata accepted by the new object management API, Shepherd
+type FileMetadata struct {
+	Authz   []string `json:"authz"`
+	Aliases []string `json:"aliases"`
+	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
+	Metadata string `json:"metadata"`
+}
+
 // FileInfo is a helper struct for including subdirname as filename
 type FileInfo struct {
-	FilePath string
-	Filename string
+	FilePath     string
+	Filename     string
+	FileMetadata FileMetadata
 }
 
 // RenamedOrSkippedFileInfo is a helper struct for recording renamed or skipped files
@@ -248,22 +264,33 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string) (string, string, error) {
-	purObject := InitRequestObject{Filename: filename}
-	objectBytes, err := json.Marshal(purObject)
-
+func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fileMetadata FileMetadata) (string, string, error) {
 	// Attempt to get the presigned URL of this file from Shepherd if it's deployed, otherwise fall back to Fence.
 	hasShepherd, err := g3.CheckForShepherdAPI(profile)
 	if err != nil {
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
 		log.Println("Falling back to Fence...")
 	} else if hasShepherd {
+		purObject := InitRequestObject{
+			Filename: filename,
+			Authz: struct {
+				Version       string   `json:"version"`
+				ResourcePaths []string `json:"resource_paths"`
+			}{
+				"0",
+				fileMetadata.Authz,
+			},
+			Aliases:  fileMetadata.Aliases,
+			Metadata: fileMetadata.Metadata,
+		}
+		objectBytes, err := json.Marshal(purObject)
+		fmt.Printf("%v", string(objectBytes))
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects"
 		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "POST", "", objectBytes)
 		if err != nil {
 			return "", "", fmt.Errorf("Error occurred when requesting upload URL from %v for file %v. Details: %v", endPointPostfix, filename, err)
 		}
-		if r.StatusCode != 200 {
+		if r.StatusCode != 201 {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(r.Body)
 			body := buf.String()
@@ -283,6 +310,9 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string) (st
 		return res.URL, res.GUID, nil
 	}
 
+	// Otherwise, fall back to Fence
+	purObject := InitRequestObject{Filename: filename}
+	objectBytes, err := json.Marshal(purObject)
 	msg, err := g3.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
@@ -415,10 +445,11 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 }
 
 // ProcessFilename returns an FileInfo object which has the information about the path and name to be used for upload of a file
-func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool) (FileInfo, error) {
+func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool, includeMetadata bool) (FileInfo, error) {
 	var err error
 	filePath, err = commonUtils.GetAbsolutePath(filePath)
 	filename := filepath.Base(filePath)
+	var metadata FileMetadata
 	if includeSubDirName {
 		uploadPath, err = commonUtils.GetAbsolutePath(uploadPath)
 		presentDirname := strings.TrimSuffix(uploadPath, commonUtils.PathSeparator+"*")
@@ -431,7 +462,11 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool)
 			filename = file
 		}
 	}
-	return FileInfo{filePath, filename}, err
+	if includeMetadata {
+		// FIXME @mpingram this is a stub, actually implement parsing the metadata file
+		metadata = FileMetadata{Authz: []string{"/programs/DEV/projects/test"}}
+	}
+	return FileInfo{filePath, filename, metadata}, err
 }
 
 func getFullFilePath(filePath string, filename string) (string, error) {
@@ -557,7 +592,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename)
+			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename, FileMetadata{})
 			if err != nil {
 				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
 				errCh <- err

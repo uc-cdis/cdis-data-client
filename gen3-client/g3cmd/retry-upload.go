@@ -120,7 +120,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				}
 			}
 		} else {
-			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, profile, ro.Filename)
+			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, profile, ro.Filename, FileMetadata{})
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, guid, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, true)
