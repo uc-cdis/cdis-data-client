@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -156,6 +157,9 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	isExpiredToken := false
 	if cred.AccessKey != "" {
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
+		if err != nil {
+			return "", resp, fmt.Errorf("Error while requesting user access token at %v: %v", apiEndpoint, err)
+		}
 
 		// 401 code is general error code from FENCE. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.

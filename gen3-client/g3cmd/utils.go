@@ -39,7 +39,7 @@ type InitRequestObject struct {
 	} `json:"authz"`
 	Aliases []string `json:"aliases"`
 	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
-	Metadata string `json:"metadata"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 // MultipartUploadRequestObject represents the payload that sends to FENCE for getting a presignedURL for a part
@@ -67,7 +67,7 @@ type FileMetadata struct {
 	Authz   []string `json:"authz"`
 	Aliases []string `json:"aliases"`
 	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
-	Metadata string `json:"metadata"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 // FileInfo is a helper struct for including subdirname as filename
@@ -286,6 +286,9 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fil
 			Metadata: fileMetadata.Metadata,
 		}
 		objectBytes, err := json.Marshal(purObject)
+		if err != nil {
+			return "", "", fmt.Errorf("Error occurred when creating upload request for file %v. Details: %v", filename, err)
+		}
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects"
 		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "POST", "", objectBytes)
 		if err != nil {
