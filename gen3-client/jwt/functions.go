@@ -183,6 +183,9 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
 
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
+		if err != nil {
+			return prefixEndPoint, resp, err
+		}
 	}
 
 	return prefixEndPoint, resp, nil
