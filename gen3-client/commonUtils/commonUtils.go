@@ -83,13 +83,22 @@ type FileDownloadResponseObject struct {
 	Writer       io.Writer
 }
 
+// FileMetadata defines the metadata accepted by the new object management API, Shepherd
+type FileMetadata struct {
+	Authz   []string `json:"authz"`
+	Aliases []string `json:"aliases"`
+	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
 // RetryObject defines a object for retry upload
 type RetryObject struct {
-	FilePath   string
-	Filename   string
-	GUID       string
-	RetryCount int
-	Multipart  bool
+	FilePath     string
+	Filename     string
+	FileMetadata FileMetadata
+	GUID         string
+	RetryCount   int
+	Multipart    bool
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning

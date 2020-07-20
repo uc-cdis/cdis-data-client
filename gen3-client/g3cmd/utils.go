@@ -426,7 +426,7 @@ func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []stri
 				log.Println("File \"" + filePath + "\" has been found in local submission history and has been skipped for preventing duplicated submissions.")
 				return
 			}
-			logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
+			logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
 
 			if fi.Size() > MultipartFileSizeLimit {
 				log.Printf("The file size of %s has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s\n", fi.Name(), FormatSize(MultipartFileSizeLimit))
@@ -528,12 +528,12 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	client := &http.Client{}
 	resp, err := client.Do(furObject.Request)
 	if err != nil {
-		logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
+		logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, retryCount, false, true)
 		furObject.Bar.Finish()
 		return errors.New("Error occurred during upload: " + err.Error())
 	}
 	if resp.StatusCode != 200 {
-		logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, retryCount, false, true)
+		logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, retryCount, false, true)
 		furObject.Bar.Finish()
 		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
 	}
@@ -604,18 +604,18 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 		if furObjects[i].GUID == "" {
 			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename, furObjects[i].FileMetadata)
 			if err != nil {
-				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
+				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, guid, 0, false, true)
 				errCh <- err
 				continue
 			}
 			furObjects[i].PresignedURL = respURL
 			furObjects[i].GUID = guid
 			// update failed log with new guid
-			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
+			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, guid, 0, false, true)
 		}
 		file, err := os.Open(furObjects[i].FilePath)
 		if err != nil {
-			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
+			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, furObjects[i].GUID, 0, false, true)
 			errCh <- errors.New("File open error: " + err.Error())
 			continue
 		}
@@ -624,7 +624,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 		furObjects[i], err = GenerateUploadRequest(furObjects[i], file)
 		if err != nil {
 			file.Close()
-			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].GUID, 0, false, true)
+			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, furObjects[i].GUID, 0, false, true)
 			errCh <- errors.New("Error occurred during request generation: " + err.Error())
 			continue
 		}
@@ -636,7 +636,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
 		for _, furObject := range furObjects {
-			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, 0, false, true)
 		}
 		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
 		return
@@ -651,11 +651,11 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 				if furObject.Request != nil {
 					resp, err := client.Do(furObject.Request)
 					if err != nil {
-						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, 0, false, true)
 						errCh <- err
 					} else {
 						if resp.StatusCode != 200 {
-							logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+							logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, 0, false, true)
 						} else { // Succeeded
 							respCh <- resp
 							logs.DeleteFromFailedLog(furObject.FilePath, true)
@@ -664,7 +664,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 						}
 					}
 				} else if furObject.FilePath != "" {
-					logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+					logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, 0, false, true)
 				}
 			}
 			wg.Done()

@@ -256,6 +256,21 @@ func (f *Functions) DeleteRecord(profile string, configFileType string, guid str
 	var err error
 	var msg string
 
+	hasShepherd, err := f.CheckForShepherdAPI(profile)
+	if err == nil && hasShepherd {
+		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + guid
+		_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
+		if err != nil {
+			return "", err
+		}
+		if resp.StatusCode == 204 {
+			msg = "Record with GUID " + guid + " has been deleted"
+		} else if resp.StatusCode == 500 {
+			err = errors.New("Internal server error occurred when deleting " + guid + "; could not delete stored files, or not able to delete INDEXD record")
+		}
+		return msg, err
+	}
+
 	endPointPostfix := commonUtils.FenceDataEndpoint + "/" + guid
 
 	_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)

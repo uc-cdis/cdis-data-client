@@ -99,7 +99,7 @@ func init() {
 					file, err := os.Open(furObject.FilePath)
 					if err != nil {
 						log.Println("File open error: " + err.Error())
-						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
 						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						continue
 					}
@@ -108,7 +108,7 @@ func init() {
 					furObject, err := GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
-						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
 						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue

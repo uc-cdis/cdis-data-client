@@ -77,7 +77,7 @@ func init() {
 				for _, filePath := range singlepartFilePaths {
 					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, hasMetadata)
 					if err != nil {
-						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
+						logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
 						log.Println("Process filename error: " + err.Error())
 						continue
 					}
@@ -105,32 +105,32 @@ func init() {
 				for _, filePath := range singlepartFilePaths {
 					file, err := os.Open(filePath)
 					if err != nil {
-						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
+						logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
 						log.Println("File open error: " + err.Error())
 						continue
 					}
 
 					fi, err := file.Stat()
 					if err != nil {
-						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
+						logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
 					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, hasMetadata)
 					if err != nil {
-						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
+						logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
 					// The following flow is for singlepart upload flow
 					respURL, guid, err := GeneratePresignedURL(gen3Interface, profile, fileInfo.Filename, fileInfo.FileMetadata)
 					if err != nil {
-						logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, 0, false, true)
+						logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
 						log.Println(err.Error())
 						continue
 					}
 					// update failed log with new guid
-					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, 0, false, true)
+					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
 
 					furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: guid, PresignedURL: respURL}
 					furObject, err = GenerateUploadRequest(furObject, file)
@@ -156,7 +156,7 @@ func init() {
 					// NOTE @mpingram -- metadata upload will not work for multipart uploads until Shepherd API supports multipart uploads
 					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, false)
 					if err != nil {
-						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
+						logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
