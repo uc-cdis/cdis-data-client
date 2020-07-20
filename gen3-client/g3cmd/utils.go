@@ -62,19 +62,11 @@ type MultipartPartObject struct {
 	ETag       string `json:"ETag"`
 }
 
-// FileMetadata defines the metadata accepted by the new object management API, Shepherd
-type FileMetadata struct {
-	Authz   []string `json:"authz"`
-	Aliases []string `json:"aliases"`
-	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
-	Metadata map[string]interface{} `json:"metadata"`
-}
-
 // FileInfo is a helper struct for including subdirname as filename
 type FileInfo struct {
 	FilePath     string
 	Filename     string
-	FileMetadata FileMetadata
+	FileMetadata commonUtils.FileMetadata
 }
 
 // RenamedOrSkippedFileInfo is a helper struct for recording renamed or skipped files
@@ -266,7 +258,7 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fileMetadata FileMetadata) (string, string, error) {
+func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fileMetadata commonUtils.FileMetadata) (string, string, error) {
 	// Attempt to get the presigned URL of this file from Shepherd if it's deployed, otherwise fall back to Fence.
 	hasShepherd, err := g3.CheckForShepherdAPI(profile)
 	if err != nil {
@@ -453,7 +445,7 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 	var err error
 	filePath, err = commonUtils.GetAbsolutePath(filePath)
 	filename := filepath.Base(filePath)
-	var metadata FileMetadata
+	var metadata commonUtils.FileMetadata
 	if includeSubDirName {
 		uploadPath, err = commonUtils.GetAbsolutePath(uploadPath)
 		presentDirname := strings.TrimSuffix(uploadPath, commonUtils.PathSeparator+"*")
@@ -610,7 +602,7 @@ func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, 
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename, FileMetadata{})
+			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename, furObjects[i].FileMetadata)
 			if err != nil {
 				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, guid, 0, false, true)
 				errCh <- err

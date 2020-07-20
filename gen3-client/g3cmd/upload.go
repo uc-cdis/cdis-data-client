@@ -18,7 +18,7 @@ func init() {
 	var batch bool
 	var forceMultipart bool
 	var numParallel int
-	var includeMetadata bool
+	var hasMetadata bool
 	var uploadCmd = &cobra.Command{
 		Use:   "upload",
 		Short: "Upload file(s) to object storage.",
@@ -52,7 +52,7 @@ func init() {
 			}
 
 			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
-			filePaths, err := commonUtils.ParseFilePaths(uploadPath)
+			filePaths, err := commonUtils.ParseFilePaths(uploadPath, hasMetadata)
 			if err != nil {
 				log.Fatalf("Error when parsing file paths: " + err.Error())
 			}
@@ -75,19 +75,19 @@ func init() {
 			if batch {
 				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
 				for _, filePath := range singlepartFilePaths {
-					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, includeMetadata)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, hasMetadata)
 					if err != nil {
 						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error: " + err.Error())
 						continue
 					}
 					if len(batchFURObjects) < workers {
-						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: ""}
+						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
 						batchUpload(batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
-						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: ""}
+						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
@@ -102,8 +102,6 @@ func init() {
 					}
 				}
 			} else {
-				// NOTE @mpingram modify this section to work w Sheepdog
-				// ------------
 				for _, filePath := range singlepartFilePaths {
 					file, err := os.Open(filePath)
 					if err != nil {
@@ -118,7 +116,7 @@ func init() {
 						log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
 						continue
 					}
-					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, includeMetadata)
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, hasMetadata)
 					if err != nil {
 						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
@@ -149,14 +147,14 @@ func init() {
 					}
 					file.Close()
 				}
-				// END NOTE ---
 			}
 
 			// multipart upload for large files here
 			if len(multipartFilePaths) > 0 {
 				log.Println("Multipart uploading....")
 				for _, filePath := range multipartFilePaths {
-					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, includeMetadata)
+					// NOTE @mpingram -- metadata upload will not work for multipart uploads until Shepherd API supports multipart uploads
+					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, false)
 					if err != nil {
 						logs.AddToFailedLog(filePath, filepath.Base(filePath), "", 0, false, true)
 						log.Println("Process filename error for file: " + err.Error())
@@ -187,6 +185,6 @@ func init() {
 	uploadCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	uploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	uploadCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
-	uploadCmd.Flags().BoolVar(&includeMetadata, "metadata", false, "Search for and upload file metadata alongside the file")
+	uploadCmd.Flags().BoolVar(&hasMetadata, "metadata", false, "Search for and upload file metadata alongside the file")
 	RootCmd.AddCommand(uploadCmd)
 }

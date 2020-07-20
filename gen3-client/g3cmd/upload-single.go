@@ -31,7 +31,7 @@ func init() {
 			logs.SetToBoth()
 			logs.InitScoreBoard(0)
 
-			filePaths, err := commonUtils.ParseFilePaths(filePath)
+			filePaths, err := commonUtils.ParseFilePaths(filePath, false)
 			if len(filePaths) > 1 {
 				fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
 				return

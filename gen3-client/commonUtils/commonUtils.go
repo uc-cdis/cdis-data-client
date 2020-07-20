@@ -51,10 +51,19 @@ const PathSeparator = string(os.PathSeparator)
 // DefaultTimeout is used to set timeout value for http client
 const DefaultTimeout = 120 * time.Second
 
+// FileMetadata defines the metadata accepted by the new object management API, Shepherd
+type FileMetadata struct {
+	Authz   []string `json:"authz"`
+	Aliases []string `json:"aliases"`
+	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
 // FileUploadRequestObject defines a object for file upload
 type FileUploadRequestObject struct {
 	FilePath     string
 	Filename     string
+	FileMetadata FileMetadata
 	GUID         string
 	PresignedURL string
 	Request      *http.Request
@@ -103,7 +112,7 @@ func GetAbsolutePath(filePath string) (string, error) {
 }
 
 // ParseFilePaths generates all possible file paths
-func ParseFilePaths(filePath string) ([]string, error) {
+func ParseFilePaths(filePath string, metadataEnabled bool) ([]string, error) {
 	fullFilePath, err := GetAbsolutePath(filePath)
 	if err != nil {
 		return nil, err
@@ -132,7 +141,13 @@ func ParseFilePaths(filePath string) ([]string, error) {
 					if err != nil {
 						return err
 					}
-					if !fileInfo.IsDir() && !isHidden {
+					isMetadata := false
+					// if file metadata is enabled, do not include metadata in the list of files.
+					if metadataEnabled {
+						isMetadata = strings.HasSuffix(path, "_metadata.json")
+					}
+
+					if !fileInfo.IsDir() && !isHidden && !isMetadata {
 						filePaths = append(filePaths, path)
 					} else if isHidden {
 						log.Printf("File %s is a hidden file and will be skipped\n", path)
