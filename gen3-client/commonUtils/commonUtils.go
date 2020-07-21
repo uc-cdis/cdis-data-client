@@ -18,6 +18,12 @@ import (
 // ShepherdEndpoint is the endpoint postfix for SHEPHERD / the Object Management API
 const ShepherdEndpoint = "/mds"
 
+// ShepherdVersionEndpoint is the endpoint used to check what version of Shepherd a commons has deployed
+const ShepherdVersionEndpoint = "/mds/version"
+
+// MinAcceptableShepherdVersion is the minimum version of Shepherd that will work with this version of the client.
+const MinAcceptableShepherdVersion = "2.0.0"
+
 // IndexdIndexEndpoint is the endpoint postfix for INDEXD index
 const IndexdIndexEndpoint = "/index/index"
 
@@ -50,14 +56,6 @@ const PathSeparator = string(os.PathSeparator)
 
 // DefaultTimeout is used to set timeout value for http client
 const DefaultTimeout = 120 * time.Second
-
-// FileMetadata defines the metadata accepted by the new object management API, Shepherd
-type FileMetadata struct {
-	Authz   []string `json:"authz"`
-	Aliases []string `json:"aliases"`
-	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
-	Metadata map[string]interface{} `json:"metadata"`
-}
 
 // FileUploadRequestObject defines a object for file upload
 type FileUploadRequestObject struct {

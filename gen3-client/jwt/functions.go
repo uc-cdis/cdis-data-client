@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
@@ -138,8 +140,34 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 }
 
 func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
-	// NOTE @mpingram implement me
-	return true, nil
+	_, res, err := f.GetResponse(profile, "", commonUtils.ShepherdVersionEndpoint, "GET", "", nil)
+	if err != nil {
+		return false, errors.New("Error occurred during generating HTTP request: " + err.Error())
+	}
+	if res.StatusCode != 200 {
+		return false, nil
+	}
+	bodyBytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return false, errors.New("Error occurred when reading HTTP request: " + err.Error())
+	}
+	body, err := strconv.Unquote(string(bodyBytes))
+	if err != nil {
+		return false, fmt.Errorf("Error occurred when parsing version from Shepherd: %v: %v", string(body), err)
+	}
+	// Compare the version in the response to the target version
+	ver, err := semver.Make(body)
+	if err != nil {
+		return false, fmt.Errorf("Error occurred when parsing version from Shepherd: %v: %v", string(body), err)
+	}
+	minVer, err := semver.Parse(commonUtils.MinAcceptableShepherdVersion)
+	if err != nil {
+		return false, fmt.Errorf("Error occurred when parsing minimum acceptable Shepherd version: %v: %v", commonUtils.MinAcceptableShepherdVersion, err)
+	}
+	if ver.GTE(minVer) {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
@@ -163,7 +191,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 
 		// 401 code is general error code from FENCE. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.
-		if resp != nil && resp.StatusCode == 401 /* FIXME @mpingram -- temporary workaround for Shepherd returning 403 instead of 401. Delete before checking in */ || resp.StatusCode == 403 /* END FIXME */ {
+		if resp != nil && resp.StatusCode == 401 {
 			isExpiredToken = true
 		} else {
 			return prefixEndPoint, resp, err
