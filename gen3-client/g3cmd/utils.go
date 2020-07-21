@@ -33,6 +33,11 @@ type ManifestObject struct {
 // InitRequestObject represents the payload that sends to FENCE for getting a singlepart upload presignedURL or init a multipart upload for new object file
 type InitRequestObject struct {
 	Filename string `json:"file_name"`
+}
+
+// ShepherdInitRequestObject represents the payload that sends to Shepherd for getting a singlepart upload presignedURL or init a multipart upload for new object file
+type ShepherdInitRequestObject struct {
+	Filename string `json:"file_name"`
 	Authz    struct {
 		Version       string   `json:"version"`
 		ResourcePaths []string `json:"resource_paths"`
@@ -265,7 +270,7 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fil
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
 		log.Println("Falling back to Fence...")
 	} else if hasShepherd {
-		purObject := InitRequestObject{
+		purObject := ShepherdInitRequestObject{
 			Filename: filename,
 			Authz: struct {
 				Version       string   `json:"version"`

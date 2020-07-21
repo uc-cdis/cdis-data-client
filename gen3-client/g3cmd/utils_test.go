@@ -1,6 +1,7 @@
 package g3cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -177,6 +178,11 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 	// -- SETUP --
 	testProfile := "test-profile"
 	testFilename := "test-file"
+	testMetadata := commonUtils.FileMetadata{
+		Aliases:  []string{"test-alias-1", "test-alias-2"},
+		Authz:    []string{"authz-resource-1", "authz-resource-2"},
+		Metadata: map[string]interface{}{"arbitrary": "metadata"},
+	}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -188,7 +194,22 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 		Return(true, nil)
 
 	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
-	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v"}`, testFilename))
+	expectedReq := ShepherdInitRequestObject{
+		Filename: testFilename,
+		Authz: struct {
+			Version       string   `json:"version"`
+			ResourcePaths []string `json:"resource_paths"`
+		}{
+			"0",
+			testMetadata.Authz,
+		},
+		Aliases:  testMetadata.Aliases,
+		Metadata: testMetadata.Metadata,
+	}
+	expectedReqBody, err := json.Marshal(expectedReq)
+	if err != nil {
+		t.Error(err)
+	}
 	mockPresignedURL := "https://example.com/example.pfb"
 	mockGUID := "000000-0000000-0000000-000000"
 	presignedURLBody := fmt.Sprintf(`{
@@ -196,16 +217,16 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 		"upload_url": "%v"
 	}`, mockGUID, mockPresignedURL)
 	mockUploadURLResponse := http.Response{
-		StatusCode: 200,
+		StatusCode: 201,
 		Body:       ioutil.NopCloser(strings.NewReader(presignedURLBody)),
 	}
 	mockGen3Interface.
 		EXPECT().
-		GetResponse(testProfile, "", commonUtils.ShepherdEndpoint+"/objects/", "POST", "", expectedReqBody).
+		GetResponse(testProfile, "", commonUtils.ShepherdEndpoint+"/objects", "POST", "", expectedReqBody).
 		Return("", &mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename, commonUtils.FileMetadata{})
+	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename, testMetadata)
 	if err != nil {
 		t.Error(err)
 	}
