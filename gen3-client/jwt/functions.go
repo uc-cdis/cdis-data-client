@@ -285,7 +285,9 @@ func (f *Functions) DeleteRecord(profile string, configFileType string, guid str
 	var msg string
 
 	hasShepherd, err := f.CheckForShepherdAPI(profile)
-	if err == nil && hasShepherd {
+	if err != nil {
+		log.Printf("WARNING: Error while checking for Shepherd API: %v. Falling back to Fence to delete record.\n", err)
+	} else if hasShepherd {
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + guid
 		_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
 		if err != nil {

@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/uc-cdis/cdis-data-client.svg?branch=master)](https://travis-ci.org/uc-cdis/cdis-data-client)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/uc-cdis/cdis-data-client?sort=semver)](https://github.com/uc-cdis/cdis-data-client/releases)
 
-`gen3-client` is a command-line tool for downloading, uploading, and submitting data files to and from a Gen3 data commons. 
+`gen3-client` is a command-line tool for downloading, uploading, and submitting data files to and from a Gen3 data commons.
 
 Read more about what it does and how to use it in the `gen3-client` [user guide](https://gen3.org/resources/user/gen3-client/).
 
@@ -16,7 +16,7 @@ Read more about what it does and how to use it in the `gen3-client` [user guide]
 First, [install Go and the Go tools](https://golang.org/doc/install) if you have not already done so. [Set up your workspace and your GOPATH.](https://golang.org/doc/code.html)
 
 
-Then: 
+Then:
 ```
 go get -d github.com/uc-cdis/gen3-client
 go install
@@ -37,3 +37,30 @@ go install .
 ```
 
 Now you should have `gen3-client` successfully installed. For a comprehensive instruction on how to configure and use `gen3-client` for uploading / downloading object files, please refer to the `gen3-client` [user guide](https://gen3.org/resources/user/gen3-client/).
+
+## Uploading File Metadata
+Some Gen3 data commons support uploading file metadata when uploading data files.
+
+You can upload file metadata using the `gen3-client upload` command with the  `--metadata` flag. E.g.:
+```
+gen3-client upload --profile=my-profile --upload-path=/path/to/myfile.bam --metadata
+```
+
+This will tell `gen3-client` to look for a metadata file `myfile_metadata.json` in the same folder as `myfile.bam`.
+A metadata file should be located in the same folder as the file to be uploaded, and should be named `[filename]_metadata.json`.
+
+The metadata file should be a JSON file in the format:
+```
+{
+    "authz": ["/example/authz/resource"],
+    "aliases": ["example_alias"],
+    "metadata": {
+        "any": {
+            "arbitrary": ["json", "metadata"]
+        }
+    }
+}
+```
+The `aliases` and `metadata` properties are optional. Some Gen3 data commons require the `authz` property to be specified in order to upload a data file.
+
+If you do not know what `authz` to use, you can look at your `/profile` page of the Gen3 data commons you are uploading to. You will see a list of *authz resources* in the format `/example/authz/resource`: these are the authz resources you have access to.

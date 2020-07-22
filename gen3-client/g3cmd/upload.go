@@ -27,8 +27,8 @@ func init() {
 			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
 			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>\n" +
 			"This command can also upload file metadata using the --metadata flag. If the --metadata flag is passed, the gen3-client will look for a file called [filename]_metadata.json in the same folder, which contains the metadata to upload.\n" +
-			"For example, if uploading the file `folder/file.bam`, the gen3-client will look for a metadata file at `folder/file_metadata.json`.\n" +
-			"Use the gen3-client generate-metadata command to quickly generate template metadata files.\n",
+			"For example, if uploading the file `folder/my_file.bam`, the gen3-client will look for a metadata file at `folder/my_file_metadata.json`.\n" +
+			"For the format of the metadata files, see the README.",
 		Run: func(cmd *cobra.Command, args []string) {
 			// initialize transmission logs
 			logs.InitSucceededLog(profile)
@@ -38,6 +38,17 @@ func init() {
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
+
+			if hasMetadata {
+				hasShepherd, err := gen3Interface.CheckForShepherdAPI(profile)
+				if err != nil {
+					log.Printf("WARNING: Error when checking for Shepherd API: %v", err)
+				} else {
+					if !hasShepherd {
+						log.Fatalf("ERROR: Metadata upload (`--metadata`) is not supported in the environment you are uploading to. Double check that you are uploading to the right profile.")
+					}
+				}
+			}
 
 			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath, hasMetadata)

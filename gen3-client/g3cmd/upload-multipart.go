@@ -38,7 +38,7 @@ func retry(attempts int, filePath string, guid string, f func() error) (err erro
 }
 
 func multipartUpload(fileInfo FileInfo, retryCount int) error {
-	// NOTE @mpingram -- multipartUpload does not yet use the new obj management API (aka Shepherd)
+	// NOTE @mpingram -- multipartUpload does not yet use the new Shepherd API
 	// because Shepherd does not yet support multipart uploads.
 	file, err := os.Open(fileInfo.FilePath)
 	defer file.Close()

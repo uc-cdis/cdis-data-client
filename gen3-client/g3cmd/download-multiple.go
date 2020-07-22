@@ -28,7 +28,7 @@ func askGen3ForFileInfo(gen3Interface Gen3Interface, profile string, guid string
 	var fileSize int64
 
 	// If the commons has the newer Shepherd API deployed, get the filename and file size from the Shepherd API.
-	// Otherwise,  on Indexd and Fence.
+	// Otherwise, fall back on Indexd and Fence.
 	hasShepherd, err := gen3Interface.CheckForShepherdAPI(profile)
 	if err != nil {
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
@@ -200,7 +200,6 @@ func validateLocalFileStat(downloadPath string, filename string, filesize int64,
 func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
 	bars := make([]*pb.ProgressBar, 0)
 	fdrs := make([]commonUtils.FileDownloadResponseObject, 0)
-
 	for _, fdrObject := range batchFDRSlice {
 		err := GetDownloadResponse(g3, profile, &fdrObject, protocolText)
 		if err != nil {
