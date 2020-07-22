@@ -132,7 +132,7 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 	}
 }
 
-// Expect GeneratePresignedURL to hit fence's data upload
+// If Shepherd is not deployed, expect GeneratePresignedURL to hit fence's data upload
 // endpoint and return the presigned URL and guid.
 func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 	// -- SETUP --
@@ -174,6 +174,9 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 	}
 }
 
+// If Shepherd is deployed, expect GeneratePresignedURL to hit Shepherd's data upload
+// endpoint with the file name and file metadata. GeneratePresignedURL should then
+// return the guid and file name that it gets from the endpoint.
 func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 	// -- SETUP --
 	testProfile := "test-profile"

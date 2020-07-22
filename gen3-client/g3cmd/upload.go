@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -38,18 +37,7 @@ func init() {
 			logs.InitScoreBoard(MaxRetryCount)
 
 			// Instantiate interface to Gen3
-			request := new(jwt.Request)
-			configure := new(jwt.Configure)
-			functions := new(jwt.Functions)
-			functions.Config = configure
-			functions.Request = request
-			gen3Interface := struct {
-				*jwt.Request
-				*jwt.Functions
-			}{
-				request,
-				functions,
-			}
+			gen3Interface := NewGen3Interface()
 
 			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath, hasMetadata)

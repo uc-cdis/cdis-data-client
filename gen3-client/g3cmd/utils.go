@@ -587,18 +587,7 @@ func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *htt
 
 func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
 	// Instantiate interface to Gen3
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	functions := new(jwt.Functions)
-	functions.Config = configure
-	functions.Request = request
-	gen3Interface := struct {
-		*jwt.Request
-		*jwt.Functions
-	}{
-		request,
-		functions,
-	}
+	gen3Interface := NewGen3Interface()
 
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
@@ -708,4 +697,29 @@ func FormatSize(size int64) string {
 	}
 
 	return fmt.Sprintf("%.1f"+unitMap[unitSize], float64(size)/float64(unitSize))
+}
+
+// Gen3Interface contains methods used to make authorized http requests to Gen3 services.
+type Gen3Interface interface {
+	CheckForShepherdAPI(profile string) (bool, error)
+	GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
+	DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (jwt.JsonMessage, error)
+	MakeARequest(method string, apiEndpoint string, accessKey string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error)
+}
+
+// NewGen3Interface returns a struct that contains methods used to make authorized http requests to Gen3 services.
+func NewGen3Interface() Gen3Interface {
+	request := new(jwt.Request)
+	configure := new(jwt.Configure)
+	functions := new(jwt.Functions)
+	functions.Config = configure
+	functions.Request = request
+	gen3Interface := struct {
+		*jwt.Request
+		*jwt.Functions
+	}{
+		request,
+		functions,
+	}
+	return gen3Interface
 }

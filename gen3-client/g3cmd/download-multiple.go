@@ -1,14 +1,12 @@
 package g3cmd
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -21,20 +19,9 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
-
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
 // mockgen -destination=../mocks/mock_gen3interface.go -package=mocks . Gen3Interface
-
-// Gen3Interface contains methods used to make authorized http requests to Gen3 services.
-type Gen3Interface interface {
-	CheckForShepherdAPI(string) (bool, error)
-	GetResponse(string, string, string, string, string, []byte) (string, *http.Response, error)
-	DoRequestWithSignedHeader(string, string, string, string, []byte) (jwt.JsonMessage, error)
-	MakeARequest(string, string, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
-	// ParseFenceURLResponse(*http.Response) (jwt.JsonMessage, error)
-}
 
 func askGen3ForFileInfo(gen3Interface Gen3Interface, profile string, guid string, protocolText string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
 	var fileName string
@@ -214,12 +201,6 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	bars := make([]*pb.ProgressBar, 0)
 	fdrs := make([]commonUtils.FileDownloadResponseObject, 0)
 
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	gen3Interface := new(jwt.Functions)
-	gen3Interface.Config = configure
-	gen3Interface.Request = request
-
 	for _, fdrObject := range batchFDRSlice {
 		err := GetDownloadResponse(g3, profile, &fdrObject, protocolText)
 		if err != nil {
@@ -316,19 +297,7 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	skippedFiles := make([]RenamedOrSkippedFileInfo, 0)
 	fdrObjects := make([]commonUtils.FileDownloadResponseObject, 0)
 
-	// Instantiate interface to Gen3
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	functions := new(jwt.Functions)
-	functions.Config = configure
-	functions.Request = request
-	gen3Interface := struct {
-		*jwt.Request
-		*jwt.Functions
-	}{
-		request,
-		functions,
-	}
+	gen3Interface := NewGen3Interface()
 
 	for _, guid := range guids {
 		var fdrObject commonUtils.FileDownloadResponseObject
