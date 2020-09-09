@@ -1,9 +1,11 @@
 package g3cmd
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
@@ -16,6 +18,8 @@ var req jwt.Request
 func init() {
 	var credFile string
 	var apiEndpoint string
+	var useShepherd string
+	var minShepherdVersion string
 	var configureCmd = &cobra.Command{
 		Use:   "configure",
 		Short: "Add or modify a configuration profile to your config file",
@@ -49,12 +53,21 @@ func init() {
 				log.Fatalln("Error occurred when validating profile config: " + errorMessageString)
 			}
 
+			useShepherd = strings.TrimSpace(useShepherd)
+			minShepherdVersion = strings.TrimSpace(minShepherdVersion)
+			if minShepherdVersion != "" {
+				_, err = semver.Parse(minShepherdVersion)
+				if err != nil {
+					log.Fatalln("Error occurred when validating minShepherdVersion: " + err.Error())
+				}
+			}
+
 			// Store user info in ~/.gen3/config
 			configPath, content, err := conf.TryReadConfigFile()
 			if err != nil {
 				log.Fatalln("Error occurred when trying to read config file: " + err.Error())
 			}
-			conf.UpdateConfigFile(cred, content, apiEndpoint, configPath, profile)
+			conf.UpdateConfigFile(cred, content, apiEndpoint, useShepherd, minShepherdVersion, configPath, profile)
 			log.Println(`Profile '` + profile + `' has been configured successfully.`)
 			logs.CloseMessageLog()
 		},
@@ -66,5 +79,7 @@ func init() {
 	configureCmd.MarkFlagRequired("cred")
 	configureCmd.Flags().StringVar(&apiEndpoint, "apiendpoint", "", "Specify the API endpoint of the data commons")
 	configureCmd.MarkFlagRequired("apiendpoint")
+	configureCmd.Flags().StringVar(&useShepherd, "use-shepherd", "", fmt.Sprintf("Enables or disables support for the Shepherd API. If enabled, gen3client will use the Shepherd API if available. (Default: %v)", commonUtils.DefaultUseShepherd))
+	configureCmd.Flags().StringVar(&minShepherdVersion, "min-shepherd-version", "", fmt.Sprintf("Specify the minimum version of Shepherd that the gen3client will use if Shepherd is enabled. (Default: %v)", commonUtils.DefaultMinShepherdVersion))
 	RootCmd.AddCommand(configureCmd)
 }

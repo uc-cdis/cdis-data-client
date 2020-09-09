@@ -15,14 +15,22 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
+// DefaultUseShepherd sets whether gen3client will attempt to use the Shepherd / Object Management API
+// endpoints if available.
+// The user can override this default using the `gen3-client configure` command.
+const DefaultUseShepherd = false
+
+// DefaultMinShepherdVersion is the minimum version of Shepherd that the gen3client will use.
+// Before attempting to use Shepherd, the client will check for Shepherd's version, and if the version is
+// below this number the gen3client will instead warn the user and fall back to fence/indexd.
+// The user can override this default using the `gen3-client configure` command.
+const DefaultMinShepherdVersion = "2.0.0"
+
 // ShepherdEndpoint is the endpoint postfix for SHEPHERD / the Object Management API
 const ShepherdEndpoint = "/mds"
 
 // ShepherdVersionEndpoint is the endpoint used to check what version of Shepherd a commons has deployed
 const ShepherdVersionEndpoint = "/mds/version"
-
-// MinAcceptableShepherdVersion is the minimum version of Shepherd that will work with this version of the client.
-const MinAcceptableShepherdVersion = "2.0.0"
 
 // IndexdIndexEndpoint is the endpoint postfix for INDEXD index
 const IndexdIndexEndpoint = "/index/index"

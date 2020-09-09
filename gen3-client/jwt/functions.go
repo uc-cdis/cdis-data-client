@@ -140,6 +140,23 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 }
 
 func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
+	// Check if Shepherd is enabled
+	cred := f.Config.ParseConfig(profile)
+	if cred.UseShepherd == "false" {
+		return false, nil
+	}
+	if cred.UseShepherd != "true" && commonUtils.DefaultUseShepherd == false {
+		return false, nil
+	}
+	// If Shepherd is enabled, make sure that the commons has a compatible version of Shepherd deployed.
+	// Compare the version returned from the Shepherd version endpoint with the minimum acceptable Shepherd version.
+	var minShepherdVersion string
+	if cred.MinShepherdVersion == "" {
+		minShepherdVersion = commonUtils.DefaultMinShepherdVersion
+	} else {
+		minShepherdVersion = cred.MinShepherdVersion
+	}
+
 	_, res, err := f.GetResponse(profile, "", commonUtils.ShepherdVersionEndpoint, "GET", "", nil)
 	if err != nil {
 		return false, errors.New("Error occurred during generating HTTP request: " + err.Error())
@@ -160,14 +177,14 @@ func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("Error occurred when parsing version from Shepherd: %v: %v", string(body), err)
 	}
-	minVer, err := semver.Parse(commonUtils.MinAcceptableShepherdVersion)
+	minVer, err := semver.Parse(minShepherdVersion)
 	if err != nil {
-		return false, fmt.Errorf("Error occurred when parsing minimum acceptable Shepherd version: %v: %v", commonUtils.MinAcceptableShepherdVersion, err)
+		return false, fmt.Errorf("Error occurred when parsing minimum acceptable Shepherd version: %v: %v", minShepherdVersion, err)
 	}
 	if ver.GTE(minVer) {
 		return true, nil
 	}
-	return false, nil
+	return false, fmt.Errorf("Shepherd is enabled, but %v does not have correct Shepherd version. (Need Shepherd version >=%v, got %v)", cred.APIEndpoint, minVer, ver)
 }
 
 func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
@@ -208,7 +225,7 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		}
 		configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 		content := f.Config.ReadFile(configPath, configFileType)
-		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
+		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, cred.UseShepherd, cred.MinShepherdVersion, configPath, profile)
 
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
 		if err != nil {

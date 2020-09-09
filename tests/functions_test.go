@@ -77,7 +77,7 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
-	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Return(nil).Times(1)
 	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
@@ -106,7 +106,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
 	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
-	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), "http://www.test.com", gomock.Any(), "default").Times(1)
+	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), "http://www.test.com", gomock.Any(), gomock.Any(), gomock.Any(), "default").Times(1)
 
 	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Return(nil).Times(1)
 	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(2)
