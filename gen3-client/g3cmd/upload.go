@@ -84,13 +84,13 @@ func init() {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
-				batchUpload(batchFURObjects, workers, respCh, errCh)
+				batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
 
 				if len(errCh) > 0 {
 					close(errCh)

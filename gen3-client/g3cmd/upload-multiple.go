@@ -83,17 +83,19 @@ func init() {
 				workers, respCh, errCh, batchFURObjects = initBatchUploadChannels(numParallel, len(objects))
 			}
 
+			gen3Interface := NewGen3Interface()
+
 			for i, furObject := range furObjects {
 				if batch {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 					if i == len(furObjects)-1 { // upload remainders
-						batchUpload(batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
 					}
 				} else {
 					file, err := os.Open(furObject.FilePath)

@@ -585,10 +585,7 @@ func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *htt
 	return workers, respCh, errCh, batchFURSlice
 }
 
-func batchUpload(furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
-	// Instantiate interface to Gen3
-	gen3Interface := NewGen3Interface()
-
+func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
