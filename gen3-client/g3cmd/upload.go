@@ -150,9 +150,15 @@ func init() {
 
 			// multipart upload for large files here
 			if len(multipartFilePaths) > 0 {
+				// NOTE(@mpingram) - For the moment Shepherd doesn't support multipart uploads.
+				// Throw an error if Shepherd is enabled and user attempts to multipart upload.
+				cred := conf.ParseConfig(profile)
+				if cred.UseShepherd == "true" ||
+					cred.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
+					log.Fatalf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ gen3-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
+				}
 				log.Println("Multipart uploading....")
 				for _, filePath := range multipartFilePaths {
-					// NOTE @mpingram -- metadata upload will not work for multipart uploads until Shepherd API supports multipart uploads
 					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, false)
 					if err != nil {
 						logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
