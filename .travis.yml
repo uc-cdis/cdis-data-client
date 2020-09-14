@@ -48,13 +48,12 @@ before_install: |-
   aws s3 sync s3://cdis-dc-builds/$TRAVIS_BRANCH ~/shared
   export GOOS=$WANTOS
   export GOARCH="amd64"
-  go get -t -v ./...
 
 script: |-
   if [ "$GOOS" == "linux" ]
   then
     set -e
-    go build
+    go build -o cdis-data-client
     ls -al
     if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
       mv gen3-client files && mv cdis-data-client gen3-client
@@ -65,7 +64,7 @@ script: |-
   elif [ "$GOOS" == "darwin" ]
   then
     set -e
-    go build
+    go build -o cdis-data-client
     ls -al
     if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
       mv gen3-client files && mv cdis-data-client gen3-client
@@ -76,10 +75,9 @@ script: |-
   elif [ "$GOOS" == "windows" ]
   then
     set -e
-    go build
+    go build -o gen3-client.exe
     ls -al
     if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
-      mv cdis-data-client.exe gen3-client.exe
       zip dataclient_win64.zip gen3-client.exe && mv dataclient_win64.zip ~/shared/.
       aws s3 sync ~/shared s3://cdis-dc-builds/$TRAVIS_BRANCH
     fi
