@@ -3,6 +3,7 @@ module github.com/uc-cdis/gen3-client
 go 1.14
 
 require (
+	github.com/blang/semver/v4 v4.0.0
 	github.com/golang/mock v1.4.3
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
