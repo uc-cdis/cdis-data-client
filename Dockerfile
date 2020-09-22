@@ -1,4 +1,4 @@
-FROM golang:1.10-alpine as build-deps
+FROM golang:1.14 as build-deps
 
 RUN apk update && apk add --no-cache git ca-certificates gcc musl-dev
 
