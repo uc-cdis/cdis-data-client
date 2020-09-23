@@ -19,70 +19,109 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
-
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 )
 
-func askGen3ForFileInfo(guid string, protocolText string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	function := new(jwt.Functions)
+// mockgen -destination=../mocks/mock_gen3interface.go -package=mocks . Gen3Interface
 
-	function.Config = configure
-	function.Request = request
+func askGen3ForFileInfo(gen3Interface Gen3Interface, profile string, guid string, protocolText string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
+	var fileName string
+	var fileSize int64
 
-	// ask INDEXD first
-	endPointPostfix := commonUtils.IndexdIndexEndpoint + "/" + guid
-	indexdMsg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+	// If the commons has the newer Shepherd API deployed, get the filename and file size from the Shepherd API.
+	// Otherwise, fall back on Indexd and Fence.
+	hasShepherd, err := gen3Interface.CheckForShepherdAPI(profile)
 	if err != nil {
-		log.Println("Error occurred when querying filename from IndexD: " + err.Error())
-		log.Println("Using GUID for filename instead.")
-		if filenameFormat != "guid" {
-			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
-		}
-		return guid, 0
+		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
+		log.Println("Falling back to Indexd...")
 	}
-
-	if filenameFormat == "guid" {
-		return guid, indexdMsg.Size
-	}
-
-	actualFilename := indexdMsg.FileName
-	if actualFilename == "" {
-		// INDEXD record is not reliable, try asking FENCE and guessing filename from returned URL
-		// If guessed filename is "", then use GUID instead
-		endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + guid + protocolText
-		fenceMsg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
-
-		if err != nil || fenceMsg.URL == "" {
-			log.Println("Error occurred when getting download URL for object " + guid)
+	if hasShepherd {
+		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + guid
+		_, res, err := gen3Interface.GetResponse(profile, "", endPointPostfix, "GET", "", nil)
+		if err != nil {
+			log.Println("Error occurred when querying filename from Shepherd: " + err.Error())
 			log.Println("Using GUID for filename instead.")
-			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+			if filenameFormat != "guid" {
+				*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+			}
+			return guid, 0
+		}
+
+		decoded := struct {
+			Record struct {
+				FileName string `json:"file_name"`
+				Size     int64  `json:"size"`
+			}
+		}{}
+		err = json.NewDecoder(res.Body).Decode(&decoded)
+		if err != nil {
+			log.Println("Error occurred when reading response from Shepherd: " + err.Error())
+			log.Println("Using GUID for filename instead.")
+			if filenameFormat != "guid" {
+				*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+			}
+			return guid, 0
+		}
+
+		fileName = decoded.Record.FileName
+		fileSize = decoded.Record.Size
+
+	} else {
+		// Attempt to get the filename from indexd
+		endPointPostfix := commonUtils.IndexdIndexEndpoint + "/" + guid
+		indexdMsg, err := gen3Interface.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+		if err != nil {
+			log.Println("Error occurred when querying filename from IndexD: " + err.Error())
+			log.Println("Using GUID for filename instead.")
+			if filenameFormat != "guid" {
+				*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+			}
+			return guid, 0
+		}
+
+		if filenameFormat == "guid" {
 			return guid, indexdMsg.Size
 		}
 
-		actualFilename = guessFilenameFromURL(fenceMsg.URL)
+		actualFilename := indexdMsg.FileName
 		if actualFilename == "" {
-			log.Println("Error occurred when guessing filename for object " + guid)
-			log.Println("Using GUID for filename instead.")
-			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
-			return guid, indexdMsg.Size
+			// INDEXD record is not reliable, try asking FENCE and guessing filename from returned URL
+			// If guessed filename is "", then use GUID instead
+			endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + guid + protocolText
+			fenceMsg, err := gen3Interface.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+
+			if err != nil || fenceMsg.URL == "" {
+				log.Println("Error occurred when getting download URL for object " + guid)
+				log.Println("Using GUID for filename instead.")
+				*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+				return guid, indexdMsg.Size
+			}
+
+			actualFilename = guessFilenameFromURL(fenceMsg.URL)
+			if actualFilename == "" {
+				log.Println("Error occurred when guessing filename for object " + guid)
+				log.Println("Using GUID for filename instead.")
+				*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: "N/A", NewFilename: guid})
+				return guid, indexdMsg.Size
+			}
 		}
+
+		fileName = actualFilename
+		fileSize = indexdMsg.Size
 	}
 
 	if filenameFormat == "original" {
 		if !rename { // no renaming in original mode
-			return actualFilename, indexdMsg.Size
+			return fileName, fileSize
 		}
-		newFilename := processOriginalFilename(downloadPath, actualFilename)
-		if actualFilename != newFilename {
-			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: actualFilename, NewFilename: newFilename})
+		newFilename := processOriginalFilename(downloadPath, fileName)
+		if fileName != newFilename {
+			*renamedFiles = append(*renamedFiles, RenamedOrSkippedFileInfo{GUID: guid, OldFilename: fileName, NewFilename: newFilename})
 		}
-		return newFilename, indexdMsg.Size
+		return newFilename, fileSize
 	}
 	// filenameFormat == "combined"
-	combinedFilename := guid + "_" + actualFilename
-	return combinedFilename, indexdMsg.Size
+	combinedFilename := guid + "_" + fileName
+	return combinedFilename, fileSize
 }
 
 func guessFilenameFromURL(URL string) string {
@@ -158,11 +197,11 @@ func validateLocalFileStat(downloadPath string, filename string, filesize int64,
 	return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Range: localFilesize}
 }
 
-func batchDownload(batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
+func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
 	bars := make([]*pb.ProgressBar, 0)
 	fdrs := make([]commonUtils.FileDownloadResponseObject, 0)
 	for _, fdrObject := range batchFDRSlice {
-		err := GetDownloadResponse(&fdrObject, protocolText)
+		err := GetDownloadResponse(g3, profile, &fdrObject, protocolText)
 		if err != nil {
 			errCh <- err
 			continue
@@ -257,9 +296,11 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	skippedFiles := make([]RenamedOrSkippedFileInfo, 0)
 	fdrObjects := make([]commonUtils.FileDownloadResponseObject, 0)
 
+	gen3Interface := NewGen3Interface()
+
 	for _, guid := range guids {
 		var fdrObject commonUtils.FileDownloadResponseObject
-		filename, filesize := askGen3ForFileInfo(guid, protocolText, downloadPath, filenameFormat, rename, &renamedFiles)
+		filename, filesize := askGen3ForFileInfo(gen3Interface, profile, guid, protocolText, downloadPath, filenameFormat, rename, &renamedFiles)
 		fdrObject = commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename}
 		if !rename {
 			fdrObject = validateLocalFileStat(downloadPath, filename, filesize, skipCompleted)
@@ -281,12 +322,12 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 		if len(batchFDRSlice) < workers {
 			batchFDRSlice = append(batchFDRSlice, fdrObject)
 		} else {
-			totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh)
+			totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh)
 			batchFDRSlice = make([]commonUtils.FileDownloadResponseObject, 0)
 			batchFDRSlice = append(batchFDRSlice, fdrObject)
 		}
 	}
-	totalCompeleted += batchDownload(batchFDRSlice, protocolText, workers, errCh) // download remainders
+	totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh) // download remainders
 
 	log.Printf("%d files downloaded.\n", totalCompeleted)
 

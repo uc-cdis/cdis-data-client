@@ -83,23 +83,25 @@ func init() {
 				workers, respCh, errCh, batchFURObjects = initBatchUploadChannels(numParallel, len(objects))
 			}
 
+			gen3Interface := NewGen3Interface()
+
 			for i, furObject := range furObjects {
 				if batch {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 					if i == len(furObjects)-1 { // upload remainders
-						batchUpload(batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
 					}
 				} else {
 					file, err := os.Open(furObject.FilePath)
 					if err != nil {
 						log.Println("File open error: " + err.Error())
-						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
 						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						continue
 					}
@@ -108,7 +110,7 @@ func init() {
 					furObject, err := GenerateUploadRequest(furObject, file)
 					if err != nil {
 						file.Close()
-						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
 						logs.IncrementScore(logs.ScoreBoardLen - 1)
 						log.Printf("Error occurred during request generation: %s", err.Error())
 						continue

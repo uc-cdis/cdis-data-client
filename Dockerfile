@@ -10,7 +10,8 @@ RUN go get github.com/mitchellh/go-homedir \
     github.com/cavaliercoder/grab \
     github.com/golang/mock/gomock \
     github.com/tcnksm/go-latest \
-    gopkg.in/cheggaaa/pb.v1
+    gopkg.in/cheggaaa/pb.v1 \
+    github.com/hashicorp/go-version
 
 COPY . .
 

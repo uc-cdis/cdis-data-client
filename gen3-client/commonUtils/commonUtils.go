@@ -15,6 +15,23 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
+// DefaultUseShepherd sets whether gen3client will attempt to use the Shepherd / Object Management API
+// endpoints if available.
+// The user can override this default using the `gen3-client configure` command.
+const DefaultUseShepherd = false
+
+// DefaultMinShepherdVersion is the minimum version of Shepherd that the gen3client will use.
+// Before attempting to use Shepherd, the client will check for Shepherd's version, and if the version is
+// below this number the gen3client will instead warn the user and fall back to fence/indexd.
+// The user can override this default using the `gen3-client configure` command.
+const DefaultMinShepherdVersion = "2.0.0"
+
+// ShepherdEndpoint is the endpoint postfix for SHEPHERD / the Object Management API
+const ShepherdEndpoint = "/mds"
+
+// ShepherdVersionEndpoint is the endpoint used to check what version of Shepherd a commons has deployed
+const ShepherdVersionEndpoint = "/mds/version"
+
 // IndexdIndexEndpoint is the endpoint postfix for INDEXD index
 const IndexdIndexEndpoint = "/index/index"
 
@@ -52,6 +69,7 @@ const DefaultTimeout = 120 * time.Second
 type FileUploadRequestObject struct {
 	FilePath     string
 	Filename     string
+	FileMetadata FileMetadata
 	GUID         string
 	PresignedURL string
 	Request      *http.Request
@@ -71,13 +89,22 @@ type FileDownloadResponseObject struct {
 	Writer       io.Writer
 }
 
+// FileMetadata defines the metadata accepted by the new object management API, Shepherd
+type FileMetadata struct {
+	Authz   []string `json:"authz"`
+	Aliases []string `json:"aliases"`
+	// Metadata is an encoded JSON string of any arbitrary metadata the user wishes to upload.
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
 // RetryObject defines a object for retry upload
 type RetryObject struct {
-	FilePath   string
-	Filename   string
-	GUID       string
-	RetryCount int
-	Multipart  bool
+	FilePath     string
+	Filename     string
+	FileMetadata FileMetadata
+	GUID         string
+	RetryCount   int
+	Multipart    bool
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning
@@ -100,7 +127,7 @@ func GetAbsolutePath(filePath string) (string, error) {
 }
 
 // ParseFilePaths generates all possible file paths
-func ParseFilePaths(filePath string) ([]string, error) {
+func ParseFilePaths(filePath string, metadataEnabled bool) ([]string, error) {
 	fullFilePath, err := GetAbsolutePath(filePath)
 	if err != nil {
 		return nil, err
@@ -129,7 +156,13 @@ func ParseFilePaths(filePath string) ([]string, error) {
 					if err != nil {
 						return err
 					}
-					if !fileInfo.IsDir() && !isHidden {
+					isMetadata := false
+					// if file metadata is enabled, do not include metadata in the list of files.
+					if metadataEnabled {
+						isMetadata = strings.HasSuffix(path, "_metadata.json")
+					}
+
+					if !fileInfo.IsDir() && !isHidden && !isMetadata {
 						filePaths = append(filePaths, path)
 					} else if isHidden {
 						log.Printf("File %s is a hidden file and will be skipped\n", path)
