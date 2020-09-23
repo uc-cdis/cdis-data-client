@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/blang/semver/v4"
+	"github.com/hashicorp/go-version"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
@@ -173,15 +173,15 @@ func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
 		return false, fmt.Errorf("Error occurred when parsing version from Shepherd: %v: %v", string(body), err)
 	}
 	// Compare the version in the response to the target version
-	ver, err := semver.Make(body)
+	ver, err := version.NewVersion(body)
 	if err != nil {
 		return false, fmt.Errorf("Error occurred when parsing version from Shepherd: %v: %v", string(body), err)
 	}
-	minVer, err := semver.Parse(minShepherdVersion)
+	minVer, err := version.NewVersion(minShepherdVersion)
 	if err != nil {
 		return false, fmt.Errorf("Error occurred when parsing minimum acceptable Shepherd version: %v: %v", minShepherdVersion, err)
 	}
-	if ver.GTE(minVer) {
+	if ver.GreaterThanOrEqual(minVer) {
 		return true, nil
 	}
 	return false, fmt.Errorf("Shepherd is enabled, but %v does not have correct Shepherd version. (Need Shepherd version >=%v, got %v)", cred.APIEndpoint, minVer, ver)

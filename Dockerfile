@@ -11,7 +11,7 @@ RUN go get github.com/mitchellh/go-homedir \
     github.com/golang/mock/gomock \
     github.com/tcnksm/go-latest \
     gopkg.in/cheggaaa/pb.v1 \
-    github.com/blang/semver/v4
+    github.com/hashicorp/go-version
 
 COPY . .
 

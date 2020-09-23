@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/blang/semver/v4"
+	"github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
@@ -56,7 +56,7 @@ func init() {
 			useShepherd = strings.TrimSpace(useShepherd)
 			minShepherdVersion = strings.TrimSpace(minShepherdVersion)
 			if minShepherdVersion != "" {
-				_, err = semver.Parse(minShepherdVersion)
+				_, err = version.NewVersion(minShepherdVersion)
 				if err != nil {
 					log.Fatalln("Error occurred when validating minShepherdVersion: " + err.Error())
 				}
