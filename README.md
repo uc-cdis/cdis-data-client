@@ -46,6 +46,12 @@ $ gen3-client configure --profile=myprofile --cred=/path/to/cred --apiendpoint=h
 ```
 If this flag is set, the gen3-client will attempt to use the Shepherd API to upload files, falling back to Fence/Indexd in case of failure.
 
+>You may also need to configure the version of the Shepherd API that the client will interact with. This is set to a default of Shepherd `v2.0.0`, but can
+>be raised or lowered by passing the `min-shepherd-version` flag to `gen3-client configure`, e.g.:
+>```
+>$ gen3-client configure --profile=myprofile --cred=/path/to/cred --apiendpoint=https://example.com --use-shepherd=true --min-shepherd-version=1.3.0
+>```
+
 ### Uploading File Metadata to Shepherd
 The Shepherd API supports uploading file metadata when uploading data files.
 
