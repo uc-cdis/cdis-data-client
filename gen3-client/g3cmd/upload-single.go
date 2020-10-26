@@ -31,7 +31,7 @@ func init() {
 			logs.SetToBoth()
 			logs.InitScoreBoard(0)
 
-			filePaths, err := commonUtils.ParseFilePaths(filePath)
+			filePaths, err := commonUtils.ParseFilePaths(filePath, false)
 			if len(filePaths) > 1 {
 				fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
 				return
@@ -44,7 +44,7 @@ func init() {
 			}
 			filename := filepath.Base(filePath)
 			if _, err := os.Stat(filePath); os.IsNotExist(err) {
-				logs.AddToFailedLog(filePath, filename, "", 0, false, true)
+				logs.AddToFailedLog(filePath, filename, commonUtils.FileMetadata{}, "", 0, false, true)
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -53,7 +53,7 @@ func init() {
 
 			file, err := os.Open(filePath)
 			if err != nil {
-				logs.AddToFailedLog(filePath, filename, "", 0, false, true)
+				logs.AddToFailedLog(filePath, filename, commonUtils.FileMetadata{}, "", 0, false, true)
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()
@@ -66,7 +66,7 @@ func init() {
 			furObject, err = GenerateUploadRequest(furObject, file)
 			if err != nil {
 				file.Close()
-				logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.GUID, 0, false, true)
+				logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
 				logs.IncrementScore(logs.ScoreBoardLen - 1)
 				logs.PrintScoreBoard()
 				logs.CloseAll()

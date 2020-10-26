@@ -19,10 +19,12 @@ import (
 )
 
 type Credential struct {
-	KeyId       string
-	APIKey      string
-	AccessKey   string
-	APIEndpoint string
+	KeyId              string
+	APIKey             string
+	AccessKey          string
+	APIEndpoint        string
+	UseShepherd        string
+	MinShepherdVersion string
 }
 
 type Configure struct{}
@@ -30,9 +32,9 @@ type Configure struct{}
 type ConfigureInterface interface {
 	ReadFile(string, string) string
 	ValidateUrl(string) (*url.URL, error)
-	ReadLines(Credential, []byte, string, string) ([]string, bool)
-	UpdateConfigFile(Credential, []byte, string, string, string)
-	ParseKeyValue(str string, expr string, errMsg string) string
+	ReadLines(Credential, []byte, string, string, string, string) ([]string, bool)
+	UpdateConfigFile(Credential, []byte, string, string, string, string, string)
+	ParseKeyValue(str string, expr string) (string, error)
 	ParseConfig(profile string) Credential
 }
 
@@ -100,7 +102,7 @@ func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
 	return configPath, content, err
 }
 
-func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint string, profile string) ([]string, bool) {
+func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint, useShepherd, minShepherdVersion, profile string) ([]string, bool) {
 	/*
 		Search profile in config file. Update new credential if found.
 	*/
@@ -118,6 +120,12 @@ func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpo
 			if apiEndpoint != "" {
 				lines[i+4] = "api_endpoint=" + apiEndpoint
 			}
+			if useShepherd != "" {
+				lines[i+5] = "use_shepherd=" + useShepherd
+			}
+			if minShepherdVersion != "" {
+				lines[i+6] = "min_shepherd_version=" + minShepherdVersion
+			}
 			found = true
 			break
 		}
@@ -125,7 +133,7 @@ func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpo
 	return lines, found
 }
 
-func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint string, configPath string, profile string) {
+func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint, useShepherd, minShepherdVersion, configPath, profile string) {
 	/*
 		Overwrite the config file with new credential
 
@@ -136,7 +144,7 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			profile: profile name
 
 	*/
-	lines, found := conf.ReadLines(cred, configContent, apiEndpoint, profile)
+	lines, found := conf.ReadLines(cred, configContent, apiEndpoint, useShepherd, minShepherdVersion, profile)
 	if found {
 		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
 		if err != nil {
@@ -165,7 +173,9 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			"key_id=" + cred.KeyId + "\n" +
 			"api_key=" + cred.APIKey + "\n" +
 			"access_key=" + cred.AccessKey + "\n" +
-			"api_endpoint=" + apiEndpoint + "\n\n")
+			"api_endpoint=" + apiEndpoint + "\n" +
+			"use_shepherd=" + useShepherd + "\n" +
+			"min_shepherd_version=" + minShepherdVersion + "\n\n")
 
 		if err != nil {
 			log.Println("error occurred when updating config: " + err.Error())
@@ -173,16 +183,16 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 	}
 }
 
-func (conf *Configure) ParseKeyValue(str string, expr string, errMsg string) string {
+func (conf *Configure) ParseKeyValue(str string, expr string) (string, error) {
 	r, err := regexp.Compile(expr)
 	if err != nil {
-		log.Fatalln("error occurred when parsing key/value: " + err.Error())
+		return "", fmt.Errorf("error occurred when parsing key/value: %v", err.Error())
 	}
 	match := r.FindStringSubmatch(str)
 	if len(match) == 0 {
-		log.Fatalln(errMsg)
+		return "", fmt.Errorf("No match found")
 	}
-	return match[1]
+	return match[1], nil
 }
 
 func (conf *Configure) ParseConfig(profile string) Credential {
@@ -198,12 +208,16 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		api_key=api_key_example_1
 		access_key=access_key_example_1
 		api_endpoint=http://localhost:8000
+		use_shepherd=true
+		min_shepherd_version=2.0.0
 
 		[profile2]
 		key_id=key_id_example_2
 		api_key=api_key_example_2
 		access_key=access_key_example_2
 		api_endpoint=http://localhost:8000
+		use_shepherd=false
+		min_shepherd_version=
 
 		Args:
 			profile: the specific profile in config file
@@ -236,7 +250,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 	lines := strings.Split(string(content), "\n")
 
 	profileLine := -1
-	for i := 0; i < len(lines); i += 6 {
+	for i := 0; i < len(lines); i++ {
 		if lines[i] == "["+profile+"]" {
 			profileLine = i
 			break
@@ -247,10 +261,25 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		log.Fatalln("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 	}
 	// Read in access key, secret key, endpoint for given profile
-	cred.KeyId = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)", "key_id not found in profile")
-	cred.APIKey = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)", "api_key not found in profile")
-	cred.AccessKey = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)", "access_key not found in profile")
-	cred.APIEndpoint = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)", "api_endpoint not found in profile")
+	cred.KeyId, err = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)")
+	if err != nil {
+		log.Fatalf("key_id not found in profile. Err: %v", err)
+	}
+	cred.APIKey, err = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)")
+	if err != nil {
+		log.Fatalf("api_key not found in profile. Err: %v", err)
+	}
+	cred.AccessKey, err = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)")
+	if err != nil {
+		log.Fatalf("access_key not found in profile. Err: %v", err)
+	}
+	cred.APIEndpoint, err = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)")
+	if err != nil {
+		log.Fatalf("api_endpoint not found in profile. Err: %v", err)
+	}
+	// UseShepherd and MinShepherdVersion are optional
+	cred.UseShepherd, _ = conf.ParseKeyValue(lines[profileLine+5], "^use_shepherd=(\\S*)")
+	cred.MinShepherdVersion, _ = conf.ParseKeyValue(lines[profileLine+6], "^min_shepherd_version=(\\S*)")
 	return cred
 }
 

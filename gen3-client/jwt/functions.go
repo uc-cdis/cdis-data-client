@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-version"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
@@ -23,7 +26,9 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	DoRequestWithSignedHeader(DoRequest, string, string, string, string, []byte) (JsonMessage, error)
+	CheckForShepherdAPI(string) (bool, error)
+	GetResponse(string, string, string, string, string, []byte) (string, *http.Response, error)
+	DoRequestWithSignedHeader(string, string, string, string, []byte) (JsonMessage, error)
 	ParseFenceURLResponse(*http.Response) (JsonMessage, error)
 }
 
@@ -31,15 +36,17 @@ type Request struct {
 }
 
 type RequestInterface interface {
-	MakeARequest(string, string, string, string, *bytes.Buffer) (*http.Response, error)
+	MakeARequest(string, string, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
 	RequestNewAccessKey(string, *Credential) error
 }
 
-func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey string, contentType string, body *bytes.Buffer) (*http.Response, error) {
+func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
 	/*
 		Make http request with header and body
 	*/
-	headers := make(map[string]string)
+	if headers == nil {
+		headers = make(map[string]string)
+	}
 	if accessKey != "" {
 		headers["Authorization"] = "Bearer " + accessKey
 	}
@@ -73,7 +80,7 @@ func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) erro
 
 	*/
 	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
-	resp, err := r.MakeARequest("POST", apiEndpoint, "", "application/json", body)
+	resp, err := r.MakeARequest("POST", apiEndpoint, "", "application/json", nil, body)
 	var m AccessTokenStruct
 	// parse resp error codes first for profile configuration verification
 	if resp != nil && resp.StatusCode != 200 {
@@ -132,6 +139,54 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	return msg, nil
 }
 
+func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
+	// Check if Shepherd is enabled
+	cred := f.Config.ParseConfig(profile)
+	if cred.UseShepherd == "false" {
+		return false, nil
+	}
+	if cred.UseShepherd != "true" && commonUtils.DefaultUseShepherd == false {
+		return false, nil
+	}
+	// If Shepherd is enabled, make sure that the commons has a compatible version of Shepherd deployed.
+	// Compare the version returned from the Shepherd version endpoint with the minimum acceptable Shepherd version.
+	var minShepherdVersion string
+	if cred.MinShepherdVersion == "" {
+		minShepherdVersion = commonUtils.DefaultMinShepherdVersion
+	} else {
+		minShepherdVersion = cred.MinShepherdVersion
+	}
+
+	_, res, err := f.GetResponse(profile, "", commonUtils.ShepherdVersionEndpoint, "GET", "", nil)
+	if err != nil {
+		return false, errors.New("Error occurred during generating HTTP request: " + err.Error())
+	}
+	if res.StatusCode != 200 {
+		return false, nil
+	}
+	bodyBytes, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return false, errors.New("Error occurred when reading HTTP request: " + err.Error())
+	}
+	body, err := strconv.Unquote(string(bodyBytes))
+	if err != nil {
+		return false, fmt.Errorf("Error occurred when parsing version from Shepherd: %v: %v", string(body), err)
+	}
+	// Compare the version in the response to the target version
+	ver, err := version.NewVersion(body)
+	if err != nil {
+		return false, fmt.Errorf("Error occurred when parsing version from Shepherd: %v: %v", string(body), err)
+	}
+	minVer, err := version.NewVersion(minShepherdVersion)
+	if err != nil {
+		return false, fmt.Errorf("Error occurred when parsing minimum acceptable Shepherd version: %v: %v", minShepherdVersion, err)
+	}
+	if ver.GreaterThanOrEqual(minVer) {
+		return true, nil
+	}
+	return false, fmt.Errorf("Shepherd is enabled, but %v does not have correct Shepherd version. (Need Shepherd version >=%v, got %v)", cred.APIEndpoint, minVer, ver)
+}
+
 func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
 
 	var resp *http.Response
@@ -146,7 +201,10 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	isExpiredToken := false
 	if cred.AccessKey != "" {
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
+		if err != nil {
+			return "", resp, fmt.Errorf("Error while requesting user access token at %v: %v", apiEndpoint, err)
+		}
 
 		// 401 code is general error code from FENCE. the error message is also not clear for the case
 		// that the token expired. Temporary solution: get new access token and make another attempt.
@@ -167,9 +225,12 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 		}
 		configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
 		content := f.Config.ReadFile(configPath, configFileType)
-		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, configPath, profile)
+		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, cred.UseShepherd, cred.MinShepherdVersion, configPath, profile)
 
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, bytes.NewBuffer(bodyBytes))
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
+		if err != nil {
+			return prefixEndPoint, resp, err
+		}
 	}
 
 	return prefixEndPoint, resp, nil
@@ -239,6 +300,23 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 func (f *Functions) DeleteRecord(profile string, configFileType string, guid string) (string, error) {
 	var err error
 	var msg string
+
+	hasShepherd, err := f.CheckForShepherdAPI(profile)
+	if err != nil {
+		log.Printf("WARNING: Error while checking for Shepherd API: %v. Falling back to Fence to delete record.\n", err)
+	} else if hasShepherd {
+		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + guid
+		_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
+		if err != nil {
+			return "", err
+		}
+		if resp.StatusCode == 204 {
+			msg = "Record with GUID " + guid + " has been deleted"
+		} else if resp.StatusCode == 500 {
+			err = errors.New("Internal server error occurred when deleting " + guid + "; could not delete stored files, or not able to delete INDEXD record")
+		}
+		return msg, err
+	}
 
 	endPointPostfix := commonUtils.FenceDataEndpoint + "/" + guid
 

@@ -38,35 +38,37 @@ func retry(attempts int, filePath string, guid string, f func() error) (err erro
 }
 
 func multipartUpload(fileInfo FileInfo, retryCount int) error {
+	// NOTE @mpingram -- multipartUpload does not yet use the new Shepherd API
+	// because Shepherd does not yet support multipart uploads.
 	file, err := os.Open(fileInfo.FilePath)
 	defer file.Close()
 	if err != nil {
-		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, "", retryCount, true, true)
+		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s due to file open error: %s", fileInfo.FilePath, err.Error())
 		return err
 	}
 
 	fi, err := file.Stat()
 	if err != nil {
-		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, "", retryCount, true, true)
+		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: file stat error, file may be missing or unreadable because of permissions", fileInfo.Filename)
 		return err
 	}
 
 	if fi.Size() > MultipartFileSizeLimit {
-		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, "", retryCount, true, true)
+		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: the file size has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s", fi.Name(), FormatSize(MultipartFileSizeLimit))
 		return err
 	}
 
 	uploadID, guid, err := InitMultipartUpload(fileInfo.Filename)
 	if err != nil {
-		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", fileInfo.Filename, err.Error())
 		return err
 	}
 	// update failed log with new guid
-	logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+	logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 
 	key := guid + "/" + fileInfo.Filename
 	var parts []MultipartPartObject
@@ -87,7 +89,7 @@ func multipartUpload(fileInfo FileInfo, retryCount int) error {
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 					log.Println(err.Error())
 					continue
 				}
@@ -102,7 +104,7 @@ func multipartUpload(fileInfo FileInfo, retryCount int) error {
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 					log.Println(err.Error())
 					continue
 				}
@@ -127,7 +129,7 @@ func multipartUpload(fileInfo FileInfo, retryCount int) error {
 					return
 				})
 				if err != nil {
-					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 					log.Println(err.Error())
 					continue
 				}
@@ -150,7 +152,7 @@ func multipartUpload(fileInfo FileInfo, retryCount int) error {
 	bar.Finish()
 
 	if len(parts) != numOfChunks {
-		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: Total number of received ETags doesn't match the total number of chunks", fileInfo.Filename)
 		return err
 	}
@@ -160,7 +162,7 @@ func multipartUpload(fileInfo FileInfo, retryCount int) error {
 	})
 
 	if err = CompleteMultipartUpload(key, uploadID, parts); err != nil {
-		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, guid, retryCount, true, true)
+		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", fileInfo.Filename, err.Error())
 		return err
 	}
