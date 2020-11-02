@@ -54,7 +54,14 @@ func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey stri
 		headers["Content-Type"] = contentType
 	}
 	client := &http.Client{Timeout: commonUtils.DefaultTimeout}
-	req, err := http.NewRequest(method, apiEndpoint, body)
+	var req *http.Request
+	var err error
+	if body == nil {
+		req, err = http.NewRequest(method, apiEndpoint, nil)
+	} else {
+		req, err = http.NewRequest(method, apiEndpoint, body)
+	}
+
 	if err != nil {
 		return nil, errors.New("Error occurred during generating HTTP request: " + err.Error())
 	}
