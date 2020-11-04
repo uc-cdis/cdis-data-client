@@ -306,6 +306,10 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 
 	gen3Interface := NewGen3Interface()
 
+	log.Printf("Total number of GUIDs: %d", len(guids))
+	log.Println("Preparing file info for each file, please wait...")
+	fileInfoBar := pb.New(len(guids)).SetRefreshRate(time.Millisecond * 10)
+	fileInfoBar.Start()
 	for _, guid := range guids {
 		var fdrObject commonUtils.FileDownloadResponseObject
 		filename, filesize := askGen3ForFileInfo(gen3Interface, profile, guid, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
@@ -315,7 +319,10 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 		}
 		fdrObject.GUID = guid
 		fdrObjects = append(fdrObjects, fdrObject)
+		fileInfoBar.Increment()
 	}
+	fileInfoBar.Finish()
+	log.Println("File info prepared successfully")
 
 	totalCompeleted := 0
 	workers, _, errCh, _ := initBatchUploadChannels(numParallel, len(fdrObjects))
@@ -376,13 +383,35 @@ func init() {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
 
-			var objects []ManifestObject
-			manifestBytes, err := ioutil.ReadFile(manifestPath)
+			manifestPath, _ = commonUtils.GetAbsolutePath(manifestPath)
+			manifestFile, err := os.Open(manifestPath)
+			if err != nil {
+				log.Fatalf("Failed to open manifest file %s, %v\n", manifestPath, err)
+			}
+			defer manifestFile.Close()
+			manifestFileStat, err := manifestFile.Stat()
+			if err != nil {
+				log.Fatalf("Failed to get manifest file stats %s, %v\n", manifestPath, err)
+			}
+			log.Println("Reading manifest...")
+			manifestFileSize := manifestFileStat.Size()
+			manifestFileBar := pb.New(int(manifestFileSize)).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10)
+			manifestFileBar.Start()
+
+			manifestFileReader := manifestFileBar.NewProxyReader(manifestFile)
+
+			manifestBytes, err := ioutil.ReadAll(manifestFileReader)
+			manifestFileBar.Finish()
+
 			if err != nil {
 				log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
 				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer from a data common's portal")
 			}
-			json.Unmarshal(manifestBytes, &objects)
+			var objects []ManifestObject
+			err = json.Unmarshal(manifestBytes, &objects)
+			if err != nil {
+				log.Fatalf("Error has occurred during unmarshalling manifest object: %v\n", err)
+			}
 
 			guids := make([]string, 0)
 			for _, object := range objects {
