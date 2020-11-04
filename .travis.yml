@@ -23,6 +23,7 @@ jobs:
     - stage: deploy
       script: echo "Deploying to GitHub" && ls -al ~/shared
       deploy:
+        overwrite: true
         skip_cleanup: true
         provider: releases
         api_key:
@@ -83,5 +84,3 @@ script: |-
     fi
     set +e
   fi
-
-
