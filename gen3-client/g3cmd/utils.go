@@ -232,7 +232,7 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 	}
 
 	// TODO: for now we don't print fdrObject.URL in error messages since it is sensitive
-	// Later after we had log level we could consder for putting into into debug logs...
+	// Later after we had log level we could consider for putting URL into debug logs...
 	fdrObject.URL = fileDownloadURL
 	if fdrObject.Range != 0 && !strings.Contains(fdrObject.URL, "X-Amz-Signature") && !strings.Contains(fdrObject.URL, "X-Goog-Signature") { // Not S3 or GS URLs and we want resume, send HEAD req first to check if server supports range
 		resp, err := http.Head(fdrObject.URL)
