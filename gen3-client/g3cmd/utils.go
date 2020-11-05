@@ -231,12 +231,14 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 		fileDownloadURL = msg.URL
 	}
 
+	// TODO: for now we don't print fdrObject.URL in error messages since it is sensitive
+	// Later after we had log level we could consder for putting into into debug logs...
 	fdrObject.URL = fileDownloadURL
 	if fdrObject.Range != 0 && !strings.Contains(fdrObject.URL, "X-Amz-Signature") && !strings.Contains(fdrObject.URL, "X-Goog-Signature") { // Not S3 or GS URLs and we want resume, send HEAD req first to check if server supports range
 		resp, err := http.Head(fdrObject.URL)
 		if err != nil {
-			errorMsg := "Error occurred when sending HEAD req to URL " + fdrObject.URL
-			errorMsg += "\n Details of error: " + err.Error()
+			errorMsg := "Error occurred when sending HEAD req to URL associated with GUID " + fdrObject.GUID
+			errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
 			return errors.New(errorMsg)
 		}
 		if resp.Header.Get("Accept-Ranges") != "bytes" { // server does not support range, download without range header
@@ -249,17 +251,21 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 	}
 	resp, err := g3.MakeARequest("GET", fdrObject.URL, "", "", headers, nil)
 	if err != nil {
-		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
-		errorMsg += "\n Details of error: " + err.Error()
+		errorMsg := "Error occurred when doing GET req for URL associated with GUID " + fdrObject.GUID
+		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
 		return errors.New(errorMsg)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 206 {
-		errorMsg := "Got a non-200 or non-206 response when doing GET req for URL " + fdrObject.URL
+		errorMsg := "Got a non-200 or non-206 response when doing GET req for URL associated with GUID " + fdrObject.GUID
 		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode)
 		return errors.New(errorMsg)
 	}
 	fdrObject.Response = resp
 	return nil
+}
+
+func sanitizeErrorMsg(errorMsg string, sensitiveURL string) string {
+	return strings.ReplaceAll(errorMsg, sensitiveURL, "<SENSITIVE_URL>")
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
