@@ -243,11 +243,19 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 			fdrObject.Range = 0
 		}
 	}
-	headers := make(map[string]string)
-	if fdrObject.Range != 0 {
-		headers["Range"] = "bytes=" + strconv.FormatInt(fdrObject.Range, 10) + "-"
+	// This is intended to create a new HTTP request and client to handle the download request here
+	// The HTTP client in MakeARequest function has a default timeout for 2 minutes which should not be used in here
+	req, err := http.NewRequest(http.MethodGet, fdrObject.URL, nil)
+	if err != nil {
+		errorMsg := "Error occurred when creating GET req for URL associated with GUID " + fdrObject.GUID
+		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
+		return errors.New(errorMsg)
 	}
-	resp, err := g3.MakeARequest("GET", fdrObject.URL, "", "", headers, nil)
+	if fdrObject.Range != 0 {
+		req.Header.Set("Range", "bytes="+strconv.FormatInt(fdrObject.Range, 10)+"-")
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
 		errorMsg += "\n Details of error: " + err.Error()
