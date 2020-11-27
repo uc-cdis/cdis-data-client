@@ -231,35 +231,49 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 		fileDownloadURL = msg.URL
 	}
 
+	// TODO: for now we don't print fdrObject.URL in error messages since it is sensitive
+	// Later after we had log level we could consider for putting URL into debug logs...
 	fdrObject.URL = fileDownloadURL
 	if fdrObject.Range != 0 && !strings.Contains(fdrObject.URL, "X-Amz-Signature") && !strings.Contains(fdrObject.URL, "X-Goog-Signature") { // Not S3 or GS URLs and we want resume, send HEAD req first to check if server supports range
 		resp, err := http.Head(fdrObject.URL)
 		if err != nil {
-			errorMsg := "Error occurred when sending HEAD req to URL " + fdrObject.URL
-			errorMsg += "\n Details of error: " + err.Error()
+			errorMsg := "Error occurred when sending HEAD req to URL associated with GUID " + fdrObject.GUID
+			errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
 			return errors.New(errorMsg)
 		}
 		if resp.Header.Get("Accept-Ranges") != "bytes" { // server does not support range, download without range header
 			fdrObject.Range = 0
 		}
 	}
-	headers := make(map[string]string)
-	if fdrObject.Range != 0 {
-		headers["Range"] = "bytes=" + strconv.FormatInt(fdrObject.Range, 10) + "-"
-	}
-	resp, err := g3.MakeARequest("GET", fdrObject.URL, "", "", headers, nil)
+	// This is intended to create a new HTTP request and client to handle the download request here
+	// The HTTP client in MakeARequest function has a default timeout for 2 minutes which should not be used in here
+	req, err := http.NewRequest(http.MethodGet, fdrObject.URL, nil)
 	if err != nil {
-		errorMsg := "Error occurred when doing GET req for URL " + fdrObject.URL
-		errorMsg += "\n Details of error: " + err.Error()
+		errorMsg := "Error occurred when creating GET req for URL associated with GUID " + fdrObject.GUID
+		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
+		return errors.New(errorMsg)
+	}
+	if fdrObject.Range != 0 {
+		req.Header.Set("Range", "bytes="+strconv.FormatInt(fdrObject.Range, 10)+"-")
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		errorMsg := "Error occurred when doing GET req for URL associated with GUID " + fdrObject.GUID
+		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
 		return errors.New(errorMsg)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 206 {
-		errorMsg := "Got a non-200 or non-206 response when doing GET req for URL " + fdrObject.URL
+		errorMsg := "Got a non-200 or non-206 response when doing GET req for URL associated with GUID " + fdrObject.GUID
 		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode)
 		return errors.New(errorMsg)
 	}
 	fdrObject.Response = resp
 	return nil
+}
+
+func sanitizeErrorMsg(errorMsg string, sensitiveURL string) string {
+	return strings.ReplaceAll(errorMsg, sensitiveURL, "<SENSITIVE_URL>")
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
