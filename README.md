@@ -38,22 +38,28 @@ go install .
 
 Now you should have `gen3-client` successfully installed. For a comprehensive instruction on how to configure and use `gen3-client` for uploading / downloading object files, please refer to the `gen3-client` [user guide](https://gen3.org/resources/user/gen3-client/).
 
-## Enabling Shepherd
-Some Gen3 data commons support uploading files through the new Shepherd API.
-To enable gen3-client to upload using the Shepherd API, pass the `use-shepherd=true` to `gen3-client configure`, e.g.:
+## Enabling New Gen3 Object Management API
+Some Gen3 data commons support uploading files through the new Gen3 Object Management API.
+
+> NOTE: The service powering this API is sometimes referred to as our object "Shepherd"
+
+To enable gen3-client to upload using the Gen3 Object Management API, pass the `use-shepherd=true` to `gen3-client configure`, e.g.:
 ```
 $ gen3-client configure --profile=myprofile --cred=/path/to/cred --apiendpoint=https://example.com --use-shepherd=true
 ```
-If this flag is set, the gen3-client will attempt to use the Shepherd API to upload files, falling back to Fence/Indexd in case of failure.
+If this flag is set, the gen3-client will attempt to use the Gen3 Object Management API to upload files, falling back to Fence/Indexd in case of failure.
 
->You may also need to configure the version of the Shepherd API that the client will interact with. This is set to a default of Shepherd `v2.0.0`, but can
+
+>You may also need to configure the version of the Gen3 Object Management API that the client will interact with. This is set to a default of Gen3 Object Management API `v2.0.0`, but can
 >be raised or lowered by passing the `min-shepherd-version` flag to `gen3-client configure`, e.g.:
 >```
 >$ gen3-client configure --profile=myprofile --cred=/path/to/cred --apiendpoint=https://example.com --use-shepherd=true --min-shepherd-version=1.3.0
 >```
 
-### Uploading File Metadata to Shepherd
-The Shepherd API supports uploading file metadata when uploading data files.
+### Uploading Additional File Object Metadata to Gen3 Object Management API
+The Gen3 Object Management API supports uploading additional *public access* file object metadata when uploading data files. 
+
+> WARNING: Additional File Object Metadata is exposed publically and thus should not be controlled/sensitive data
 
 You can upload file metadata using the `gen3-client upload` command with the  `--metadata` flag. E.g.:
 ```
