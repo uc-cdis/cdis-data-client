@@ -4,16 +4,9 @@ RUN apk update && apk add --no-cache git ca-certificates gcc musl-dev
 
 WORKDIR /go/src/github.com/uc-cdis/gen3-client
 
-RUN go get github.com/mitchellh/go-homedir \
-    github.com/spf13/cobra \
-    github.com/spf13/viper \
-    github.com/cavaliercoder/grab \
-    github.com/golang/mock/gomock \
-    github.com/tcnksm/go-latest \
-    gopkg.in/cheggaaa/pb.v1 \
-    github.com/hashicorp/go-version
-
 COPY . .
+
+RUN go mod download
 
 # Populate git version info into the code
 RUN printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
