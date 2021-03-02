@@ -57,10 +57,10 @@ func init() {
 							sort.Strings(access)
 							log.Printf("%s %s\n", project, access)
 						} else {
-							// Premissions from Arborist already sorted, just pretty print them
+							// Permissions from Arborist already sorted, just pretty print them
 							marshalledPermissions, err := json.MarshalIndent(permissions, "", "  ")
 							if err != nil {
-								log.Printf("%s (error occurred when marshalling premissions): %s\n", project, err)
+								log.Printf("%s (error occurred when marshalling permissions): %s\n", project, err)
 							}
 							log.Printf("%s %s\n", project, marshalledPermissions)
 						}

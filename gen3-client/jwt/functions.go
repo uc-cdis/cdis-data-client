@@ -298,7 +298,7 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 
 	resourceAccess, ok := data["authz"].(map[string]interface{})
 
-	// If the `authz` section (Arborist premissions) is empty or missing, try get `project_access` section (Fence premissions)
+	// If the `authz` section (Arborist permissions) is empty or missing, try get `project_access` section (Fence permissions)
 	if len(resourceAccess) == 0 || !ok {
 		resourceAccess, ok = data["project_access"].(map[string]interface{})
 		if !ok {

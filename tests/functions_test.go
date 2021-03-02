@@ -45,14 +45,14 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
+	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"http://www.test.com/user/data/download/test_uuid\"}")),
 		StatusCode: 200,
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/data/download/test_uuid", "non_exprired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/data/download/test_uuid", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
 
 	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
 
@@ -148,14 +148,14 @@ func TestCheckPrivilegesNoAccess(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
+	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"project_access\": {}}")),
 		StatusCode: 200,
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
 
 	_, receivedAccess, err := testFunction.CheckPrivileges("default", "")
 
@@ -177,16 +177,14 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
+	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
 
-	grantedAccessJSON := "{\"project_access\": " +
-		"{\"test_project\": [" +
-		"\"read\"," +
-		"\"create\"," +
-		"\"read-storage\"," +
-		"\"update\"," +
-		"\"delete\"]}" +
-		"}"
+	grantedAccessJSON := `{
+		"project_access":
+			{
+				"test_project": ["read", "create","read-storage","update","delete"]
+			}
+		}`
 
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
@@ -194,7 +192,7 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
 
 	_, expectedAccess, err := testFunction.CheckPrivileges("default", "")
 
@@ -225,25 +223,23 @@ func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
+	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
 
-	grantedAccessJSON := "{\"authz\": " +
-		"{\"test_project\":[" +
-		"{\"method\":\"create\",\"service\":\"*\"}," +
-		"{\"method\":\"delete\",\"service\":\"*\"}," +
-		"{\"method\":\"read\",\"service\":\"*\"}," +
-		"{\"method\":\"read-storage\",\"service\":\"*\"}," +
-		"{\"method\":\"update\",\"service\":\"*\"}," +
-		"{\"method\":\"upload\",\"service\":\"*\"}" +
-		"]}," +
-		"\"project_access\": " +
-		"{\"test_project\": [" +
-		"\"read\"," +
-		"\"create\"," +
-		"\"read-storage\"," +
-		"\"update\"," +
-		"\"delete\"]}" +
-		"}"
+	grantedAccessJSON := `{
+		"authz": {
+			"test_project":[
+				{"method":"create", "service":"*"},
+				{"method":"delete", "service":"*"},
+				{"method":"read", "service":"*"},
+				{"method":"read-storage", "service":"*"},
+				{"method":"update", "service":"*"},
+				{"method":"upload", "service":"*"}
+			]
+		},
+		"project_access": {
+			"test_project": ["read", "create","read-storage","update","delete"]
+		}
+	}`
 
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
@@ -251,7 +247,7 @@ func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
 	}
 
 	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
 
 	_, expectedAccess, err := testFunction.CheckPrivileges("default", "")
 
