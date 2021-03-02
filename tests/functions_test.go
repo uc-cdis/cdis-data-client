@@ -2,6 +2,7 @@ package tests
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -178,17 +179,17 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 
 	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
 
-	grantedAccessJson := "{\"project_access\": " +
-		"{\"test_project\": {" +
-		"\"0\": \"read\"," +
-		"\"1\": \"create\"," +
-		"\"2\": \"read-storage\"," +
-		"\"3\": \"update\"," +
-		"\"4\": \"delete\"}" +
-		"}}"
+	grantedAccessJSON := "{\"project_access\": " +
+		"{\"test_project\": [" +
+		"\"read\"," +
+		"\"create\"," +
+		"\"read-storage\"," +
+		"\"update\"," +
+		"\"delete\"]}" +
+		"}"
 
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJson)),
+		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
 		StatusCode: 200,
 	}
 
@@ -198,16 +199,76 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 	_, expectedAccess, err := testFunction.CheckPrivileges("default", "")
 
 	receivedAccess := make(map[string]interface{})
-	receivedAccess["test_project"] = map[string]interface{}{
-		"0": "read",
-		"1": "create",
-		"2": "read-storage",
-		"3": "update",
-		"4": "delete"}
+	receivedAccess["test_project"] = []interface{}{
+		"read",
+		"create",
+		"read-storage",
+		"update",
+		"delete"}
 
 	if err != nil {
 		t.Errorf("Expected no errors, received an error \"%v\"", err)
 	} else if !reflect.DeepEqual(expectedAccess, receivedAccess) {
+		t.Errorf(`Expected user access and received user access are note the same.
+        Expected: %v
+        Received: %v`, expectedAccess, receivedAccess)
+	}
+}
+
+// If both `authz` and `project_access` section exists, `authz` takes precedence
+func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockConfig := mocks.NewMockConfigureInterface(mockCtrl)
+	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
+	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
+
+	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_exprired_token", APIEndpoint: "http://www.test.com"}
+
+	grantedAccessJSON := "{\"authz\": " +
+		"{\"test_project\":[" +
+		"{\"method\":\"create\",\"service\":\"*\"}," +
+		"{\"method\":\"delete\",\"service\":\"*\"}," +
+		"{\"method\":\"read\",\"service\":\"*\"}," +
+		"{\"method\":\"read-storage\",\"service\":\"*\"}," +
+		"{\"method\":\"update\",\"service\":\"*\"}," +
+		"{\"method\":\"upload\",\"service\":\"*\"}" +
+		"]}," +
+		"\"project_access\": " +
+		"{\"test_project\": [" +
+		"\"read\"," +
+		"\"create\"," +
+		"\"read-storage\"," +
+		"\"update\"," +
+		"\"delete\"]}" +
+		"}"
+
+	mockedResp := &http.Response{
+		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
+		StatusCode: 200,
+	}
+
+	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_exprired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+
+	_, expectedAccess, err := testFunction.CheckPrivileges("default", "")
+
+	receivedAccess := make(map[string]interface{})
+	receivedAccess["test_project"] = []map[string]interface{}{
+		{"method": "create", "service": "*"},
+		{"method": "delete", "service": "*"},
+		{"method": "read", "service": "*"},
+		{"method": "read-storage", "service": "*"},
+		{"method": "update", "service": "*"},
+		{"method": "upload", "service": "*"},
+	}
+
+	if err != nil {
+		t.Errorf("Expected no errors, received an error \"%v\"", err)
+		// don't use DeepEqual since expectedAccess is []interface {} and receivedAccess is []map[string]interface {}, just check for contents
+	} else if fmt.Sprint(expectedAccess) != fmt.Sprint(receivedAccess) {
 		t.Errorf(`Expected user access and received user access are note the same.
         Expected: %v
         Received: %v`, expectedAccess, receivedAccess)
