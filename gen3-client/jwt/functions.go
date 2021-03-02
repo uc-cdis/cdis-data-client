@@ -296,12 +296,17 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 		return "", nil, errors.New("Error occurred when unmarshalling response: " + err.Error())
 	}
 
-	projectAccess, ok := data["project_access"].(map[string]interface{})
-	if !ok {
-		return "", nil, errors.New("Not possible to read user access privileges")
+	resourceAccess, ok := data["authz"].(map[string]interface{})
+
+	// If the `authz` section (Arborist premissions) is empty or missing, try get `project_access` section (Fence premissions)
+	if len(resourceAccess) == 0 || !ok {
+		resourceAccess, ok = data["project_access"].(map[string]interface{})
+		if !ok {
+			return "", nil, errors.New("Not possible to read access privileges of user")
+		}
 	}
 
-	return host, projectAccess, err
+	return host, resourceAccess, err
 }
 
 func (f *Functions) DeleteRecord(profile string, configFileType string, guid string) (string, error) {
