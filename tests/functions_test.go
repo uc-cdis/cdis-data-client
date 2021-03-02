@@ -209,7 +209,7 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no errors, received an error \"%v\"", err)
 	} else if !reflect.DeepEqual(expectedAccess, receivedAccess) {
-		t.Errorf(`Expected user access and received user access are note the same.
+		t.Errorf(`Expected user access and received user access are not the same.
         Expected: %v
         Received: %v`, expectedAccess, receivedAccess)
 	}
@@ -269,7 +269,7 @@ func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
 		t.Errorf("Expected no errors, received an error \"%v\"", err)
 		// don't use DeepEqual since expectedAccess is []interface {} and receivedAccess is []map[string]interface {}, just check for contents
 	} else if fmt.Sprint(expectedAccess) != fmt.Sprint(receivedAccess) {
-		t.Errorf(`Expected user access and received user access are note the same.
+		t.Errorf(`Expected user access and received user access are not the same.
         Expected: %v
         Received: %v`, expectedAccess, receivedAccess)
 	}
