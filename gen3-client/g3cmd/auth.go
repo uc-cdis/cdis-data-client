@@ -1,6 +1,7 @@
 package g3cmd
 
 import (
+	"encoding/json"
 	"log"
 	"sort"
 
@@ -13,8 +14,8 @@ func init() {
 
 	var authCmd = &cobra.Command{
 		Use:     "auth",
-		Short:   "Return data access privileges from profile",
-		Long:    `Gets data access privileges for specified profile.`,
+		Short:   "Return resource access privileges from profile",
+		Long:    `Gets resource access privileges for specified profile.`,
 		Example: `./gen3-client auth --profile=<profile-name>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
@@ -27,33 +28,42 @@ func init() {
 			function.Request = request
 			function.Config = configure
 
-			host, projectAccess, err := function.CheckPrivileges(profile, "")
+			host, resourceAccess, err := function.CheckPrivileges(profile, "")
 
 			if err != nil {
 				log.Fatalf("Fatal authentication error: %s\n", err)
 			} else {
-				if len(projectAccess) == 0 {
-					log.Printf("\nYou don't currently have access to data from any projects at %s\n", host)
+				if len(resourceAccess) == 0 {
+					log.Printf("\nYou don't currently have access to any resources at %s\n", host)
 				} else {
-					log.Printf("\nYou have access to the following project(s) at %s:\n", host)
+					log.Printf("\nYou have access to the following resource(s) at %s:\n", host)
 
-					// Sort by project name
-					projects := make([]string, 0, len(projectAccess))
-					for project := range projectAccess {
-						projects = append(projects, project)
+					// Sort by resource name
+					resources := make([]string, 0, len(resourceAccess))
+					for resource := range resourceAccess {
+						resources = append(resources, resource)
 					}
-					sort.Strings(projects)
+					sort.Strings(resources)
 
-					for _, project := range projects {
-						// Sort by access name
-						permissions := projectAccess[project].([]interface{})
-						access := make([]string, 0, len(permissions))
-						for _, permission := range permissions {
-							access = append(access, permission.(string))
+					for _, project := range resources {
+						// Sort by access name if permissions are from Fence
+						permissions := resourceAccess[project].([]interface{})
+						_, isFencePermission := permissions[0].(string)
+						if isFencePermission {
+							access := make([]string, 0, len(permissions))
+							for _, permission := range permissions {
+								access = append(access, permission.(string))
+							}
+							sort.Strings(access)
+							log.Printf("%s %s\n", project, access)
+						} else {
+							// Permissions from Arborist already sorted, just pretty print them
+							marshalledPermissions, err := json.MarshalIndent(permissions, "", "  ")
+							if err != nil {
+								log.Printf("%s (error occurred when marshalling permissions): %s\n", project, err)
+							}
+							log.Printf("%s %s\n", project, marshalledPermissions)
 						}
-						sort.Strings(access)
-
-						log.Printf("%s %s\n", project, access)
 					}
 				}
 			}
