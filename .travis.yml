@@ -36,9 +36,10 @@ jobs:
           repo: uc-cdis/cdis-data-client
           branch: master
           tags: true
-
 before_install: |-
-  pip3 install --user awscli
+  pyenv global 3.7.1
+  pip install -U pip
+  pip install awscli
   export PATH=$PATH:$HOME/.local/bin
   ln -s $PWD $GOPATH/src/github.com/uc-cdis/gen3-client
   printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
