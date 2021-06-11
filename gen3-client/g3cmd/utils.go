@@ -472,7 +472,6 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 		dir, file := filepath.Split(subFilename)
 		if dir != "" && dir != commonUtils.PathSeparator {
 			filename = strings.TrimPrefix(subFilename, commonUtils.PathSeparator)
-			//filename = strings.Replace(filename, commonUtils.PathSeparator, ".", -1)
 			filename = filepath.ToSlash(filename)
 		} else {
 			filename = file
