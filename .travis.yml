@@ -38,9 +38,8 @@ jobs:
           tags: true
 
 before_install: |-
-  sudo apt-get update
-  sudo apt-get install python3-pip python3-dev
-  pip3 install --user awscli
+  curl https://bootstrap.pypa.io/get-pip.py | python
+  pip install --user awscli
   export PATH=$PATH:$HOME/.local/bin
   ln -s $PWD $GOPATH/src/github.com/uc-cdis/gen3-client
   printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
