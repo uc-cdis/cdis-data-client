@@ -38,6 +38,8 @@ jobs:
           tags: true
 
 before_install: |-
+  sudo apt-get update
+  sudo apt-get install python3-pip
   pip install --user awscli
   export PATH=$PATH:$HOME/.local/bin
   ln -s $PWD $GOPATH/src/github.com/uc-cdis/gen3-client
