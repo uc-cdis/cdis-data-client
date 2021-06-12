@@ -40,7 +40,7 @@ jobs:
 before_install: |-
   sudo apt-get update
   sudo apt-get install python3-pip
-  pip install --user awscli
+  pip3 install --user awscli
   export PATH=$PATH:$HOME/.local/bin
   ln -s $PWD $GOPATH/src/github.com/uc-cdis/gen3-client
   printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
