@@ -1,6 +1,8 @@
 sudo: required
 dist: focal
 language: go
+python:
+  - "3.6"
 git:
   depth: 1
 go:
