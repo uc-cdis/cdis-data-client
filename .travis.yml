@@ -36,7 +36,6 @@ jobs:
           repo: uc-cdis/cdis-data-client
           branch: master
           tags: true
-
 before_install: |-
   pip3 install awscli
   export PATH=$PATH:$HOME/.local/bin
