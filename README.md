@@ -83,4 +83,4 @@ The metadata file should be a JSON file in the format:
 ```
 The `aliases` and `metadata` properties are optional. Some Gen3 data commons require the `authz` property to be specified in order to upload a data file.
 
-If you do not know what `authz` to use, you can look at your `/profile` page of the Gen3 data commons you are uploading to. You will see a list of *authz resources* in the format `/example/authz/resource`: these are the authz resources you have access to.
+If you do not know what `authz` to use, you can look at your `Profile` tab or `/identity` page of the Gen3 data commons you are uploading to. You will see a list of *authz resources* in the format `/example/authz/resource`: these are the authz resources you have access to.
