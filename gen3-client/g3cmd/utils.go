@@ -475,12 +475,11 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 				fmt.Println("uploadpath is not valid")
 			}
 			if !fileInfo.IsDir() {
-				_, file := filepath.Split(uploadPath)
-				presentDirname = strings.TrimSuffix(uploadPath, file)
+				presentDirname, _ = filepath.Split(uploadPath)
 
-			} else {
+			}
+			if fileInfo.IsDir() {
 				presentDirname = strings.TrimSuffix(uploadPath, commonUtils.PathSeparator+"*")
-
 			}
 		}
 		subFilename := strings.TrimPrefix(filePath, presentDirname)
