@@ -474,7 +474,8 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 				log.Fatal(err)
 			}
 			if !fileInfo.IsDir() {
-				// do nothing (explicitly)
+				filename = presentPath
+
 			} else {
 				filename = strings.TrimPrefix(filePath, presentPath)
 				filename = strings.TrimPrefix(filename, commonUtils.PathSeparator)
