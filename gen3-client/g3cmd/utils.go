@@ -467,30 +467,18 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 	var metadata commonUtils.FileMetadata
 	if includeSubDirName {
 		uploadPath, err := commonUtils.GetAbsolutePath(uploadPath)
-		var presentDirname string
 		if err == nil {
-			fileInfo, err := os.Stat(uploadPath)
-			if os.IsNotExist(err) {
+			presentPath := strings.TrimSuffix(uploadPath, commonUtils.PathSeparator+"*")
+			fileInfo, err := os.Stat(presentPath)
+			if err != nil {
 				log.Fatal(err)
 			}
-			if fileInfo.IsDir() {
-				presentDirname = strings.TrimSuffix(uploadPath, commonUtils.PathSeparator+"*")
-
+			if !fileInfo.IsDir() {
+				// do nothing (explicitly)
 			} else {
-				pwd, err := os.Getwd()
-				if err != nil {
-					log.Fatal(err)
-				}
-				presentDirname = pwd
+				filename = strings.TrimPrefix(filePath, presentPath)
+				filename = strings.TrimPrefix(filename, commonUtils.PathSeparator)
 			}
-		}
-		subFilename := strings.TrimPrefix(filePath, presentDirname)
-		dir, file := filepath.Split(subFilename)
-		if dir != "" && dir != commonUtils.PathSeparator {
-			filename = strings.TrimPrefix(subFilename, commonUtils.PathSeparator)
-			filename = filepath.ToSlash(filename)
-		} else {
-			filename = file
 		}
 	}
 	if includeMetadata {
