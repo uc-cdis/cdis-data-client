@@ -482,8 +482,8 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 
 			} else {
 				filename = strings.TrimPrefix(filePath, presentPath)
-				filename = strings.TrimPrefix(filename, commonUtils.PathSeparator)
 			}
+			filename = strings.TrimPrefix(filename, commonUtils.PathSeparator)
 		}
 	}
 	if includeMetadata {
