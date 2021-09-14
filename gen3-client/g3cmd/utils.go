@@ -474,7 +474,11 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 				log.Fatal(err)
 			}
 			if !fileInfo.IsDir() {
-				filename = presentPath
+				pwd, err := os.Getwd()
+				if err != nil {
+					log.Fatal(err)
+				}
+				filename = strings.TrimPrefix(presentPath, pwd)
 
 			} else {
 				filename = strings.TrimPrefix(filePath, presentPath)
