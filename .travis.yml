@@ -4,7 +4,7 @@ language: go
 git:
   depth: 1
 go:
-  - 1.14
+  - 1.17
 
 jobs:
   include:

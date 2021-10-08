@@ -1,6 +1,7 @@
-FROM quay.io/cdis/golang:1.14-alpine as build-deps
+FROM quay.io/cdis/golang:1.17-bullseye as build-deps
 
-RUN apk update && apk add --no-cache git ca-certificates gcc musl-dev
+ENV GOOS=linux
+ENV GOARCH=amd64
 
 WORKDIR /go/src/github.com/uc-cdis/gen3-client
 
