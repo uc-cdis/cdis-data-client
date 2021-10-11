@@ -24,5 +24,6 @@ RUN COMMIT=$(git rev-parse HEAD); \
     && go build -o /gen3-client
 
 FROM scratch
+COPY --from=build-deps /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build-deps /gen3-client /gen3-client
 CMD ["/gen3-client"]
