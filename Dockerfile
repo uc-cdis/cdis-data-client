@@ -1,27 +1,29 @@
 FROM quay.io/cdis/golang:1.17-bullseye as build-deps
 
+ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
 
-WORKDIR /go/src/github.com/uc-cdis/gen3-client
+WORKDIR $GOPATH/src/github.com/uc-cdis/gen3-client/
 
-COPY . .
+COPY go.mod .
+COPY go.sum .
 
 RUN go mod download
 
-# Populate git version info into the code
-RUN printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
-    && COMMIT=`git rev-parse HEAD` && echo "    gitcommit=\"${COMMIT}\"" >>gen3-client/g3cmd/gitversion.go \
-    && VERSION=`git describe --always --tags` && echo "    gitversion=\"${VERSION}\"" >>gen3-client/g3cmd/gitversion.go \
-    && echo ")" >>gen3-client/g3cmd/gitversion.go
+COPY . .
 
-#RUN go test -v github.com/uc-cdis/gen3-client/tests
+RUN COMMIT=$(git rev-parse HEAD); \
+    VERSION=$(git describe --always --tags); \
+    printf '%s\n' 'package g3cmd'\
+    ''\
+    'const ('\
+    '    gitcommit="'"${COMMIT}"'"'\
+    '    gitversion="'"${VERSION}"'"'\
+    ')' > gen3-client/g3cmd/gitversion.go \
+    && go build -o /gen3-client
 
-RUN go build -ldflags "-linkmode external -extldflags -static" -o bin/gen3-client
-
-# Store only the resulting binary in the final image
-# Resulting in significantly smaller docker image size
 FROM scratch
 COPY --from=build-deps /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=build-deps /go/src/github.com/uc-cdis/gen3-client/bin/gen3-client /gen3-client
-ENTRYPOINT ["/gen3-client"]
+COPY --from=build-deps /gen3-client /gen3-client
+CMD ["/gen3-client"]
