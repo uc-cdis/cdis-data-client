@@ -38,6 +38,8 @@ type ConfigureInterface interface {
 	ParseConfig(profile string) Credential
 }
 
+var configCache map[string]Credential
+
 func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	//Look in config file
 	fullFilePath, err := commonUtils.GetAbsolutePath(filePath)
@@ -181,6 +183,12 @@ func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, a
 			log.Println("error occurred when updating config: " + err.Error())
 		}
 	}
+
+	// cache it
+	if configCache == nil {
+		configCache = make(map[string]Credential)
+	}
+	configCache[profile] = cred
 }
 
 func (conf *Configure) ParseKeyValue(str string, expr string) (string, error) {
@@ -224,6 +232,16 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		Returns:
 			An instance of Credential
 	*/
+
+	// check if the config is cached, to only read the config file once
+	if configCache == nil {
+		configCache = make(map[string]Credential)
+	}
+	cachedCred := configCache[profile]
+	if cachedCred != (Credential{}) {
+		return cachedCred
+	}
+
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		log.Fatalln("Error occurred when getting home directory: " + err.Error())
@@ -278,8 +296,14 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		log.Fatalf("api_endpoint not found in profile. Err: %v", err)
 	}
 	// UseShepherd and MinShepherdVersion are optional
-	cred.UseShepherd, _ = conf.ParseKeyValue(lines[profileLine+5], "^use_shepherd=(\\S*)")
-	cred.MinShepherdVersion, _ = conf.ParseKeyValue(lines[profileLine+6], "^min_shepherd_version=(\\S*)")
+	if len(lines) > profileLine + 5 {
+		cred.UseShepherd, _ = conf.ParseKeyValue(lines[profileLine+5], "^use_shepherd=(\\S*)")
+	}
+	if len(lines) > profileLine + 6 {
+		cred.MinShepherdVersion, _ = conf.ParseKeyValue(lines[profileLine+6], "^min_shepherd_version=(\\S*)")
+	}
+
+	configCache[profile] = cred // cache it
 	return cred
 }
 
