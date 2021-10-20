@@ -211,6 +211,7 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	for _, fdrObject := range batchFDRSlice {
 		err := GetDownloadResponse(g3, profile, &fdrObject, protocolText)
 		if err != nil {
+			log.Println(err.Error())
 			errCh <- err
 			continue
 		}
@@ -228,7 +229,9 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 		}
 		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0666)
 		if err != nil {
-			errCh <- errors.New("Error occurred during opening local file: " + err.Error())
+			err_msg := errors.New("Error occurred during opening local file: " + err.Error())
+			log.Println(err_msg)
+			errCh <- err_msg
 			continue
 		}
 		defer file.Close()
@@ -244,7 +247,9 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	fdrCh := make(chan commonUtils.FileDownloadResponseObject, len(fdrs))
 	pool, err := pb.StartPool(bars...)
 	if err != nil {
-		errCh <- errors.New("Error occurred during initializing progress bars: " + err.Error())
+		err_msg := errors.New("Error occurred during initializing progress bars: " + err.Error())
+		log.Println(err_msg)
+		errCh <- err_msg
 		return 0
 	}
 
@@ -255,7 +260,9 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 		go func() {
 			for fdr := range fdrCh {
 				if _, err = io.Copy(fdr.Writer, fdr.Response.Body); err != nil {
-					errCh <- errors.New("io.Copy error: " + err.Error())
+					err_msg := errors.New("io.Copy error: " + err.Error())
+					log.Println(err_msg)
+					errCh <- err_msg
 					return
 				}
 				succeeded++

@@ -511,7 +511,7 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	filePath, err := commonUtils.GetAbsolutePath(filePath)
 	fi, err := os.Stat(filePath)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return "", err
 	}
 	switch mode := fi.Mode(); {
@@ -619,6 +619,7 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename, furObjects[i].FileMetadata)
 			if err != nil {
 				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, guid, 0, false, true)
+				log.Println(err.Error())
 				errCh <- err
 				continue
 			}
@@ -630,7 +631,9 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 		file, err := os.Open(furObjects[i].FilePath)
 		if err != nil {
 			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, furObjects[i].GUID, 0, false, true)
-			errCh <- errors.New("File open error: " + err.Error())
+			err_msg := errors.New("File open error: " + err.Error())
+			log.Println(err_msg)
+			errCh <- err_msg
 			continue
 		}
 		defer file.Close()
@@ -639,7 +642,9 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 		if err != nil {
 			file.Close()
 			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, furObjects[i].GUID, 0, false, true)
-			errCh <- errors.New("Error occurred during request generation: " + err.Error())
+			err_msg := errors.New("Error occurred during request generation: " + err.Error())
+			log.Println(err_msg)
+			errCh <- err_msg
 			continue
 		}
 		bars = append(bars, furObjects[i].Bar)
@@ -652,7 +657,9 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 		for _, furObject := range furObjects {
 			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, 0, false, true)
 		}
-		errCh <- errors.New("Error occurred during starting progress bar pool: " + err.Error())
+		err_msg := errors.New("Error occurred during starting progress bar pool: " + err.Error())
+		log.Println(err_msg)
+		errCh <- err_msg
 		return
 	}
 
@@ -666,6 +673,7 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 					resp, err := client.Do(furObject.Request)
 					if err != nil {
 						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, 0, false, true)
+						log.Println(err.Error())
 						errCh <- err
 					} else {
 						if resp.StatusCode != 200 {

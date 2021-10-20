@@ -120,7 +120,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	if !(resp.StatusCode == 200 || resp.StatusCode == 201) {
 		switch resp.StatusCode {
 		case 401:
-			return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials")
+			return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your access, configuration and/or credentials")
 		case 403:
 			return msg, errors.New("403 Forbidden error has occurred! You don't have permission to access the requested url \"" + resp.Request.URL.String() + "\"")
 		case 404:
