@@ -22,6 +22,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
+			profileConfig = conf.ParseConfig(profile)
 
 			guids := make([]string, 0)
 			guids = append(guids, guid)

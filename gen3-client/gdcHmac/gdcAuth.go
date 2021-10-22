@@ -18,14 +18,14 @@ const AUTHORIZATION_HEADER = "Authorization"
 const CLIENT_CONTEXT_HEADER = "x-amz-client-context"
 
 type Credentials struct {
-	AccessKeyID     string
-	SecretAccessKey string
+	AccessTokenID     string
+	SecretAccessToken string
 }
 
 // Sign signs a request with Signed Signature Version 4.
 // TRYING TO COPY PYTHON SIGN_AUTH
 func Sign(request *http.Request, credentials Credentials, service string) *http.Request {
-	secret_key := credentials.SecretAccessKey
+	secret_key := credentials.SecretAccessToken
 	if request.URL.Path == "" {
 		request.URL.Path += "/"
 	}
@@ -50,9 +50,9 @@ func Sign(request *http.Request, credentials Credentials, service string) *http.
 
 func Verify(service string, req *http.Request, secret_key string) bool {
 	signature := ParseSignature(req)
-	accessKey := ParseAccessKey(req)
+	accessToken := ParseAccessToken(req)
 	SignedHeaders := ParseSignedHeaders(req)
-	credentials := Credentials{AccessKeyID: accessKey, SecretAccessKey: secret_key}
+	credentials := Credentials{AccessTokenID: accessToken, SecretAccessToken: secret_key}
 	req_time := GetExactRequestTime(req)
 	if CheckExpiredTime(req_time) {
 		fmt.Println("Request expired")

@@ -11,12 +11,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
@@ -26,10 +24,12 @@ type Functions struct {
 }
 
 type FunctionInterface interface {
-	CheckForShepherdAPI(string) (bool, error)
-	GetResponse(string, string, string, string, string, []byte) (string, *http.Response, error)
-	DoRequestWithSignedHeader(string, string, string, string, []byte) (JsonMessage, error)
+	CheckPrivileges(profileConfig *Credential) (string, map[string]interface{}, error)
+	CheckForShepherdAPI(*Credential) (bool, error)
+	GetResponse(*Credential, string, string, string, []byte) (string, *http.Response, error)
+	DoRequestWithSignedHeader(*Credential, string, string, []byte) (JsonMessage, error)
 	ParseFenceURLResponse(*http.Response) (JsonMessage, error)
+	GetHost(profileConfig *Credential) (*url.URL, error)
 }
 
 type Request struct {
@@ -37,18 +37,18 @@ type Request struct {
 
 type RequestInterface interface {
 	MakeARequest(string, string, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
-	RequestNewAccessKey(string, *Credential) error
+	RequestNewAccessToken(string, *Credential) error
 }
 
-func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
+func (r *Request) MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
 	/*
 		Make http request with header and body
 	*/
 	if headers == nil {
 		headers = make(map[string]string)
 	}
-	if accessKey != "" {
-		headers["Authorization"] = "Bearer " + accessKey
+	if accessToken != "" {
+		headers["Authorization"] = "Bearer " + accessToken
 	}
 	if contentType != "" {
 		headers["Content-Type"] = contentType
@@ -75,38 +75,38 @@ func (r *Request) MakeARequest(method string, apiEndpoint string, accessKey stri
 	return resp, nil
 }
 
-func (r *Request) RequestNewAccessKey(apiEndpoint string, cred *Credential) error {
+func (r *Request) RequestNewAccessToken(accessTokenEndpoint string, profileConfig *Credential) error {
 	/*
 		Request new access token to replace the expired one.
 
 		Args:
-			apiEndpoint: the api endpoint for request new access token
+			accessTokenEndpoint: the api endpoint for request new access token
 		Returns:
-			cred: new credential
+			profileConfig: new credential
 			err: error
 
 	*/
-	body := bytes.NewBufferString("{\"api_key\": \"" + cred.APIKey + "\"}")
-	resp, err := r.MakeARequest("POST", apiEndpoint, "", "application/json", nil, body)
+	body := bytes.NewBufferString("{\"api_key\": \"" + profileConfig.APIKey + "\"}")
+	resp, err := r.MakeARequest("POST", accessTokenEndpoint, "", "application/json", nil, body)
 	var m AccessTokenStruct
 	// parse resp error codes first for profile configuration verification
 	if resp != nil && resp.StatusCode != 200 {
-		return errors.New("Error occurred in RequestNewAccessKey with error code " + strconv.Itoa(resp.StatusCode) + ", check FENCE log for more details.")
+		return errors.New("Error occurred in RequestNewAccessToken with error code " + strconv.Itoa(resp.StatusCode) + ", check FENCE log for more details.")
 	}
 	if err != nil {
-		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
+		return errors.New("Error occurred in RequestNewAccessToken: " + err.Error())
 	}
 
 	str := ResponseToString(resp)
 	err = DecodeJsonFromString(str, &m)
 	if err != nil {
-		return errors.New("Error occurred in RequestNewAccessKey: " + err.Error())
+		return errors.New("Error occurred in RequestNewAccessToken: " + err.Error())
 	}
 
 	if m.AccessToken == "" {
 		return errors.New("Could not get new access key from response string: " + str)
 	}
-	cred.AccessKey = m.AccessToken
+	profileConfig.AccessToken = m.AccessToken
 	return nil
 }
 
@@ -146,25 +146,24 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 	return msg, nil
 }
 
-func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
+func (f *Functions) CheckForShepherdAPI(profileConfig *Credential) (bool, error) {
 	// Check if Shepherd is enabled
-	cred := f.Config.ParseConfig(profile)
-	if cred.UseShepherd == "false" {
+	if profileConfig.UseShepherd == "false" {
 		return false, nil
 	}
-	if cred.UseShepherd != "true" && commonUtils.DefaultUseShepherd == false {
+	if profileConfig.UseShepherd != "true" && commonUtils.DefaultUseShepherd == false {
 		return false, nil
 	}
 	// If Shepherd is enabled, make sure that the commons has a compatible version of Shepherd deployed.
 	// Compare the version returned from the Shepherd version endpoint with the minimum acceptable Shepherd version.
 	var minShepherdVersion string
-	if cred.MinShepherdVersion == "" {
+	if profileConfig.MinShepherdVersion == "" {
 		minShepherdVersion = commonUtils.DefaultMinShepherdVersion
 	} else {
-		minShepherdVersion = cred.MinShepherdVersion
+		minShepherdVersion = profileConfig.MinShepherdVersion
 	}
 
-	_, res, err := f.GetResponse(profile, "", commonUtils.ShepherdVersionEndpoint, "GET", "", nil)
+	_, res, err := f.GetResponse(profileConfig, commonUtils.ShepherdVersionEndpoint, "GET", "", nil)
 	if err != nil {
 		return false, errors.New("Error occurred during generating HTTP request: " + err.Error())
 	}
@@ -191,24 +190,23 @@ func (f *Functions) CheckForShepherdAPI(profile string) (bool, error) {
 	if ver.GreaterThanOrEqual(minVer) {
 		return true, nil
 	}
-	return false, fmt.Errorf("Shepherd is enabled, but %v does not have correct Shepherd version. (Need Shepherd version >=%v, got %v)", cred.APIEndpoint, minVer, ver)
+	return false, fmt.Errorf("Shepherd is enabled, but %v does not have correct Shepherd version. (Need Shepherd version >=%v, got %v)", profileConfig.APIEndpoint, minVer, ver)
 }
 
-func (f *Functions) GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
+func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error) {
 
 	var resp *http.Response
 	var err error
 
-	cred := f.Config.ParseConfig(profile)
-	if cred.APIKey == "" && cred.AccessKey == "" && cred.APIEndpoint == "" {
+	if profileConfig.APIKey == "" && profileConfig.AccessToken == "" && profileConfig.APIEndpoint == "" {
 		return "", resp, errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
 	}
-	host, _ := url.Parse(cred.APIEndpoint)
+	host, _ := url.Parse(profileConfig.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
 	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	isExpiredToken := false
-	if cred.AccessKey != "" {
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
+	if profileConfig.AccessToken != "" {
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes))
 		if err != nil {
 			return "", resp, fmt.Errorf("Error while requesting user access token at %v: %v", apiEndpoint, err)
 		}
@@ -221,20 +219,14 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 			return prefixEndPoint, resp, err
 		}
 	}
-	if cred.AccessKey == "" || isExpiredToken {
-		err := f.Request.RequestNewAccessKey(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &cred)
+	if profileConfig.AccessToken == "" || isExpiredToken {
+		err := f.Request.RequestNewAccessToken(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, profileConfig)
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}
-		homeDir, err := homedir.Dir()
-		if err != nil {
-			log.Fatalln("Error occurred when getting home directory: " + err.Error())
-		}
-		configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
-		content := f.Config.ReadFile(configPath, configFileType)
-		f.Config.UpdateConfigFile(cred, []byte(content), cred.APIEndpoint, cred.UseShepherd, cred.MinShepherdVersion, configPath, profile)
+		f.Config.UpdateConfigFile(*profileConfig)
 
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, cred.AccessKey, contentType, nil, bytes.NewBuffer(bodyBytes))
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes))
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}
@@ -243,16 +235,15 @@ func (f *Functions) GetResponse(profile string, configFileType string, endpointP
 	return prefixEndPoint, resp, nil
 }
 
-func (f *Functions) GetHost(profile string, configFileType string) (*url.URL, error) {
-	cred := f.Config.ParseConfig(profile)
-	if cred.APIEndpoint == "" {
+func (f *Functions) GetHost(profileConfig *Credential) (*url.URL, error) {
+	if profileConfig.APIEndpoint == "" {
 		return nil, errors.New("No APIEndpoint found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
 	}
-	host, _ := url.Parse(cred.APIEndpoint)
+	host, _ := url.Parse(profileConfig.APIEndpoint)
 	return host, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
+func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
 	/*
 	   Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
@@ -264,7 +255,7 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 		method = "POST"
 	}
 
-	_, resp, err := f.GetResponse(profile, configFileType, endpointPostPrefix, method, contentType, bodyBytes)
+	_, resp, err := f.GetResponse(profileConfig, endpointPostPrefix, method, contentType, bodyBytes)
 	if err != nil {
 		return msg, err
 	}
@@ -273,18 +264,14 @@ func (f *Functions) DoRequestWithSignedHeader(profile string, configFileType str
 	return msg, err
 }
 
-func (f *Functions) CheckProfileConfig(apiKey string, apiEndpoint string) error {
-	return nil
-}
-
-func (f *Functions) CheckPrivileges(profile string, configFileType string) (string, map[string]interface{}, error) {
+func (f *Functions) CheckPrivileges(profileConfig *Credential) (string, map[string]interface{}, error) {
 	/*
 	   Return user privileges from specified profile
 	*/
 	var err error
 	var data map[string]interface{}
 
-	host, resp, err := f.GetResponse(profile, configFileType, commonUtils.FenceUserEndpoint, "GET", "", nil)
+	host, resp, err := f.GetResponse(profileConfig, commonUtils.FenceUserEndpoint, "GET", "", nil)
 	if err != nil {
 		return "", nil, errors.New("Error occurred when getting response from remote: " + err.Error())
 	}
@@ -309,16 +296,16 @@ func (f *Functions) CheckPrivileges(profile string, configFileType string) (stri
 	return host, resourceAccess, err
 }
 
-func (f *Functions) DeleteRecord(profile string, configFileType string, guid string) (string, error) {
+func (f *Functions) DeleteRecord(profileConfig *Credential, guid string) (string, error) {
 	var err error
 	var msg string
 
-	hasShepherd, err := f.CheckForShepherdAPI(profile)
+	hasShepherd, err := f.CheckForShepherdAPI(profileConfig)
 	if err != nil {
 		log.Printf("WARNING: Error while checking for Shepherd API: %v. Falling back to Fence to delete record.\n", err)
 	} else if hasShepherd {
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + guid
-		_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
+		_, resp, err := f.GetResponse(profileConfig, endPointPostfix, "DELETE", "", nil)
 		if err != nil {
 			return "", err
 		}
@@ -332,7 +319,7 @@ func (f *Functions) DeleteRecord(profile string, configFileType string, guid str
 
 	endPointPostfix := commonUtils.FenceDataEndpoint + "/" + guid
 
-	_, resp, err := f.GetResponse(profile, configFileType, endPointPostfix, "DELETE", "", nil)
+	_, resp, err := f.GetResponse(profileConfig, endPointPostfix, "DELETE", "", nil)
 
 	if resp.StatusCode == 204 {
 		msg = "Record with GUID " + guid + " has been deleted"

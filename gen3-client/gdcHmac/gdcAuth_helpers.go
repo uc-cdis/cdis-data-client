@@ -22,7 +22,7 @@ func ParseSignature(req *http.Request) string {
 	return re.FindStringSubmatch(req.Header.Get("Authorization"))[1]
 }
 
-func ParseAccessKey(req *http.Request) string {
+func ParseAccessToken(req *http.Request) string {
 	re, _ := regexp.Compile("Credential=(\\S*?)\\/")
 	return re.FindStringSubmatch(req.Header.Get("Authorization"))[1]
 }

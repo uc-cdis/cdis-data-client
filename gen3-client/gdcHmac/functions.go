@@ -9,7 +9,7 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
-func SignedRequest(method string, url_string string, body io.Reader, content_type string, service string, access_key string, secret_key string) (*http.Response, error) {
+func SignedRequest(method string, url_string string, body io.Reader, content_type string, service string, access_token string, secret_key string) (*http.Response, error) {
 	uri, err := url.Parse(url_string)
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func SignedRequest(method string, url_string string, body io.Reader, content_typ
 	req.Header.Add("Content-Type", content_type)
 	req.Header.Add("X-Amz-Date", time.Now().UTC().Format("20060102T150405Z"))
 
-	signed_req := Sign(req, Credentials{AccessKeyID: access_key, SecretAccessKey: secret_key}, service)
+	signed_req := Sign(req, Credentials{AccessTokenID: access_token, SecretAccessToken: secret_key}, service)
 
 	return client.Do(signed_req)
 }

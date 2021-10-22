@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -20,15 +19,10 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
+			gen3Interface := NewGen3Interface()
+			profileConfig = conf.ParseConfig(profile)
 
-			request := new(jwt.Request)
-			configure := new(jwt.Configure)
-			function := new(jwt.Functions)
-
-			function.Request = request
-			function.Config = configure
-
-			host, resourceAccess, err := function.CheckPrivileges(profile, "")
+			host, resourceAccess, err := gen3Interface.CheckPrivileges(&profileConfig)
 
 			if err != nil {
 				log.Fatalf("Fatal authentication error: %s\n", err)

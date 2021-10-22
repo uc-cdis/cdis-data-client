@@ -45,7 +45,7 @@ func TestSign(t *testing.T) {
 		vanilla_req, _ := http.NewRequest(method, "/", nil)
 		vanilla_req.Header.Add("Host", "example.amazonaws.com")
 		vanilla_req.Header.Add("X-Amz-Date", "20150830T123600Z")
-		svanilla_req := Sign(vanilla_req, Credentials{AccessKeyID: "AKIDEXAMPLE", SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"}, "submission")
+		svanilla_req := Sign(vanilla_req, Credentials{AccessTokenID: "AKIDEXAMPLE", SecretAccessToken: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY"}, "submission")
 
 		if svanilla_req.Header.Get("Host") != "example.amazonaws.com" {
 			t.Error("Host header incorrect! Expected example.amazonaws.com, got " + svanilla_req.Header.Get("Host"))

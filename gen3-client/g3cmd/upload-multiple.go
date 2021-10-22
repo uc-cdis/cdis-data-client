@@ -13,7 +13,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
@@ -35,14 +34,11 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n\n")
 
-			request := new(jwt.Request)
-			configure := new(jwt.Configure)
-			function := new(jwt.Functions)
+			// Instantiate interface to Gen3
+			gen3Interface := NewGen3Interface()
+			profileConfig = conf.ParseConfig(profile)
 
-			function.Config = configure
-			function.Request = request
-
-			host, err := function.GetHost(profile, "")
+			host, err := gen3Interface.GetHost(&profileConfig)
 			if err != nil {
 				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
 			}
@@ -83,8 +79,6 @@ func init() {
 				workers, respCh, errCh, batchFURObjects = initBatchUploadChannels(numParallel, len(objects))
 			}
 
-			gen3Interface := NewGen3Interface()
-
 			for i, furObject := range furObjects {
 				if batch {
 					if len(batchFURObjects) < workers {
@@ -107,7 +101,7 @@ func init() {
 					}
 					defer file.Close()
 
-					furObject, err := GenerateUploadRequest(furObject, file)
+					furObject, err := GenerateUploadRequest(gen3Interface, furObject, file)
 					if err != nil {
 						file.Close()
 						logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)

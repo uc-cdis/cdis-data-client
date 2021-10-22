@@ -77,21 +77,6 @@ func (mr *MockConfigureInterfaceMockRecorder) ReadFile(arg0, arg1 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockConfigureInterface)(nil).ReadFile), arg0, arg1)
 }
 
-// ReadLines mocks base method
-func (m *MockConfigureInterface) ReadLines(arg0 jwt.Credential, arg1 []byte, arg2, arg3, arg4, arg5 string) ([]string, bool) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadLines", arg0, arg1, arg2, arg3, arg4, arg5)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(bool)
-	return ret0, ret1
-}
-
-// ReadLines indicates an expected call of ReadLines
-func (mr *MockConfigureInterfaceMockRecorder) ReadLines(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadLines", reflect.TypeOf((*MockConfigureInterface)(nil).ReadLines), arg0, arg1, arg2, arg3, arg4, arg5)
-}
-
 // UpdateConfigFile mocks base method
 func (m *MockConfigureInterface) UpdateConfigFile(arg0 jwt.Credential, arg1 []byte, arg2, arg3, arg4, arg5, arg6 string) {
 	m.ctrl.T.Helper()

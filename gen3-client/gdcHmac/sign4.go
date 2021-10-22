@@ -105,7 +105,7 @@ func signingKeyV4(secretKey, date, service string) []byte {
 }
 
 func buildAuthHeaderV4(signature string, meta *metadata, keys Credentials) string {
-	credential := keys.AccessKeyID + "/" + meta.credentialScope
+	credential := keys.AccessTokenID + "/" + meta.credentialScope
 
 	return meta.algorithm +
 		" Credential=" + credential +

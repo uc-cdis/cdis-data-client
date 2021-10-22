@@ -23,20 +23,20 @@ import (
 
 // mockgen -destination=../mocks/mock_gen3interface.go -package=mocks . Gen3Interface
 
-func askGen3ForFileInfo(gen3Interface Gen3Interface, profile string, guid string, protocol string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
+func askGen3ForFileInfo(gen3Interface Gen3Interface, guid string, protocol string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
 	var fileName string
 	var fileSize int64
 
 	// If the commons has the newer Shepherd API deployed, get the filename and file size from the Shepherd API.
 	// Otherwise, fall back on Indexd and Fence.
-	hasShepherd, err := gen3Interface.CheckForShepherdAPI(profile)
+	hasShepherd, err := gen3Interface.CheckForShepherdAPI(&profileConfig)
 	if err != nil {
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
 		log.Println("Falling back to Indexd...")
 	}
 	if hasShepherd {
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + guid
-		_, res, err := gen3Interface.GetResponse(profile, "", endPointPostfix, "GET", "", nil)
+		_, res, err := gen3Interface.GetResponse(&profileConfig, endPointPostfix, "GET", "", nil)
 		if err != nil {
 			log.Println("Error occurred when querying filename from Shepherd: " + err.Error())
 			log.Println("Using GUID for filename instead.")
@@ -68,7 +68,7 @@ func askGen3ForFileInfo(gen3Interface Gen3Interface, profile string, guid string
 	} else {
 		// Attempt to get the filename from Indexd
 		endPointPostfix := commonUtils.IndexdIndexEndpoint + "/" + guid
-		indexdMsg, err := gen3Interface.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+		indexdMsg, err := gen3Interface.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
 		if err != nil {
 			log.Println("Error occurred when querying filename from IndexD: " + err.Error())
 			log.Println("Using GUID for filename instead.")
@@ -312,7 +312,7 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 	fileInfoBar.Start()
 	for _, guid := range guids {
 		var fdrObject commonUtils.FileDownloadResponseObject
-		filename, filesize := askGen3ForFileInfo(gen3Interface, profile, guid, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
+		filename, filesize := askGen3ForFileInfo(gen3Interface, guid, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
 		fdrObject = commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename}
 		if !rename {
 			fdrObject = validateLocalFileStat(downloadPath, filename, filesize, skipCompleted)
@@ -382,6 +382,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
+			profileConfig = conf.ParseConfig(profile)
 
 			manifestPath, _ = commonUtils.GetAbsolutePath(manifestPath)
 			manifestFile, err := os.Open(manifestPath)

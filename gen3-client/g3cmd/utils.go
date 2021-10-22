@@ -10,6 +10,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -116,18 +117,11 @@ const MaxRetryCount = 5
 const maxWaitTime = 300
 
 // InitMultipartUpload helps sending requests to FENCE to init a multipart upload
-func InitMultipartUpload(filename string) (string, string, error) {
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	function := new(jwt.Functions)
-
-	function.Config = configure
-	function.Request = request
-
+func InitMultipartUpload(g3 Gen3Interface, filename string) (string, string, error) {
 	multipartInitObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(multipartInitObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartInitEndpoint, "application/json", objectBytes)
+	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartInitEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
@@ -142,7 +136,7 @@ func InitMultipartUpload(filename string) (string, string, error) {
 }
 
 // GenerateMultipartPresignedURL helps sending requests to FENCE to get a presigned URL for a part during a multipart upload
-func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) (string, error) {
+func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string, partNumber int) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -153,7 +147,7 @@ func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) 
 	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber}
 	objectBytes, err := json.Marshal(multipartUploadObject)
 
-	msg, err := function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartUploadEndpoint, "application/json", objectBytes)
+	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", errors.New("Error has occurred during multipart upload presigned url generation, detailed error message: " + err.Error())
@@ -165,7 +159,7 @@ func GenerateMultipartPresignedURL(key string, uploadID string, partNumber int) 
 }
 
 // CompleteMultipartUpload helps sending requests to FENCE to complete a multipart upload
-func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartObject) error {
+func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, parts []MultipartPartObject) error {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -176,7 +170,7 @@ func CompleteMultipartUpload(key string, uploadID string, parts []MultipartPartO
 	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts}
 	objectBytes, err := json.Marshal(multipartCompleteObject)
 
-	_, err = function.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataMultipartCompleteEndpoint, "application/json", objectBytes)
+	_, err = g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartCompleteEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return errors.New("Error has occurred during completing multipart upload, detailed error message: " + err.Error())
@@ -189,13 +183,13 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 	// Attempt to get the file download URL from Shepherd if it's deployed in this commons,
 	// otherwise fall back to Fence.
 	var fileDownloadURL string
-	hasShepherd, err := g3.CheckForShepherdAPI(profile)
+	hasShepherd, err := g3.CheckForShepherdAPI(&profileConfig)
 	if err != nil {
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
 		log.Println("Falling back to Indexd...")
 	} else if hasShepherd {
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + fdrObject.GUID + "/download"
-		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "GET", "", nil)
+		_, r, err := g3.GetResponse(&profileConfig, endPointPostfix, "GET", "", nil)
 		if err != nil {
 			return fmt.Errorf("Error occurred when getting download URL for object %v from endpoint %v. Details: %v", fdrObject.GUID, endPointPostfix, err)
 		}
@@ -219,7 +213,7 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 		}
 	} else {
 		endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
-		msg, err := g3.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
 
 		if err != nil || msg.URL == "" {
 			errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
@@ -277,9 +271,9 @@ func sanitizeErrorMsg(errorMsg string, sensitiveURL string) string {
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fileMetadata commonUtils.FileMetadata) (string, string, error) {
+func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata commonUtils.FileMetadata) (string, string, error) {
 	// Attempt to get the presigned URL of this file from Shepherd if it's deployed, otherwise fall back to Fence.
-	hasShepherd, err := g3.CheckForShepherdAPI(profile)
+	hasShepherd, err := g3.CheckForShepherdAPI(&profileConfig)
 	if err != nil {
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())
 		log.Println("Falling back to Fence...")
@@ -301,7 +295,7 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fil
 			return "", "", fmt.Errorf("Error occurred when creating upload request for file %v. Details: %v", filename, err)
 		}
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects"
-		_, r, err := g3.GetResponse(profile, "", endPointPostfix, "POST", "", objectBytes)
+		_, r, err := g3.GetResponse(&profileConfig, endPointPostfix, "POST", "", objectBytes)
 		if err != nil {
 			return "", "", fmt.Errorf("Error occurred when requesting upload URL from %v for file %v. Details: %v", endPointPostfix, filename, err)
 		}
@@ -328,7 +322,7 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fil
 	// Otherwise, fall back to Fence
 	purObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(purObject)
-	msg, err := g3.DoRequestWithSignedHeader(profile, "", commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
+	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
@@ -340,17 +334,10 @@ func GeneratePresignedURL(g3 Gen3Interface, profile string, filename string, fil
 }
 
 // GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar for single part upload
-func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
-	request := new(jwt.Request)
-	configure := new(jwt.Configure)
-	function := new(jwt.Functions)
-
-	function.Config = configure
-	function.Request = request
-
+func GenerateUploadRequest(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
 	if furObject.PresignedURL == "" {
 		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID
-		msg, err := function.DoRequestWithSignedHeader(profile, "", endPointPostfix, "", nil)
+		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
 		}
@@ -399,7 +386,7 @@ func GenerateUploadRequest(furObject commonUtils.FileUploadRequestObject, file *
 }
 
 // DeleteRecord helps sending requests to FENCE to delete a record from INDEXD as well as its storage locations
-func DeleteRecord(guid string) (string, error) {
+func DeleteRecord(g3 Gen3Interface, guid string) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -407,7 +394,7 @@ func DeleteRecord(guid string) (string, error) {
 	function.Config = configure
 	function.Request = request
 
-	msg, err := function.DeleteRecord(profile, "", guid)
+	msg, err := function.DeleteRecord(&profileConfig, guid)
 	return msg, err
 }
 
@@ -616,7 +603,7 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(gen3Interface, profile, furObjects[i].Filename, furObjects[i].FileMetadata)
+			respURL, guid, err = GeneratePresignedURL(gen3Interface, furObjects[i].Filename, furObjects[i].FileMetadata)
 			if err != nil {
 				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, guid, 0, false, true)
 				errCh <- err
@@ -635,7 +622,7 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 		}
 		defer file.Close()
 
-		furObjects[i], err = GenerateUploadRequest(furObjects[i], file)
+		furObjects[i], err = GenerateUploadRequest(gen3Interface, furObjects[i], file)
 		if err != nil {
 			file.Close()
 			logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, furObjects[i].GUID, 0, false, true)
@@ -721,10 +708,12 @@ func FormatSize(size int64) string {
 
 // Gen3Interface contains methods used to make authorized http requests to Gen3 services.
 type Gen3Interface interface {
-	CheckForShepherdAPI(profile string) (bool, error)
-	GetResponse(profile string, configFileType string, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
-	DoRequestWithSignedHeader(profile string, configFileType string, endpointPostPrefix string, contentType string, bodyBytes []byte) (jwt.JsonMessage, error)
-	MakeARequest(method string, apiEndpoint string, accessKey string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error)
+	CheckPrivileges(profileConfig *jwt.Credential) (string, map[string]interface{}, error)
+	CheckForShepherdAPI(profileConfig *jwt.Credential) (bool, error)
+	GetResponse(profileConfig *jwt.Credential, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
+	DoRequestWithSignedHeader(profileConfig *jwt.Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (jwt.JsonMessage, error)
+	MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error)
+	GetHost(profileConfig *jwt.Credential) (*url.URL, error)
 }
 
 // NewGen3Interface returns a struct that contains methods used to make authorized http requests to Gen3 services.
