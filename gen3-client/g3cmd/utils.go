@@ -120,6 +120,9 @@ const maxWaitTime = 300
 func InitMultipartUpload(g3 Gen3Interface, filename string) (string, string, error) {
 	multipartInitObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(multipartInitObject)
+	if err != nil {
+		return "", "", errors.New("Error has occurred during marshalling data for multipart upload initialization, detailed error message: " + err.Error())
+	}
 
 	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartInitEndpoint, "application/json", objectBytes)
 
@@ -146,6 +149,9 @@ func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string
 
 	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber}
 	objectBytes, err := json.Marshal(multipartUploadObject)
+	if err != nil {
+		return "", errors.New("Error has occurred during marshalling data for multipart upload presigned url generation, detailed error message: " + err.Error())
+	}
 
 	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartUploadEndpoint, "application/json", objectBytes)
 
@@ -169,9 +175,11 @@ func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, part
 
 	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts}
 	objectBytes, err := json.Marshal(multipartCompleteObject)
+	if err != nil {
+		return errors.New("Error has occurred during marshalling data for multipart upload, detailed error message: " + err.Error())
+	}
 
 	_, err = g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartCompleteEndpoint, "application/json", objectBytes)
-
 	if err != nil {
 		return errors.New("Error has occurred during completing multipart upload, detailed error message: " + err.Error())
 	}
@@ -179,7 +187,7 @@ func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, part
 }
 
 // GetDownloadResponse helps grabbing a response for downloading a file specified with GUID
-func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtils.FileDownloadResponseObject, protocolText string) error {
+func GetDownloadResponse(g3 Gen3Interface, fdrObject *commonUtils.FileDownloadResponseObject, protocolText string) error {
 	// Attempt to get the file download URL from Shepherd if it's deployed in this commons,
 	// otherwise fall back to Fence.
 	var fileDownloadURL string
@@ -191,13 +199,13 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects/" + fdrObject.GUID + "/download"
 		_, r, err := g3.GetResponse(&profileConfig, endPointPostfix, "GET", "", nil)
 		if err != nil {
-			return fmt.Errorf("Error occurred when getting download URL for object %v from endpoint %v. Details: %v", fdrObject.GUID, endPointPostfix, err)
+			return errors.New("Error occurred when getting download URL for object " + fdrObject.GUID + " from endpoint " + endPointPostfix + " . Details: " + err.Error())
 		}
 		if r.StatusCode != 200 {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(r.Body)
 			body := buf.String()
-			return fmt.Errorf("Error when getting download URL at %v for file %v: Shepherd returned non-200 status code %v. Request body: %v", endPointPostfix, fdrObject.GUID, r.StatusCode, body)
+			return errors.New("Error when getting download URL at " + endPointPostfix + " for file " + fdrObject.GUID + " : Shepherd returned non-200 status code " + strconv.Itoa(r.StatusCode) + " . Request body: " + body)
 		}
 		// Unmarshal into json
 		urlResponse := struct {
@@ -205,11 +213,11 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 		}{}
 		err = json.NewDecoder(r.Body).Decode(&urlResponse)
 		if err != nil {
-			return fmt.Errorf("Error occurred when getting download URL for object %v from endpoint %v. Details: %v", fdrObject.GUID, endPointPostfix, err)
+			return errors.New("Error occurred when getting download URL for object " + fdrObject.GUID + " from endpoint " + endPointPostfix + " . Details: " + err.Error())
 		}
 		fileDownloadURL = urlResponse.URL
 		if fileDownloadURL == "" {
-			return fmt.Errorf("Unknown error occurred when getting download URL for object %v from endpoint %v: No URL found in response body. Check the Shepherd logs", fdrObject.GUID, endPointPostfix)
+			return errors.New("Unknown error occurred when getting download URL for object " + fdrObject.GUID + " from endpoint " + endPointPostfix + " : No URL found in response body. Check the Shepherd logs")
 		}
 	} else {
 		endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
@@ -292,18 +300,18 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 		}
 		objectBytes, err := json.Marshal(purObject)
 		if err != nil {
-			return "", "", fmt.Errorf("Error occurred when creating upload request for file %v. Details: %v", filename, err)
+			return "", "", errors.New("Error occurred when creating upload request for file " + filename + ". Details: " + err.Error())
 		}
 		endPointPostfix := commonUtils.ShepherdEndpoint + "/objects"
 		_, r, err := g3.GetResponse(&profileConfig, endPointPostfix, "POST", "", objectBytes)
 		if err != nil {
-			return "", "", fmt.Errorf("Error occurred when requesting upload URL from %v for file %v. Details: %v", endPointPostfix, filename, err)
+			return "", "", errors.New("Error occurred when requesting upload URL from " + endPointPostfix + " for file " + filename + ". Details: " + err.Error())
 		}
 		if r.StatusCode != 201 {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(r.Body)
 			body := buf.String()
-			return "", "", fmt.Errorf("Error when requesting upload URL at %v for file %v: Shepherd returned non-200 status code %v. Request body: %v", endPointPostfix, filename, r.StatusCode, body)
+			return "", "", errors.New("Error when requesting upload URL at " + endPointPostfix + " for file " + filename + ": Shepherd returned non-200 status code " + strconv.Itoa(r.StatusCode) + ". Request body: " + body)
 		}
 		res := struct {
 			GUID string `json:"guid"`
@@ -311,7 +319,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 		}{}
 		err = json.NewDecoder(r.Body).Decode(&res)
 		if err != nil {
-			return "", "", fmt.Errorf("Error occurred when creating upload URL for file %v: . Details: %v", filename, err)
+			return "", "", errors.New("Error occurred when creating upload URL for file " + filename + ": . Details: " + err.Error())
 		}
 		if res.URL == "" || res.GUID == "" {
 			return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
@@ -480,11 +488,11 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 		if _, err := os.Stat(metadataFilePath); err == nil {
 			metadataFileBytes, err = ioutil.ReadFile(metadataFilePath)
 			if err != nil {
-				return FileInfo{}, fmt.Errorf("Error reading metadata file %v: %v", metadataFilePath, err)
+				return FileInfo{}, errors.New("Error reading metadata file " + metadataFilePath + ": " + err.Error())
 			}
 			err := json.Unmarshal(metadataFileBytes, &metadata)
 			if err != nil {
-				return FileInfo{}, fmt.Errorf("Error parsing metadata file %v: %v", metadataFilePath, err)
+				return FileInfo{}, errors.New("Error parsing metadata file " + metadataFilePath + ": " + err.Error())
 			}
 		} else {
 			// No metadata file was found for this file -- proceed, but warn the user.
@@ -496,6 +504,10 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 
 func getFullFilePath(filePath string, filename string) (string, error) {
 	filePath, err := commonUtils.GetAbsolutePath(filePath)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
 	fi, err := os.Stat(filePath)
 	if err != nil {
 		log.Println(err)
