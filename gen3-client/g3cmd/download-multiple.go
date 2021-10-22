@@ -231,14 +231,15 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 			errCh <- errors.New("Error occurred during opening local file: " + err.Error())
 			continue
 		}
-		defer file.Close()
-		defer fdrObject.Response.Body.Close()
 		bar := pb.New64(fdrObject.Response.ContentLength + fdrObject.Range).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fdrObject.Filename + " ")
 		bar.Set64(fdrObject.Range)
 		writer := io.MultiWriter(file, bar)
 		bars = append(bars, bar)
 		fdrObject.Writer = writer
 		fdrs = append(fdrs, fdrObject)
+		defer file.Close()
+		defer fdrObject.Response.Body.Close()
+		defer bar.Finish()
 	}
 
 	fdrCh := make(chan commonUtils.FileDownloadResponseObject, len(fdrs))
