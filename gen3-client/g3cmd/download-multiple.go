@@ -275,7 +275,7 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	return succeeded
 }
 
-func downloadFile(guids []string, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) {
+func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) {
 	if numParallel < 1 {
 		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
 	}
@@ -307,18 +307,27 @@ func downloadFile(guids []string, downloadPath string, filenameFormat string, re
 
 	gen3Interface := NewGen3Interface()
 
-	log.Printf("Total number of GUIDs: %d", len(guids))
+	log.Printf("Total number of objects in manifest: %d", len(objects))
 	log.Println("Preparing file info for each file, please wait...")
-	fileInfoBar := pb.New(len(guids)).SetRefreshRate(time.Millisecond * 10)
+	fileInfoBar := pb.New(len(objects)).SetRefreshRate(time.Millisecond * 10)
 	fileInfoBar.Start()
-	for _, guid := range guids {
+	for _, obj := range objects {
+		if obj.ObjectID != "" {
+			log.Println("Found empty object_id (GUID), skipping this entry")
+			continue
+		}
 		var fdrObject commonUtils.FileDownloadResponseObject
-		filename, filesize := askGen3ForFileInfo(gen3Interface, guid, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
+		filename := obj.Filename
+		filesize := obj.Filesize
+		// only queries Gen3 services if any of these 2 values doesn't exists in manifest
+		if filename == "" || filesize == 0 {
+			filename, filesize = askGen3ForFileInfo(gen3Interface, obj.ObjectID, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
+		}
 		fdrObject = commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename}
 		if !rename {
 			fdrObject = validateLocalFileStat(downloadPath, filename, filesize, skipCompleted)
 		}
-		fdrObject.GUID = guid
+		fdrObject.GUID = obj.ObjectID
 		fdrObjects = append(fdrObjects, fdrObject)
 		fileInfoBar.Increment()
 	}
@@ -415,15 +424,15 @@ func init() {
 				log.Fatalf("Error has occurred during unmarshalling manifest object: %v\n", err)
 			}
 
-			guids := make([]string, 0)
-			for _, object := range objects {
-				if object.ObjectID != "" {
-					guids = append(guids, object.ObjectID)
-				} else {
-					log.Println("Download error: empty object_id (GUID)")
-				}
-			}
-			downloadFile(guids, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
+			// guids := make([]string, 0)
+			// for _, object := range objects {
+			// 	if object.ObjectID != "" {
+			// 		guids = append(guids, object.ObjectID)
+			// 	} else {
+			// 		log.Println("Download error: empty object_id (GUID)")
+			// 	}
+			// }
+			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
 			logs.CloseMessageLog()
 		},
 	}
