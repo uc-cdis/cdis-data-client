@@ -24,9 +24,11 @@ func init() {
 			logs.SetToBoth()
 			profileConfig = conf.ParseConfig(profile)
 
-			guids := make([]string, 0)
-			guids = append(guids, guid)
-			downloadFile(guids, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
+			obj := ManifestObject{
+				ObjectID: guid,
+			}
+			objects := []ManifestObject{obj}
+			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
 			logs.CloseMessageLog()
 		},
 	}
