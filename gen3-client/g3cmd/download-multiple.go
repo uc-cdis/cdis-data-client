@@ -424,14 +424,6 @@ func init() {
 				log.Fatalf("Error has occurred during unmarshalling manifest object: %v\n", err)
 			}
 
-			// guids := make([]string, 0)
-			// for _, object := range objects {
-			// 	if object.ObjectID != "" {
-			// 		guids = append(guids, object.ObjectID)
-			// 	} else {
-			// 		log.Println("Download error: empty object_id (GUID)")
-			// 	}
-			// }
 			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
 			logs.CloseMessageLog()
 		},
