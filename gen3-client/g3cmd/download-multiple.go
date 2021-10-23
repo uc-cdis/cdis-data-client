@@ -312,7 +312,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 	fileInfoBar := pb.New(len(objects)).SetRefreshRate(time.Millisecond * 10)
 	fileInfoBar.Start()
 	for _, obj := range objects {
-		if obj.ObjectID != "" {
+		if obj.ObjectID == "" {
 			log.Println("Found empty object_id (GUID), skipping this entry")
 			continue
 		}
