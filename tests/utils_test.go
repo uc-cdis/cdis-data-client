@@ -1,4 +1,4 @@
-package g3cmd
+package tests
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	g3cmd "github.com/uc-cdis/gen3-client/gen3-client/g3cmd"
 	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
 )
@@ -21,17 +22,19 @@ import (
 func TestGetDownloadResponse_withShepherd(t *testing.T) {
 	// -- SETUP --
 	testGUID := "000000-0000000-0000000-000000"
-	testProfile := "test-profile"
+	testProfileConfig := jwt.Credential{
+		Profile: "test-profile",
+	}
 	testFilename := "test-file"
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
 	// Mock the request that checks if Shepherd is deployed.
 	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
-	mockGen3Interface.
-		EXPECT().
-		CheckForShepherdAPI(testProfile).
-		Return(true, nil)
+	// mockGen3Interface.
+	// 	EXPECT().
+	// 	CheckForShepherdAPI(&testProfileConfig).
+	// 	Return(true, nil)
 
 	// Mock the request to Shepherd for the download URL of this file.
 	mockDownloadURL := "https://example.com/example.pfb"
@@ -44,7 +47,7 @@ func TestGetDownloadResponse_withShepherd(t *testing.T) {
 	}
 	mockGen3Interface.
 		EXPECT().
-		GetResponse(testProfile, "", commonUtils.ShepherdEndpoint+"/objects/"+testGUID+"/download", "GET", "", nil).
+		GetResponse(testProfileConfig, commonUtils.ShepherdEndpoint+"/objects/"+testGUID+"/download", "GET", "", nil).
 		Return("", &mockDownloadURLResponse, nil)
 
 	// Mock the request for the file at mockDownloadURL.
@@ -63,7 +66,7 @@ func TestGetDownloadResponse_withShepherd(t *testing.T) {
 		GUID:     testGUID,
 		Range:    0,
 	}
-	err := GetDownloadResponse(mockGen3Interface, testProfile, &mockFDRObj, "")
+	err := g3cmd.GetDownloadResponse(mockGen3Interface, &mockFDRObj, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -82,7 +85,9 @@ func TestGetDownloadResponse_withShepherd(t *testing.T) {
 func TestGetDownloadResponse_noShepherd(t *testing.T) {
 	// -- SETUP --
 	testGUID := "000000-0000000-0000000-000000"
-	testProfile := "test-profile"
+	testProfileConfig := jwt.Credential{
+		Profile: "test-profile",
+	}
 	testFilename := "test-file"
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -91,7 +96,7 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
 	mockGen3Interface.
 		EXPECT().
-		CheckForShepherdAPI(testProfile).
+		CheckForShepherdAPI(testProfileConfig).
 		Return(false, nil)
 
 	// Mock the request to Fence for the download URL of this file.
@@ -101,7 +106,7 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 	}
 	mockGen3Interface.
 		EXPECT().
-		DoRequestWithSignedHeader(testProfile, "", commonUtils.FenceDataDownloadEndpoint+"/"+testGUID, "", nil).
+		DoRequestWithSignedHeader(testProfileConfig, commonUtils.FenceDataDownloadEndpoint+"/"+testGUID, "", nil).
 		Return(mockDownloadURLResponse, nil)
 
 	// Mock the request for the file at mockDownloadURL.
@@ -120,7 +125,7 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 		GUID:     testGUID,
 		Range:    0,
 	}
-	err := GetDownloadResponse(mockGen3Interface, testProfile, &mockFDRObj, "")
+	err := g3cmd.GetDownloadResponse(mockGen3Interface, &mockFDRObj, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -136,7 +141,9 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 // endpoint and return the presigned URL and guid.
 func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 	// -- SETUP --
-	testProfile := "test-profile"
+	testProfileConfig := jwt.Credential{
+		Profile: "test-profile",
+	}
 	testFilename := "test-file"
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -145,7 +152,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
 	mockGen3Interface.
 		EXPECT().
-		CheckForShepherdAPI(testProfile).
+		CheckForShepherdAPI(testProfileConfig).
 		Return(false, nil)
 
 	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
@@ -158,11 +165,11 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 	}
 	mockGen3Interface.
 		EXPECT().
-		DoRequestWithSignedHeader(testProfile, "", commonUtils.FenceDataUploadEndpoint, "application/json", expectedReqBody).
+		DoRequestWithSignedHeader(testProfileConfig, commonUtils.FenceDataUploadEndpoint, "application/json", expectedReqBody).
 		Return(mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename, commonUtils.FileMetadata{})
+	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, commonUtils.FileMetadata{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -179,7 +186,9 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 // return the guid and file name that it gets from the endpoint.
 func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 	// -- SETUP --
-	testProfile := "test-profile"
+	testProfileConfig := jwt.Credential{
+		Profile: "test-profile",
+	}
 	testFilename := "test-file"
 	testMetadata := commonUtils.FileMetadata{
 		Aliases:  []string{"test-alias-1", "test-alias-2"},
@@ -193,11 +202,11 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
 	mockGen3Interface.
 		EXPECT().
-		CheckForShepherdAPI(testProfile).
+		CheckForShepherdAPI(testProfileConfig).
 		Return(true, nil)
 
 	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
-	expectedReq := ShepherdInitRequestObject{
+	expectedReq := g3cmd.ShepherdInitRequestObject{
 		Filename: testFilename,
 		Authz: struct {
 			Version       string   `json:"version"`
@@ -225,11 +234,11 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 	}
 	mockGen3Interface.
 		EXPECT().
-		GetResponse(testProfile, "", commonUtils.ShepherdEndpoint+"/objects", "POST", "", expectedReqBody).
+		GetResponse(testProfileConfig, commonUtils.ShepherdEndpoint+"/objects", "POST", "", expectedReqBody).
 		Return("", &mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := GeneratePresignedURL(mockGen3Interface, testProfile, testFilename, testMetadata)
+	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, testMetadata)
 	if err != nil {
 		t.Error(err)
 	}

@@ -23,7 +23,7 @@ import (
 
 // mockgen -destination=../mocks/mock_gen3interface.go -package=mocks . Gen3Interface
 
-func askGen3ForFileInfo(gen3Interface Gen3Interface, guid string, protocol string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
+func AskGen3ForFileInfo(gen3Interface Gen3Interface, guid string, protocol string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
 	var fileName string
 	var fileSize int64
 
@@ -321,7 +321,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 		filesize := obj.Filesize
 		// only queries Gen3 services if any of these 2 values doesn't exists in manifest
 		if filename == "" || filesize == 0 {
-			filename, filesize = askGen3ForFileInfo(gen3Interface, obj.ObjectID, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
+			filename, filesize = AskGen3ForFileInfo(gen3Interface, obj.ObjectID, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
 		}
 		fdrObject = commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename}
 		if !rename {

@@ -1,6 +1,6 @@
 package jwt
 
-//go:generate mockgen -destination=mocks/mock_configure.go -package=mocks jwt ConfigureInterface
+//go:generate mockgen -destination=./gen3-client/mocks/mock_configure.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/jwt ConfigureInterface
 
 import (
 	"encoding/json"
