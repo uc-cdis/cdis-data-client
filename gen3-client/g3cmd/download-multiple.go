@@ -209,7 +209,7 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	bars := make([]*pb.ProgressBar, 0)
 	fdrs := make([]commonUtils.FileDownloadResponseObject, 0)
 	for _, fdrObject := range batchFDRSlice {
-		_, r, err := GetDownloadResponse(g3, profile, &fdrObject, protocolText)
+		err := GetDownloadResponse(g3, profile, &fdrObject, protocolText)
 		if err != nil {
 			errCh <- err
 			continue
@@ -240,7 +240,6 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 		defer file.Close()
 		defer fdrObject.Response.Body.Close()
 		defer bar.Finish()
-		defer r.Body.Close()
 	}
 
 	fdrCh := make(chan commonUtils.FileDownloadResponseObject, len(fdrs))

@@ -199,6 +199,7 @@ func GetDownloadResponse(g3 Gen3Interface, profile string, fdrObject *commonUtil
 		if err != nil {
 			return fmt.Errorf("Error occurred when getting download URL for object %v from endpoint %v. Details: %v", fdrObject.GUID, endPointPostfix, err)
 		}
+		defer r.Body.Close()
 		if r.StatusCode != 200 {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(r.Body)
