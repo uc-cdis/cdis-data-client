@@ -40,28 +40,6 @@ func init() {
 }
 
 func initConfig() {
-	// if cfgFile != "" {
-	// 	// Use config file from the flag.
-	// 	viper.SetConfigFile(cfgFile)
-	// } else {
-	// 	// Find home directory.
-	// 	homeDir, err := homedir.Dir()
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		os.Exit(1)
-	// 	}
-
-	// 	// Search config in home directory with name ".gen3" (without extension).
-	// 	viper.AddConfigPath(homeDir)
-	// 	viper.SetConfigName(".gen3")
-	// }
-
-	// viper.AutomaticEnv() // read in environment variables that match
-
-	// // If a config file is found, read it in.
-	// if err := viper.ReadInConfig(); err == nil {
-	// 	fmt.Println("Using config file:", viper.ConfigFileUsed())
-	// }
 
 	logs.Init()
 	logs.InitMessageLog(profile)
@@ -72,7 +50,7 @@ func initConfig() {
 	if err != nil {
 		log.Fatalln("Error occurred when trying to init config file: " + err.Error())
 	}
-	// profileConfig = conf.ParseConfig(profile)
+	profileConfig = conf.ParseConfig(profile)
 
 	// version checker
 	if gitversion != "" && gitversion != "N/A" {
