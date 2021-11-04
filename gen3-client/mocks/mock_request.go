@@ -36,16 +36,16 @@ func (m *MockRequestInterface) EXPECT() *MockRequestInterfaceMockRecorder {
 }
 
 // MakeARequest mocks base method
-func (m *MockRequestInterface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer) (*http.Response, error) {
-	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5)
+func (m *MockRequestInterface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer, arg6 bool) (*http.Response, error) {
+	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(*http.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MakeARequest indicates an expected call of MakeARequest
-func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockRequestInterface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5)
+func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockRequestInterface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 // RequestNewAccessToken mocks base method

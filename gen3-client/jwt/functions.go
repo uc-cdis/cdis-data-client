@@ -26,10 +26,10 @@ type Functions struct {
 
 type FunctionInterface interface {
 	CheckPrivileges(profileConfig *Credential) (string, map[string]interface{}, error)
-	CheckForShepherdAPI(*Credential) (bool, error)
-	GetResponse(*Credential, string, string, string, []byte) (string, *http.Response, error)
-	DoRequestWithSignedHeader(*Credential, string, string, []byte) (JsonMessage, error)
-	ParseFenceURLResponse(*http.Response) (JsonMessage, error)
+	CheckForShepherdAPI(profileConfig *Credential) (bool, error)
+	GetResponse(profileConfig *Credential, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
+	DoRequestWithSignedHeader(profileConfig *Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error)
+	ParseFenceURLResponse(resp *http.Response) (JsonMessage, error)
 	GetHost(profileConfig *Credential) (*url.URL, error)
 }
 
@@ -37,11 +37,11 @@ type Request struct {
 }
 
 type RequestInterface interface {
-	MakeARequest(string, string, string, string, map[string]string, *bytes.Buffer) (*http.Response, error)
-	RequestNewAccessToken(string, *Credential) error
+	MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer, noTimeout bool) (*http.Response, error)
+	RequestNewAccessToken(accessTokenEndpoint string, profileConfig *Credential) error
 }
 
-func (r *Request) MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error) {
+func (r *Request) MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer, noTimeout bool) (*http.Response, error) {
 	/*
 		Make http request with header and body
 	*/
@@ -54,7 +54,12 @@ func (r *Request) MakeARequest(method string, apiEndpoint string, accessToken st
 	if contentType != "" {
 		headers["Content-Type"] = contentType
 	}
-	client := &http.Client{Timeout: commonUtils.DefaultTimeout}
+	var client *http.Client
+	if noTimeout {
+		client = &http.Client{}
+	} else {
+		client = &http.Client{Timeout: commonUtils.DefaultTimeout}
+	}
 	var req *http.Request
 	var err error
 	if body == nil {
@@ -88,7 +93,7 @@ func (r *Request) RequestNewAccessToken(accessTokenEndpoint string, profileConfi
 
 	*/
 	body := bytes.NewBufferString("{\"api_key\": \"" + profileConfig.APIKey + "\"}")
-	resp, err := r.MakeARequest("POST", accessTokenEndpoint, "", "application/json", nil, body)
+	resp, err := r.MakeARequest("POST", accessTokenEndpoint, "", "application/json", nil, body, false)
 	var m AccessTokenStruct
 	// parse resp error codes first for profile configuration verification
 	if resp != nil && resp.StatusCode != 200 {
@@ -207,7 +212,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 	apiEndpoint := host.Scheme + "://" + host.Host + endpointPostPrefix
 	isExpiredToken := false
 	if profileConfig.AccessToken != "" {
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes))
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes), false)
 		if err != nil {
 			return "", resp, fmt.Errorf("Error while requesting user access token at %v: %v", apiEndpoint, err)
 		}
@@ -227,7 +232,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 		}
 		f.Config.UpdateConfigFile(*profileConfig)
 
-		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes))
+		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes), false)
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}

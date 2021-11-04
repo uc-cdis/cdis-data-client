@@ -251,26 +251,19 @@ func GetDownloadResponse(g3 Gen3Interface, fdrObject *commonUtils.FileDownloadRe
 			fdrObject.Range = 0
 		}
 	}
-	// This is intended to create a new HTTP request and client to handle the download request here
-	// The HTTP client in MakeARequest function has a default timeout for 2 minutes which should not be used in here
-	req, err := http.NewRequest(http.MethodGet, fdrObject.URL, nil)
-	if err != nil {
-		errorMsg := "Error occurred when creating GET req for URL associated with GUID " + fdrObject.GUID
-		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
-		return errors.New(errorMsg)
-	}
+
+	headers := map[string]string{}
 	if fdrObject.Range != 0 {
-		req.Header.Set("Range", "bytes="+strconv.FormatInt(fdrObject.Range, 10)+"-")
+		headers["Range"] = "bytes=" + strconv.FormatInt(fdrObject.Range, 10) + "-"
 	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := g3.MakeARequest(http.MethodGet, fdrObject.URL, "", "", headers, nil, true)
 	if err != nil {
-		errorMsg := "Error occurred when doing GET req for URL associated with GUID " + fdrObject.GUID
+		errorMsg := "Error occurred when making request to URL associated with GUID " + fdrObject.GUID
 		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
 		return errors.New(errorMsg)
 	}
 	if resp.StatusCode != 200 && resp.StatusCode != 206 {
-		errorMsg := "Got a non-200 or non-206 response when doing GET req for URL associated with GUID " + fdrObject.GUID
+		errorMsg := "Got a non-200 or non-206 response when making request to URL associated with GUID " + fdrObject.GUID
 		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode)
 		return errors.New(errorMsg)
 	}
@@ -728,7 +721,7 @@ type Gen3Interface interface {
 	CheckForShepherdAPI(profileConfig *jwt.Credential) (bool, error)
 	GetResponse(profileConfig *jwt.Credential, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
 	DoRequestWithSignedHeader(profileConfig *jwt.Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (jwt.JsonMessage, error)
-	MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer) (*http.Response, error)
+	MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer, noTimeout bool) (*http.Response, error)
 	GetHost(profileConfig *jwt.Credential) (*url.URL, error)
 }
 

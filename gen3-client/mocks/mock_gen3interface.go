@@ -104,14 +104,14 @@ func (mr *MockGen3InterfaceMockRecorder) GetResponse(arg0, arg1, arg2, arg3, arg
 }
 
 // MakeARequest mocks base method
-func (m *MockGen3Interface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer) (*http.Response, error) {
-	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5)
+func (m *MockGen3Interface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer, arg6 bool) (*http.Response, error) {
+	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(*http.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MakeARequest indicates an expected call of MakeARequest
-func (mr *MockGen3InterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockGen3Interface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5)
+func (mr *MockGen3InterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockGen3Interface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }

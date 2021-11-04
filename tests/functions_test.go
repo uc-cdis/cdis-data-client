@@ -49,7 +49,7 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 		StatusCode: 200,
 	}
 
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/data/download/test_uuid", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/data/download/test_uuid", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
 	_, err := testFunction.DoRequestWithSignedHeader(&profileConfig, "/user/data/download/test_uuid", "", nil)
 
@@ -75,7 +75,7 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 
 	mockConfig.EXPECT().UpdateConfigFile(profileConfig).Times(1)
 	mockRequest.EXPECT().RequestNewAccessToken("http://www.test.com/user/credentials/api/access_token", &profileConfig).Return(nil).Times(1)
-	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
 	_, err := testFunction.DoRequestWithSignedHeader(&profileConfig, "/user/data/download/test_uuid", "", nil)
 
@@ -101,7 +101,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 
 	mockConfig.EXPECT().UpdateConfigFile(profileConfig).Times(1)
 	mockRequest.EXPECT().RequestNewAccessToken("http://www.test.com/user/credentials/api/access_token", &profileConfig).Return(nil).Times(1)
-	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(2)
+	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(2)
 
 	_, err := testFunction.DoRequestWithSignedHeader(&profileConfig, "/user/data/download/test_uuid", "", nil)
 
@@ -143,7 +143,7 @@ func TestCheckPrivilegesNoAccess(t *testing.T) {
 		StatusCode: 200,
 	}
 
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
 	_, receivedAccess, err := testFunction.CheckPrivileges(&profileConfig)
 
@@ -179,7 +179,7 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 		StatusCode: 200,
 	}
 
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
 	_, expectedAccess, err := testFunction.CheckPrivileges(&profileConfig)
 
@@ -233,7 +233,7 @@ func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
 		StatusCode: 200,
 	}
 
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
 	_, expectedAccess, err := testFunction.CheckPrivileges(&profileConfig)
 
