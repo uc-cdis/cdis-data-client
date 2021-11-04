@@ -188,6 +188,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		Returns:
 			An instance of Credential
 	*/
+
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		log.Fatalln("Error occurred when getting home directory: " + err.Error())
