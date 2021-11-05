@@ -100,7 +100,7 @@ func (conf *Configure) GetConfigPath() (string, error) {
 
 func (conf *Configure) InitConfigFile() error {
 	/*
-		Make sure the config if exists on start up
+		Make sure the config exists on start up
 	*/
 	configPath, err := conf.GetConfigPath()
 	if err != nil {
