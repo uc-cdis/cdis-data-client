@@ -50,7 +50,6 @@ func initConfig() {
 	if err != nil {
 		log.Fatalln("Error occurred when trying to init config file: " + err.Error())
 	}
-	profileConfig = conf.ParseConfig(profile)
 
 	// version checker
 	if gitversion != "" && gitversion != "N/A" {

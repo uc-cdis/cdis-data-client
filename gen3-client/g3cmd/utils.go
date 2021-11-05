@@ -263,7 +263,6 @@ func GetDownloadResponse(g3 Gen3Interface, fdrObject *commonUtils.FileDownloadRe
 		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
 		return errors.New(errorMsg)
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode != 200 && resp.StatusCode != 206 {
 		errorMsg := "Got a non-200 or non-206 response when making request to URL associated with GUID " + fdrObject.GUID
 		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode)

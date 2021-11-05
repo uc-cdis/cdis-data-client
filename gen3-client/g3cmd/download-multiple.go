@@ -233,9 +233,6 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 		}
 		bar := pb.New64(fdrObject.Response.ContentLength + fdrObject.Range).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fdrObject.Filename + " ")
 		bar.Set64(fdrObject.Range)
-		defer file.Close()
-		defer fdrObject.Response.Body.Close()
-		defer bar.Finish()
 		writer := io.MultiWriter(file, bar)
 		bars = append(bars, bar)
 		fdrObject.Writer = writer
