@@ -102,6 +102,7 @@ func (r *Request) RequestNewAccessToken(accessTokenEndpoint string, profileConfi
 	if err != nil {
 		return errors.New("Error occurred in RequestNewAccessToken: " + err.Error())
 	}
+	defer resp.Body.Close()
 
 	str := ResponseToString(resp)
 	err = DecodeJsonFromString(str, &m)
