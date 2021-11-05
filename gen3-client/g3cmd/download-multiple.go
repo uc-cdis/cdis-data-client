@@ -240,6 +240,9 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 		bars = append(bars, bar)
 		fdrObject.Writer = writer
 		fdrs = append(fdrs, fdrObject)
+		defer file.Close()
+		defer fdrObject.Response.Body.Close()
+		defer bar.Finish()
 	}
 
 	fdrCh := make(chan commonUtils.FileDownloadResponseObject, len(fdrs))

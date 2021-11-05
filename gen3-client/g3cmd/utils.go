@@ -205,6 +205,7 @@ func GetDownloadResponse(g3 Gen3Interface, fdrObject *commonUtils.FileDownloadRe
 		if err != nil {
 			return errors.New("Error occurred when getting download URL for object " + fdrObject.GUID + " from endpoint " + endPointPostfix + " . Details: " + err.Error())
 		}
+		defer r.Body.Close()
 		if r.StatusCode != 200 {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(r.Body)
@@ -262,6 +263,7 @@ func GetDownloadResponse(g3 Gen3Interface, fdrObject *commonUtils.FileDownloadRe
 		errorMsg += "\n Details of error: " + sanitizeErrorMsg(err.Error(), fdrObject.URL)
 		return errors.New(errorMsg)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 200 && resp.StatusCode != 206 {
 		errorMsg := "Got a non-200 or non-206 response when making request to URL associated with GUID " + fdrObject.GUID
 		errorMsg += "\n HTTP status code for response: " + strconv.Itoa(resp.StatusCode)
