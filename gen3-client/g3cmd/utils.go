@@ -305,6 +305,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 		if err != nil {
 			return "", "", errors.New("Error occurred when requesting upload URL from " + endPointPostfix + " for file " + filename + ". Details: " + err.Error())
 		}
+		defer r.Body.Close()
 		if r.StatusCode != 201 {
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(r.Body)

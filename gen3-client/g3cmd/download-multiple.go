@@ -61,6 +61,7 @@ func AskGen3ForFileInfo(gen3Interface Gen3Interface, guid string, protocol strin
 			}
 			return guid, 0
 		}
+		defer res.Body.Close()
 
 		fileName = decoded.Record.FileName
 		fileSize = decoded.Record.Size

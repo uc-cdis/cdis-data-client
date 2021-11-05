@@ -173,6 +173,7 @@ func (f *Functions) CheckForShepherdAPI(profileConfig *Credential) (bool, error)
 	if err != nil {
 		return false, errors.New("Error occurred during generating HTTP request: " + err.Error())
 	}
+	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		return false, nil
 	}
@@ -265,6 +266,7 @@ func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, endpoin
 	if err != nil {
 		return msg, err
 	}
+	defer resp.Body.Close()
 
 	msg, err = f.ParseFenceURLResponse(resp)
 	return msg, err
@@ -281,9 +283,9 @@ func (f *Functions) CheckPrivileges(profileConfig *Credential) (string, map[stri
 	if err != nil {
 		return "", nil, errors.New("Error occurred when getting response from remote: " + err.Error())
 	}
+	defer resp.Body.Close()
 
 	str := ResponseToString(resp)
-
 	err = json.Unmarshal([]byte(str), &data)
 	if err != nil {
 		return "", nil, errors.New("Error occurred when unmarshalling response: " + err.Error())
@@ -315,6 +317,7 @@ func (f *Functions) DeleteRecord(profileConfig *Credential, guid string) (string
 		if err != nil {
 			return "", err
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode == 204 {
 			msg = "Record with GUID " + guid + " has been deleted"
 		} else if resp.StatusCode == 500 {
@@ -326,6 +329,10 @@ func (f *Functions) DeleteRecord(profileConfig *Credential, guid string) (string
 	endPointPostfix := commonUtils.FenceDataEndpoint + "/" + guid
 
 	_, resp, err := f.GetResponse(profileConfig, endPointPostfix, "DELETE", "", nil)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == 204 {
 		msg = "Record with GUID " + guid + " has been deleted"
