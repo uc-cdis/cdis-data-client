@@ -36,7 +36,7 @@ func init() {
 
 	// Define flags and configuration settings.
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "", "Specify profile to use")
-	RootCmd.MarkFlagRequired("profile")
+	_ = RootCmd.MarkFlagRequired("profile")
 }
 
 func initConfig() {

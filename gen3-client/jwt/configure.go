@@ -108,11 +108,20 @@ func (conf *Configure) InitConfigFile() error {
 	}
 
 	if _, err := os.Stat(path.Dir(configPath)); os.IsNotExist(err) {
-		os.Mkdir(path.Join(path.Dir(configPath)), os.FileMode(0777))
-		os.Create(configPath)
+		osErr := os.Mkdir(path.Join(path.Dir(configPath)), os.FileMode(0777))
+		if osErr != nil {
+			return err
+		}
+		_, osErr = os.Create(configPath)
+		if osErr != nil {
+			return err
+		}
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		os.Create(configPath)
+		_, osErr := os.Create(configPath)
+		if osErr != nil {
+			return err
+		}
 	}
 	_, err = ini.Load(configPath)
 
