@@ -5,16 +5,14 @@ import (
 	"log"
 	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	latest "github.com/tcnksm/go-latest"
+	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
-var cfgFile string
 var profile string
-var uri string
+var profileConfig jwt.Credential
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -38,36 +36,21 @@ func init() {
 
 	// Define flags and configuration settings.
 	RootCmd.PersistentFlags().StringVar(&profile, "profile", "", "Specify profile to use")
+	_ = RootCmd.MarkFlagRequired("profile")
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		homeDir, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".gen3" (without extension).
-		viper.AddConfigPath(homeDir)
-		viper.SetConfigName(".gen3")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
 
 	logs.Init()
 	logs.InitMessageLog(profile)
 	logs.SetToBoth()
+
+	// init local config file
+	err := conf.InitConfigFile()
+	if err != nil {
+		log.Fatalln("Error occurred when trying to init config file: " + err.Error())
+	}
+
 	// version checker
 	if gitversion != "" && gitversion != "N/A" {
 		githubTag := &latest.GithubTag{

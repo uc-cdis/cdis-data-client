@@ -26,11 +26,9 @@ func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 	mockConfig := mocks.NewMockConfigureInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "", AccessKey: "", APIEndpoint: ""}
+	profileConfig := jwt.Credential{KeyId: "", APIKey: "", AccessToken: "", APIEndpoint: ""}
 
-	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
-
-	_, err := testFunction.DoRequestWithSignedHeader("default", "not_json", "/user/data/download/test_uuid", "", nil)
+	_, err := testFunction.DoRequestWithSignedHeader(&profileConfig, "/user/data/download/test_uuid", "", nil)
 
 	if err == nil {
 		t.Fail()
@@ -45,16 +43,15 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
+	profileConfig := jwt.Credential{Profile: "test", KeyId: "", APIKey: "fake_api_key", AccessToken: "non_expired_token", APIEndpoint: "http://www.test.com", UseShepherd: "false", MinShepherdVersion: ""}
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"http://www.test.com/user/data/download/test_uuid\"}")),
 		StatusCode: 200,
 	}
 
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/data/download/test_uuid", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/data/download/test_uuid", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
-	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
+	_, err := testFunction.DoRequestWithSignedHeader(&profileConfig, "/user/data/download/test_uuid", "", nil)
 
 	if err != nil {
 		t.Fail()
@@ -70,20 +67,17 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "", APIEndpoint: "http://www.test.com"}
+	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
 		StatusCode: 200,
 	}
 
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
-	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+	mockConfig.EXPECT().UpdateConfigFile(profileConfig).Times(1)
+	mockRequest.EXPECT().RequestNewAccessToken("http://www.test.com/user/credentials/api/access_token", &profileConfig).Return(nil).Times(1)
+	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
-	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Return(nil).Times(1)
-	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
-
-	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
+	_, err := testFunction.DoRequestWithSignedHeader(&profileConfig, "/user/data/download/test_uuid", "", nil)
 
 	if err != nil {
 		t.Fail()
@@ -99,20 +93,17 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "expired_token", APIEndpoint: "http://www.test.com"}
+	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "expired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
 		StatusCode: 401,
 	}
 
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockConfig.EXPECT().ReadFile(gomock.Any(), gomock.Any()).Times(1)
-	mockConfig.EXPECT().UpdateConfigFile(cred, gomock.Any(), "http://www.test.com", gomock.Any(), gomock.Any(), gomock.Any(), "default").Times(1)
+	mockConfig.EXPECT().UpdateConfigFile(profileConfig).Times(1)
+	mockRequest.EXPECT().RequestNewAccessToken("http://www.test.com/user/credentials/api/access_token", &profileConfig).Return(nil).Times(1)
+	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(2)
 
-	mockRequest.EXPECT().RequestNewAccessKey("http://www.test.com/user/credentials/api/access_token", &cred).Return(nil).Times(1)
-	mockRequest.EXPECT().MakeARequest(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(2)
-
-	_, err := testFunction.DoRequestWithSignedHeader("default", "", "/user/data/download/test_uuid", "", nil)
+	_, err := testFunction.DoRequestWithSignedHeader(&profileConfig, "/user/data/download/test_uuid", "", nil)
 
 	if err != nil && !strings.Contains(err.Error(), "401") {
 		t.Fail()
@@ -128,11 +119,9 @@ func TestCheckPrivilegesNoProfile(t *testing.T) {
 	mockConfig := mocks.NewMockConfigureInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "", AccessKey: "", APIEndpoint: ""}
+	profileConfig := jwt.Credential{KeyId: "", APIKey: "", AccessToken: "", APIEndpoint: ""}
 
-	mockConfig.EXPECT().ParseConfig(gomock.Any()).Return(cred).Times(1)
-
-	_, _, err := testFunction.CheckPrivileges("default", "")
+	_, _, err := testFunction.CheckPrivileges(&profileConfig)
 
 	if err == nil {
 		t.Errorf("Expected an error on missing credentials in configuration, but not received")
@@ -148,16 +137,15 @@ func TestCheckPrivilegesNoAccess(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
+	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "non_expired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
 		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"project_access\": {}}")),
 		StatusCode: 200,
 	}
 
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
-	_, receivedAccess, err := testFunction.CheckPrivileges("default", "")
+	_, receivedAccess, err := testFunction.CheckPrivileges(&profileConfig)
 
 	expectedAccess := make(map[string]interface{})
 
@@ -177,7 +165,7 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
+	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "non_expired_token", APIEndpoint: "http://www.test.com"}
 
 	grantedAccessJSON := `{
 		"project_access":
@@ -191,10 +179,9 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 		StatusCode: 200,
 	}
 
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
-	_, expectedAccess, err := testFunction.CheckPrivileges("default", "")
+	_, expectedAccess, err := testFunction.CheckPrivileges(&profileConfig)
 
 	receivedAccess := make(map[string]interface{})
 	receivedAccess["test_project"] = []interface{}{
@@ -223,7 +210,7 @@ func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
 	mockRequest := mocks.NewMockRequestInterface(mockCtrl)
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
-	cred := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessKey: "non_expired_token", APIEndpoint: "http://www.test.com"}
+	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "non_expired_token", APIEndpoint: "http://www.test.com"}
 
 	grantedAccessJSON := `{
 		"authz": {
@@ -246,10 +233,9 @@ func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
 		StatusCode: 200,
 	}
 
-	mockConfig.EXPECT().ParseConfig("default").Return(cred).Times(1)
-	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any()).Return(mockedResp, nil).Times(1)
+	mockRequest.EXPECT().MakeARequest("GET", "http://www.test.com/user/user", "non_expired_token", "", gomock.Any(), gomock.Any(), false).Return(mockedResp, nil).Times(1)
 
-	_, expectedAccess, err := testFunction.CheckPrivileges("default", "")
+	_, expectedAccess, err := testFunction.CheckPrivileges(&profileConfig)
 
 	receivedAccess := make(map[string]interface{})
 	receivedAccess["test_project"] = []map[string]interface{}{

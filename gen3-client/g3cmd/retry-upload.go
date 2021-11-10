@@ -22,6 +22,7 @@ func updateRetryObject(ro *commonUtils.RetryObject, filePath string, filename st
 }
 
 func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.RetryObject, err error, isMuted bool) {
+	gen3Interface := NewGen3Interface()
 	logs.AddToFailedLog(ro.FilePath, ro.Filename, ro.FileMetadata, ro.GUID, ro.RetryCount, ro.Multipart, isMuted)
 	if err != nil {
 		log.Println(err.Error())
@@ -30,7 +31,7 @@ func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.R
 		retryObjCh <- ro
 	} else {
 		if ro.GUID != "" {
-			msg, err := DeleteRecord(ro.GUID)
+			msg, err := DeleteRecord(gen3Interface, ro.GUID)
 			if err == nil {
 				log.Println(msg)
 			} else {
@@ -79,7 +80,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 		time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
 
 		if ro.GUID != "" {
-			msg, err := DeleteRecord(ro.GUID)
+			msg, err := DeleteRecord(gen3Interface, ro.GUID)
 			if err == nil {
 				log.Println(msg)
 			} else {
@@ -95,7 +96,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 
 		if ro.Multipart {
 			fileInfo := FileInfo{FilePath: ro.FilePath, Filename: ro.Filename}
-			err = multipartUpload(fileInfo, ro.RetryCount)
+			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
@@ -108,7 +109,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				}
 			}
 		} else {
-			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, profile, ro.Filename, ro.FileMetadata)
+			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, ro.Filename, ro.FileMetadata)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, guid, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, true)
@@ -131,7 +132,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				continue
 			}
 
-			furObject, err = GenerateUploadRequest(furObject, file)
+			furObject, err = GenerateUploadRequest(gen3Interface, furObject, file)
 			if err != nil {
 				updateRetryObject(&ro, furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, false)
@@ -170,6 +171,7 @@ func init() {
 			logs.InitFailedLog(profile)
 			logs.SetToBoth()
 			logs.InitScoreBoard(MaxRetryCount)
+			profileConfig = conf.ParseConfig(profile)
 
 			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
 			logs.LoadFailedLogFile(failedLogPath)

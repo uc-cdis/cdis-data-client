@@ -23,14 +23,15 @@ func init() {
 	var configureCmd = &cobra.Command{
 		Use:   "configure",
 		Short: "Add or modify a configuration profile to your config file",
-		Long: `Configuration file located at ~/.gen3/config
+		Long: `Configuration file located at ~/.gen3/gen3_client_config.ini
 	If a field is left empty, the existing value (if it exists) will remain unchanged`,
 		Example: `./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
 
-			cred := conf.ReadCredentials(credFile)
+			profileConfig := conf.ReadCredentials(credFile)
+			profileConfig.Profile = profile
 			apiEndpoint = strings.TrimSpace(apiEndpoint)
 			if apiEndpoint[len(apiEndpoint)-1:] == "/" {
 				apiEndpoint = apiEndpoint[:len(apiEndpoint)-1]
@@ -41,7 +42,7 @@ func init() {
 			}
 
 			prefixEndPoint := parsedURL.Scheme + "://" + parsedURL.Host
-			err = req.RequestNewAccessKey(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &cred)
+			err = req.RequestNewAccessToken(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &profileConfig)
 			if err != nil {
 				receivedErrorString := err.Error()
 				errorMessageString := receivedErrorString
@@ -52,8 +53,10 @@ func init() {
 				}
 				log.Fatalln("Error occurred when validating profile config: " + errorMessageString)
 			}
+			profileConfig.APIEndpoint = apiEndpoint
 
 			useShepherd = strings.TrimSpace(useShepherd)
+			profileConfig.UseShepherd = useShepherd
 			minShepherdVersion = strings.TrimSpace(minShepherdVersion)
 			if minShepherdVersion != "" {
 				_, err = version.NewVersion(minShepherdVersion)
@@ -61,13 +64,10 @@ func init() {
 					log.Fatalln("Error occurred when validating minShepherdVersion: " + err.Error())
 				}
 			}
+			profileConfig.MinShepherdVersion = minShepherdVersion
 
-			// Store user info in ~/.gen3/config
-			configPath, content, err := conf.TryReadConfigFile()
-			if err != nil {
-				log.Fatalln("Error occurred when trying to read config file: " + err.Error())
-			}
-			conf.UpdateConfigFile(cred, content, apiEndpoint, useShepherd, minShepherdVersion, configPath, profile)
+			// Store user info in ~/.gen3/gen3_client_config.ini
+			conf.UpdateConfigFile(profileConfig)
 			log.Println(`Profile '` + profile + `' has been configured successfully.`)
 			logs.CloseMessageLog()
 		},

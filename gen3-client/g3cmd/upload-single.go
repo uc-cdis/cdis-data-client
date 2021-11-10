@@ -31,6 +31,10 @@ func init() {
 			logs.SetToBoth()
 			logs.InitScoreBoard(0)
 
+			// Instantiate interface to Gen3
+			gen3Interface := NewGen3Interface()
+			profileConfig = conf.ParseConfig(profile)
+
 			filePaths, err := commonUtils.ParseFilePaths(filePath, false)
 			if len(filePaths) > 1 {
 				fmt.Println("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
@@ -63,7 +67,7 @@ func init() {
 
 			furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filename, GUID: guid}
 
-			furObject, err = GenerateUploadRequest(furObject, file)
+			furObject, err = GenerateUploadRequest(gen3Interface, furObject, file)
 			if err != nil {
 				file.Close()
 				logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
