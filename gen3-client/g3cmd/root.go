@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 	latest "github.com/tcnksm/go-latest"
@@ -56,6 +58,21 @@ func initConfig() {
 		githubTag := &latest.GithubTag{
 			Owner:      "uc-cdis",
 			Repository: "cdis-data-client",
+			TagFilterFunc: func(versionTag string) bool {
+				// only assume a version tag to be valid semvar tag if it has 2 "." in it
+				// so tags like "2021.10", "whatever" or "new.123.release" won't interfere
+				versionTagSlice := strings.Split(versionTag, ".")
+				if len(versionTagSlice) != 3 {
+					return false
+				}
+				for _, s := range versionTagSlice {
+					_, err := strconv.Atoi(s)
+					if err != nil {
+						return false
+					}
+				}
+				return true
+			},
 		}
 		res, err := latest.Check(githubTag, gitversion)
 		if err != nil {
