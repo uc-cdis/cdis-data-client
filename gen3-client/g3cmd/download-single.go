@@ -1,6 +1,8 @@
 package g3cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
@@ -29,14 +31,17 @@ func init() {
 			}
 			objects := []ManifestObject{obj}
 			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
-			logs.CloseMessageLog()
+			err := logs.CloseMessageLog()
+			if err != nil {
+				log.Println(err.Error())
+			}
 		},
 	}
 
 	downloadSingleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
-	downloadSingleCmd.MarkFlagRequired("profile")
+	downloadSingleCmd.MarkFlagRequired("profile") //nolint:errcheck
 	downloadSingleCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
-	downloadSingleCmd.MarkFlagRequired("guid")
+	downloadSingleCmd.MarkFlagRequired("guid") //nolint:errcheck
 	downloadSingleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
 	downloadSingleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\"")
 	downloadSingleCmd.Flags().BoolVar(&rename, "rename", false, "Only useful when \"--filename-format=original\", will rename file by appending a counter value to its filename if set to true, otherwise the same filename will be used")

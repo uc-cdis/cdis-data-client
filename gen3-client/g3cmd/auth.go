@@ -61,11 +61,14 @@ func init() {
 					}
 				}
 			}
-			logs.CloseMessageLog()
+			err = logs.CloseMessageLog()
+			if err != nil {
+				log.Println(err.Error())
+			}
 		},
 	}
 
 	authCmd.Flags().StringVar(&profile, "profile", "", "Specify the profile to check your access privileges")
-	authCmd.MarkFlagRequired("profile")
+	authCmd.MarkFlagRequired("profile") // nolint: errcheck
 	RootCmd.AddCommand(authCmd)
 }

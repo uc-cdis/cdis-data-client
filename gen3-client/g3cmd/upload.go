@@ -184,9 +184,9 @@ func init() {
 	}
 
 	uploadCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
-	uploadCmd.MarkFlagRequired("profile")
+	uploadCmd.MarkFlagRequired("profile") //nolint:errcheck
 	uploadCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory or file in which contains file(s) to be uploaded")
-	uploadCmd.MarkFlagRequired("upload-path")
+	uploadCmd.MarkFlagRequired("upload-path") //nolint:errcheck
 	uploadCmd.Flags().BoolVar(&batch, "batch", false, "Upload in parallel")
 	uploadCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	uploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")

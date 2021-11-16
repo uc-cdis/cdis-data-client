@@ -208,7 +208,7 @@ func GetDownloadResponse(g3 Gen3Interface, fdrObject *commonUtils.FileDownloadRe
 		defer r.Body.Close()
 		if r.StatusCode != 200 {
 			buf := new(bytes.Buffer)
-			buf.ReadFrom(r.Body)
+			buf.ReadFrom(r.Body) // nolint:errcheck
 			body := buf.String()
 			return errors.New("Error when getting download URL at " + endPointPostfix + " for file " + fdrObject.GUID + " : Shepherd returned non-200 status code " + strconv.Itoa(r.StatusCode) + " . Request body: " + body)
 		}
@@ -308,7 +308,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 		defer r.Body.Close()
 		if r.StatusCode != 201 {
 			buf := new(bytes.Buffer)
-			buf.ReadFrom(r.Body)
+			buf.ReadFrom(r.Body) // nolint:errcheck
 			body := buf.String()
 			return "", "", errors.New("Error when requesting upload URL at " + endPointPostfix + " for file " + filename + ": Shepherd returned non-200 status code " + strconv.Itoa(r.StatusCode) + ". Request body: " + body)
 		}
@@ -329,6 +329,9 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 	// Otherwise, fall back to Fence
 	purObject := InitRequestObject{Filename: filename}
 	objectBytes, err := json.Marshal(purObject)
+	if err != nil {
+		return "", "", errors.New("Error occurred when marshalling object: " + err.Error())
+	}
 	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
@@ -689,7 +692,10 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 	close(furObjectCh)
 
 	wg.Wait()
-	pool.Stop()
+	err = pool.Stop()
+	if err != nil {
+		errCh <- errors.New("Error occurred during stopping progress bar pool: " + err.Error())
+	}
 }
 
 // GetWaitTime calculates the wait time for the next retry based on retry count

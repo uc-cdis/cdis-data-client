@@ -117,6 +117,11 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 			}
 			furObject := commonUtils.FileUploadRequestObject{FilePath: ro.FilePath, Filename: ro.Filename, FileMetadata: ro.FileMetadata, GUID: guid, PresignedURL: presignedURL}
 			file, err := os.Open(ro.FilePath)
+			if err != nil {
+				updateRetryObject(&ro, furObject.FilePath, furObject.Filename, furObject.FileMetadata, ro.GUID, ro.RetryCount, false)
+				handleFailedRetry(ro, retryObjCh, err, false)
+				continue
+			}
 			fi, err := file.Stat()
 			if err != nil {
 				updateRetryObject(&ro, furObject.FilePath, furObject.Filename, furObject.FileMetadata, ro.GUID, ro.RetryCount, false)
@@ -182,8 +187,8 @@ func init() {
 	}
 
 	retryUploadCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
-	retryUploadCmd.MarkFlagRequired("profile")
+	retryUploadCmd.MarkFlagRequired("profile") //nolint:errcheck
 	retryUploadCmd.Flags().StringVar(&failedLogPath, "failed-log-path", "", "The path to the failed log file.")
-	retryUploadCmd.MarkFlagRequired("failed-log-path")
+	retryUploadCmd.MarkFlagRequired("failed-log-path") //nolint:errcheck
 	RootCmd.AddCommand(retryUploadCmd)
 }

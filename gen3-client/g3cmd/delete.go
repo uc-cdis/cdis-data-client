@@ -30,5 +30,5 @@ If no profile is specified, "default" profile is used for authentication.`,
 }
 
 func init() {
-	//RootCmd.AddCommand(deleteCmd)
+	RootCmd.AddCommand(deleteCmd)
 }

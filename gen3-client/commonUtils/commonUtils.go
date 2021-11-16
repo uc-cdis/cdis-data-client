@@ -170,6 +170,9 @@ func ParseFilePaths(filePath string, metadataEnabled bool) ([]string, error) {
 					return nil
 				})
 			}
+			if err != nil {
+				log.Fatal("File walk error for " + filePath + " : " + err.Error())
+			}
 		}()
 	}
 	log.Println("Finish parsing all file paths for \"" + fullFilePath + "\"")
