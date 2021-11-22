@@ -59,10 +59,13 @@ func initConfig() {
 			Owner:      "uc-cdis",
 			Repository: "cdis-data-client",
 			TagFilterFunc: func(versionTag string) bool {
-				// only assume a version tag to be valid semvar tag if it has 2 "." in it
-				// so tags like "2021.10", "whatever" or "new.123.release" won't interfere
+				// only assume a version tag to be valid version tag if it has either 2 or 3 "." in it
+				// so tags like "whatever" or "new.123.release" won't interfere
+				gitversionSlice := strings.Split(gitversion, ".")
 				versionTagSlice := strings.Split(versionTag, ".")
-				if len(versionTagSlice) != 3 {
+				// if gitversion is sematic version number, ignore tags that don't have 3 "."
+				// if gitversion is monthly release version number, ignore tags that don't have 2 "."
+				if (len(gitversionSlice) == 3 && len(versionTagSlice) != 3) || (len(gitversionSlice) == 2 && len(versionTagSlice) != 2) {
 					return false
 				}
 				for _, s := range versionTagSlice {
