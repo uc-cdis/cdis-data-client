@@ -6,9 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Not support yet
+//Not support yet, place holder only
 
-var deleteCmd = &cobra.Command{
+var deleteCmd = &cobra.Command{ // nolint:deadcode,unused,varcheck
 	Use:   "delete",
 	Short: "Send DELETE HTTP Request for given URI",
 	Long: `Deletes a given URI from the database.
@@ -30,5 +30,5 @@ If no profile is specified, "default" profile is used for authentication.`,
 }
 
 func init() {
-	//RootCmd.AddCommand(deleteCmd)
+	// RootCmd.AddCommand(deleteCmd)
 }

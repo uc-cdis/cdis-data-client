@@ -1,10 +1,15 @@
 sudo: required
-dist: focal
+dist: xenial
 language: go
 git:
   depth: 1
 go:
   - "1.17"
+
+env:
+  global:
+    # include $HOME/.local/bin for `aws`
+    - PATH=$HOME/.local/bin:$PATH
 
 jobs:
   include:
@@ -36,9 +41,11 @@ jobs:
           repo: uc-cdis/cdis-data-client
           branch: master
           tags: true
+
 before_install: |-
-  pip3 install awscli
-  export PATH=$PATH:$HOME/.local/bin
+  pyenv global 3.7.1
+  pip install -U pip
+  pip install awscli
   ln -s $PWD $GOPATH/src/github.com/uc-cdis/gen3-client
   printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
     && COMMIT=`git rev-parse HEAD` && echo "    gitcommit=\"${COMMIT}\"" >>gen3-client/g3cmd/gitversion.go \

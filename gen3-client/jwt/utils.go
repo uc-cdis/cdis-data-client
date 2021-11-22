@@ -28,7 +28,7 @@ type DoRequest func(*http.Response) *http.Response
 
 func ResponseToString(resp *http.Response) string {
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	buf.ReadFrom(resp.Body) // nolint: errcheck
 	return buf.String()
 }
 

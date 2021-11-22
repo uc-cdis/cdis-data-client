@@ -225,7 +225,11 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 
 		subDir := filepath.Dir(fdrObject.Filename)
 		if subDir != "." && subDir != "/" {
-			os.MkdirAll(fdrObject.DownloadPath+subDir, 0766)
+			err = os.MkdirAll(fdrObject.DownloadPath+subDir, 0766)
+			if err != nil {
+				errCh <- err
+				continue
+			}
 		}
 		file, err := os.OpenFile(fdrObject.DownloadPath+fdrObject.Filename, fileFlag, 0666)
 		if err != nil {
@@ -272,7 +276,11 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	close(fdrCh)
 
 	wg.Wait()
-	pool.Stop()
+	err = pool.Stop()
+	if err != nil {
+		errCh <- errors.New("Error occurred during stopping progress bars: " + err.Error())
+		return succeeded
+	}
 	return succeeded
 }
 
@@ -426,14 +434,17 @@ func init() {
 			}
 
 			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
-			logs.CloseMessageLog()
+			err = logs.CloseMessageLog()
+			if err != nil {
+				log.Println(err.Error())
+			}
 		},
 	}
 
 	downloadMultipleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
-	downloadMultipleCmd.MarkFlagRequired("profile")
+	downloadMultipleCmd.MarkFlagRequired("profile") //nolint:errcheck
 	downloadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from. A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer from a data common's portal")
-	downloadMultipleCmd.MarkFlagRequired("manifest")
+	downloadMultipleCmd.MarkFlagRequired("manifest") //nolint:errcheck
 	downloadMultipleCmd.Flags().StringVar(&downloadPath, "download-path", ".", "The directory in which to store the downloaded files")
 	downloadMultipleCmd.Flags().StringVar(&filenameFormat, "filename-format", "original", "The format of filename to be used, including \"original\", \"guid\" and \"combined\"")
 	downloadMultipleCmd.Flags().BoolVar(&rename, "rename", false, "Only useful when \"--filename-format=original\", will rename file by appending a counter value to its filename if set to true, otherwise the same filename will be used")

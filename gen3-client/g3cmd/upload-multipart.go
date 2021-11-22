@@ -41,12 +41,12 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int) error 
 	// NOTE @mpingram -- multipartUpload does not yet use the new Shepherd API
 	// because Shepherd does not yet support multipart uploads.
 	file, err := os.Open(fileInfo.FilePath)
-	defer file.Close()
 	if err != nil {
 		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, "", retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s due to file open error: %s", fileInfo.FilePath, err.Error())
 		return err
 	}
+	defer file.Close()
 
 	fi, err := file.Stat()
 	if err != nil {
@@ -112,6 +112,10 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int) error 
 				var eTag string
 				err = retry(MaxRetryCount, fileInfo.FilePath, guid, func() (err error) {
 					req, err := http.NewRequest(http.MethodPut, presignedURL, bytes.NewReader(buf))
+					if err != nil {
+						err = errors.New("Error occurred when creating HTTP request: " + err.Error())
+						return
+					}
 					req.ContentLength = int64(n)
 					client := &http.Client{}
 					resp, err := client.Do(req)

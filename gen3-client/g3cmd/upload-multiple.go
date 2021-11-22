@@ -67,7 +67,10 @@ func init() {
 					log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
 					log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
 				}
-				json.Unmarshal(manifestBytes, &objects)
+				err = json.Unmarshal(manifestBytes, &objects)
+				if err != nil {
+					log.Fatalln("Unmarshalling manifest failed with error: " + err.Error())
+				}
 			default:
 				log.Println("Unsupported manifast format")
 				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
@@ -125,11 +128,11 @@ func init() {
 	}
 
 	uploadMultipleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
-	uploadMultipleCmd.MarkFlagRequired("profile")
+	uploadMultipleCmd.MarkFlagRequired("profile") //nolint:errcheck
 	uploadMultipleCmd.Flags().StringVar(&manifestPath, "manifest", "", "The manifest file to read from. A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer for Common portal")
-	uploadMultipleCmd.MarkFlagRequired("manifest")
+	uploadMultipleCmd.MarkFlagRequired("manifest") //nolint:errcheck
 	uploadMultipleCmd.Flags().StringVar(&uploadPath, "upload-path", "", "The directory in which contains files to be uploaded")
-	uploadMultipleCmd.MarkFlagRequired("upload-path")
+	uploadMultipleCmd.MarkFlagRequired("upload-path") //nolint:errcheck
 	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
 	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	RootCmd.AddCommand(uploadMultipleCmd)

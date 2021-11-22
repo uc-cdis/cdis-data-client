@@ -69,16 +69,19 @@ func init() {
 			// Store user info in ~/.gen3/gen3_client_config.ini
 			conf.UpdateConfigFile(profileConfig)
 			log.Println(`Profile '` + profile + `' has been configured successfully.`)
-			logs.CloseMessageLog()
+			err = logs.CloseMessageLog()
+			if err != nil {
+				log.Println(err.Error())
+			}
 		},
 	}
 
 	configureCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
-	configureCmd.MarkFlagRequired("profile")
+	configureCmd.MarkFlagRequired("profile") //nolint:errcheck
 	configureCmd.Flags().StringVar(&credFile, "cred", "", "Specify the credential file that you want to use")
-	configureCmd.MarkFlagRequired("cred")
+	configureCmd.MarkFlagRequired("cred") //nolint:errcheck
 	configureCmd.Flags().StringVar(&apiEndpoint, "apiendpoint", "", "Specify the API endpoint of the data commons")
-	configureCmd.MarkFlagRequired("apiendpoint")
+	configureCmd.MarkFlagRequired("apiendpoint") //nolint:errcheck
 	configureCmd.Flags().StringVar(&useShepherd, "use-shepherd", "", fmt.Sprintf("Enables or disables support for the Shepherd API. If enabled, gen3client will use the Shepherd API if available. (Default: %v)", commonUtils.DefaultUseShepherd))
 	configureCmd.Flags().StringVar(&minShepherdVersion, "min-shepherd-version", "", fmt.Sprintf("Specify the minimum version of Shepherd that the gen3client will use if Shepherd is enabled. (Default: %v)", commonUtils.DefaultMinShepherdVersion))
 	RootCmd.AddCommand(configureCmd)

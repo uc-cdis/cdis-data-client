@@ -4,13 +4,11 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 	"time"
 )
 
 var messageLogFilename string
 var messageLogFile *os.File
-var messageLogLock sync.Mutex
 var multiWriter io.Writer
 
 func InitMessageLog(profile string) {
