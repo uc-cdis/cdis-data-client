@@ -14,10 +14,6 @@ import (
 	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
 )
 
-func Requesting(*http.Response) *http.Response {
-	return &http.Response{}
-}
-
 func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
