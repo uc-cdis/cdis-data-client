@@ -38,9 +38,10 @@ func init() {
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
+			profileConfig = conf.ParseConfig(profile)
 
 			if hasMetadata {
-				hasShepherd, err := gen3Interface.CheckForShepherdAPI(profile)
+				hasShepherd, err := gen3Interface.CheckForShepherdAPI(&profileConfig)
 				if err != nil {
 					log.Printf("WARNING: Error when checking for Shepherd API: %v", err)
 				} else {
@@ -122,7 +123,7 @@ func init() {
 						continue
 					}
 					// The following flow is for singlepart upload flow
-					respURL, guid, err := GeneratePresignedURL(gen3Interface, profile, fileInfo.Filename, fileInfo.FileMetadata)
+					respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata)
 					if err != nil {
 						logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
 						log.Println(err.Error())
@@ -132,7 +133,7 @@ func init() {
 					logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
 
 					furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: guid, PresignedURL: respURL}
-					furObject, err = GenerateUploadRequest(furObject, file)
+					furObject, err = GenerateUploadRequest(gen3Interface, furObject, file)
 					if err != nil {
 						file.Close()
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
@@ -152,9 +153,9 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				// NOTE(@mpingram) - For the moment Shepherd doesn't support multipart uploads.
 				// Throw an error if Shepherd is enabled and user attempts to multipart upload.
-				cred := conf.ParseConfig(profile)
-				if cred.UseShepherd == "true" ||
-					cred.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
+				profileConfig := conf.ParseConfig(profile)
+				if profileConfig.UseShepherd == "true" ||
+					profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
 					log.Fatalf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ gen3-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
 				}
 				log.Println("Multipart uploading....")
@@ -165,7 +166,7 @@ func init() {
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
-					err = multipartUpload(fileInfo, 0)
+					err = multipartUpload(gen3Interface, fileInfo, 0)
 					if err != nil {
 						log.Println(err.Error())
 					} else {

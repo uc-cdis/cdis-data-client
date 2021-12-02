@@ -9,6 +9,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	jwt "github.com/uc-cdis/gen3-client/gen3-client/jwt"
 	http "net/http"
+	url "net/url"
 	reflect "reflect"
 )
 
@@ -36,8 +37,7 @@ func (m *MockGen3Interface) EXPECT() *MockGen3InterfaceMockRecorder {
 }
 
 // CheckForShepherdAPI mocks base method
-func (m *MockGen3Interface) CheckForShepherdAPI(arg0 string) (bool, error) {
-	m.ctrl.T.Helper()
+func (m *MockGen3Interface) CheckForShepherdAPI(arg0 *jwt.Credential) (bool, error) {
 	ret := m.ctrl.Call(m, "CheckForShepherdAPI", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
@@ -46,29 +46,52 @@ func (m *MockGen3Interface) CheckForShepherdAPI(arg0 string) (bool, error) {
 
 // CheckForShepherdAPI indicates an expected call of CheckForShepherdAPI
 func (mr *MockGen3InterfaceMockRecorder) CheckForShepherdAPI(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckForShepherdAPI", reflect.TypeOf((*MockGen3Interface)(nil).CheckForShepherdAPI), arg0)
 }
 
+// CheckPrivileges mocks base method
+func (m *MockGen3Interface) CheckPrivileges(arg0 *jwt.Credential) (string, map[string]interface{}, error) {
+	ret := m.ctrl.Call(m, "CheckPrivileges", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(map[string]interface{})
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CheckPrivileges indicates an expected call of CheckPrivileges
+func (mr *MockGen3InterfaceMockRecorder) CheckPrivileges(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckPrivileges", reflect.TypeOf((*MockGen3Interface)(nil).CheckPrivileges), arg0)
+}
+
 // DoRequestWithSignedHeader mocks base method
-func (m *MockGen3Interface) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3 string, arg4 []byte) (jwt.JsonMessage, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3, arg4)
+func (m *MockGen3Interface) DoRequestWithSignedHeader(arg0 *jwt.Credential, arg1, arg2 string, arg3 []byte) (jwt.JsonMessage, error) {
+	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(jwt.JsonMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DoRequestWithSignedHeader indicates an expected call of DoRequestWithSignedHeader
-func (mr *MockGen3InterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockGen3Interface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3, arg4)
+func (mr *MockGen3InterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockGen3Interface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3)
+}
+
+// GetHost mocks base method
+func (m *MockGen3Interface) GetHost(arg0 *jwt.Credential) (*url.URL, error) {
+	ret := m.ctrl.Call(m, "GetHost", arg0)
+	ret0, _ := ret[0].(*url.URL)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHost indicates an expected call of GetHost
+func (mr *MockGen3InterfaceMockRecorder) GetHost(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHost", reflect.TypeOf((*MockGen3Interface)(nil).GetHost), arg0)
 }
 
 // GetResponse mocks base method
-func (m *MockGen3Interface) GetResponse(arg0, arg1, arg2, arg3, arg4 string, arg5 []byte) (string, *http.Response, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResponse", arg0, arg1, arg2, arg3, arg4, arg5)
+func (m *MockGen3Interface) GetResponse(arg0 *jwt.Credential, arg1, arg2, arg3 string, arg4 []byte) (string, *http.Response, error) {
+	ret := m.ctrl.Call(m, "GetResponse", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(*http.Response)
 	ret2, _ := ret[2].(error)
@@ -76,22 +99,19 @@ func (m *MockGen3Interface) GetResponse(arg0, arg1, arg2, arg3, arg4 string, arg
 }
 
 // GetResponse indicates an expected call of GetResponse
-func (mr *MockGen3InterfaceMockRecorder) GetResponse(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponse", reflect.TypeOf((*MockGen3Interface)(nil).GetResponse), arg0, arg1, arg2, arg3, arg4, arg5)
+func (mr *MockGen3InterfaceMockRecorder) GetResponse(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponse", reflect.TypeOf((*MockGen3Interface)(nil).GetResponse), arg0, arg1, arg2, arg3, arg4)
 }
 
 // MakeARequest mocks base method
-func (m *MockGen3Interface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer) (*http.Response, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5)
+func (m *MockGen3Interface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer, arg6 bool) (*http.Response, error) {
+	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(*http.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MakeARequest indicates an expected call of MakeARequest
-func (mr *MockGen3InterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockGen3Interface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5)
+func (mr *MockGen3InterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockGen3Interface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }

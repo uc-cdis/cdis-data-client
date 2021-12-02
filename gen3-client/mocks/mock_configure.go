@@ -34,9 +34,21 @@ func (m *MockConfigureInterface) EXPECT() *MockConfigureInterfaceMockRecorder {
 	return m.recorder
 }
 
+// GetConfigPath mocks base method
+func (m *MockConfigureInterface) GetConfigPath() (string, error) {
+	ret := m.ctrl.Call(m, "GetConfigPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConfigPath indicates an expected call of GetConfigPath
+func (mr *MockConfigureInterfaceMockRecorder) GetConfigPath() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigPath", reflect.TypeOf((*MockConfigureInterface)(nil).GetConfigPath))
+}
+
 // ParseConfig mocks base method
 func (m *MockConfigureInterface) ParseConfig(arg0 string) jwt.Credential {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseConfig", arg0)
 	ret0, _ := ret[0].(jwt.Credential)
 	return ret0
@@ -44,13 +56,11 @@ func (m *MockConfigureInterface) ParseConfig(arg0 string) jwt.Credential {
 
 // ParseConfig indicates an expected call of ParseConfig
 func (mr *MockConfigureInterfaceMockRecorder) ParseConfig(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseConfig", reflect.TypeOf((*MockConfigureInterface)(nil).ParseConfig), arg0)
 }
 
 // ParseKeyValue mocks base method
 func (m *MockConfigureInterface) ParseKeyValue(arg0, arg1 string) (string, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseKeyValue", arg0, arg1)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
@@ -59,13 +69,11 @@ func (m *MockConfigureInterface) ParseKeyValue(arg0, arg1 string) (string, error
 
 // ParseKeyValue indicates an expected call of ParseKeyValue
 func (mr *MockConfigureInterfaceMockRecorder) ParseKeyValue(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseKeyValue", reflect.TypeOf((*MockConfigureInterface)(nil).ParseKeyValue), arg0, arg1)
 }
 
 // ReadFile mocks base method
 func (m *MockConfigureInterface) ReadFile(arg0, arg1 string) string {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadFile", arg0, arg1)
 	ret0, _ := ret[0].(string)
 	return ret0
@@ -73,40 +81,21 @@ func (m *MockConfigureInterface) ReadFile(arg0, arg1 string) string {
 
 // ReadFile indicates an expected call of ReadFile
 func (mr *MockConfigureInterfaceMockRecorder) ReadFile(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockConfigureInterface)(nil).ReadFile), arg0, arg1)
 }
 
-// ReadLines mocks base method
-func (m *MockConfigureInterface) ReadLines(arg0 jwt.Credential, arg1 []byte, arg2, arg3, arg4, arg5 string) ([]string, bool) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadLines", arg0, arg1, arg2, arg3, arg4, arg5)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(bool)
-	return ret0, ret1
-}
-
-// ReadLines indicates an expected call of ReadLines
-func (mr *MockConfigureInterfaceMockRecorder) ReadLines(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadLines", reflect.TypeOf((*MockConfigureInterface)(nil).ReadLines), arg0, arg1, arg2, arg3, arg4, arg5)
-}
-
 // UpdateConfigFile mocks base method
-func (m *MockConfigureInterface) UpdateConfigFile(arg0 jwt.Credential, arg1 []byte, arg2, arg3, arg4, arg5, arg6 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateConfigFile", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+func (m *MockConfigureInterface) UpdateConfigFile(arg0 jwt.Credential) {
+	m.ctrl.Call(m, "UpdateConfigFile", arg0)
 }
 
 // UpdateConfigFile indicates an expected call of UpdateConfigFile
-func (mr *MockConfigureInterfaceMockRecorder) UpdateConfigFile(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfigFile", reflect.TypeOf((*MockConfigureInterface)(nil).UpdateConfigFile), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+func (mr *MockConfigureInterfaceMockRecorder) UpdateConfigFile(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateConfigFile", reflect.TypeOf((*MockConfigureInterface)(nil).UpdateConfigFile), arg0)
 }
 
 // ValidateUrl mocks base method
 func (m *MockConfigureInterface) ValidateUrl(arg0 string) (*url.URL, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateUrl", arg0)
 	ret0, _ := ret[0].(*url.URL)
 	ret1, _ := ret[1].(error)
@@ -115,6 +104,5 @@ func (m *MockConfigureInterface) ValidateUrl(arg0 string) (*url.URL, error) {
 
 // ValidateUrl indicates an expected call of ValidateUrl
 func (mr *MockConfigureInterfaceMockRecorder) ValidateUrl(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateUrl", reflect.TypeOf((*MockConfigureInterface)(nil).ValidateUrl), arg0)
 }

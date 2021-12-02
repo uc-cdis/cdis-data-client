@@ -1,6 +1,6 @@
 package jwt
 
-//go:generate mockgen -destination=mocks/mock_configure.go -package=mocks jwt ConfigureInterface
+//go:generate mockgen -destination=./gen3-client/mocks/mock_configure.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/jwt ConfigureInterface
 
 import (
 	"encoding/json"
@@ -16,12 +16,14 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	"gopkg.in/ini.v1"
 )
 
 type Credential struct {
+	Profile            string
 	KeyId              string
 	APIKey             string
-	AccessKey          string
+	AccessToken        string
 	APIEndpoint        string
 	UseShepherd        string
 	MinShepherdVersion string
@@ -32,8 +34,8 @@ type Configure struct{}
 type ConfigureInterface interface {
 	ReadFile(string, string) string
 	ValidateUrl(string) (*url.URL, error)
-	ReadLines(Credential, []byte, string, string, string, string) ([]string, bool)
-	UpdateConfigFile(Credential, []byte, string, string, string, string, string)
+	GetConfigPath() (string, error)
+	UpdateConfigFile(Credential)
 	ParseKeyValue(str string, expr string) (string, error)
 	ParseConfig(profile string) Credential
 }
@@ -76,110 +78,81 @@ func (conf *Configure) ValidateUrl(apiEndpoint string) (*url.URL, error) {
 }
 
 func (conf *Configure) ReadCredentials(filePath string) Credential {
-	var configuration Credential
+	var profileConfig Credential
 	jsonContent := conf.ReadFile(filePath, "json")
 	jsonContent = strings.Replace(jsonContent, "key_id", "KeyId", -1)
 	jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
-	err := json.Unmarshal([]byte(jsonContent), &configuration)
+	err := json.Unmarshal([]byte(jsonContent), &profileConfig)
 	if err != nil {
 		log.Fatalln("Cannot read json file: " + err.Error())
 	}
-	return configuration
+	return profileConfig
 }
 
-func (conf *Configure) TryReadConfigFile() (string, []byte, error) {
-	/*
-		Try to open config file. If not existed, create empty config file.
-	*/
+func (conf *Configure) GetConfigPath() (string, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
-	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
-
-	content, err := conf.TryReadFile(configPath)
-
-	return configPath, content, err
+	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "gen3_client_config.ini")
+	return configPath, nil
 }
 
-func (conf *Configure) ReadLines(cred Credential, configContent []byte, apiEndpoint, useShepherd, minShepherdVersion, profile string) ([]string, bool) {
+func (conf *Configure) InitConfigFile() error {
 	/*
-		Search profile in config file. Update new credential if found.
+		Make sure the config exists on start up
 	*/
-	lines := strings.Split(string(configContent), "\n")
-	found := false
-	for i := 0; i < len(lines); i += 6 {
-		if lines[i] == "["+profile+"]" {
-			if cred.KeyId != "" {
-				lines[i+1] = "key_id=" + cred.KeyId
-			}
-			if cred.APIKey != "" {
-				lines[i+2] = "api_key=" + cred.APIKey
-			}
-			lines[i+3] = "access_key=" + cred.AccessKey
-			if apiEndpoint != "" {
-				lines[i+4] = "api_endpoint=" + apiEndpoint
-			}
-			if useShepherd != "" {
-				lines[i+5] = "use_shepherd=" + useShepherd
-			}
-			if minShepherdVersion != "" {
-				lines[i+6] = "min_shepherd_version=" + minShepherdVersion
-			}
-			found = true
-			break
+	configPath, err := conf.GetConfigPath()
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(path.Dir(configPath)); os.IsNotExist(err) {
+		osErr := os.Mkdir(path.Join(path.Dir(configPath)), os.FileMode(0777))
+		if osErr != nil {
+			return err
+		}
+		_, osErr = os.Create(configPath)
+		if osErr != nil {
+			return err
 		}
 	}
-	return lines, found
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		_, osErr := os.Create(configPath)
+		if osErr != nil {
+			return err
+		}
+	}
+	_, err = ini.Load(configPath)
+
+	return err
 }
 
-func (conf *Configure) UpdateConfigFile(cred Credential, configContent []byte, apiEndpoint, useShepherd, minShepherdVersion, configPath, profile string) {
+func (conf *Configure) UpdateConfigFile(profileConfig Credential) {
 	/*
 		Overwrite the config file with new credential
 
 		Args:
-			cred: Credential
-			configContent: config file content in byte format
-			configPath: file path
-			profile: profile name
-
+			profileConfig: Credential object represents config of a profile
+			configPath: file path to config file
 	*/
-	lines, found := conf.ReadLines(cred, configContent, apiEndpoint, useShepherd, minShepherdVersion, profile)
-	if found {
-		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_TRUNC, 0777)
-		if err != nil {
-			log.Fatalln("error occurred when opening config file: " + err.Error())
-		}
-		defer func() {
-			if err := f.Close(); err != nil {
-				log.Println("error occurred when closing config file: " + err.Error())
-			}
-		}()
-		for i := 0; i < len(lines)-1; i++ {
-			f.WriteString(lines[i] + "\n")
-		}
-	} else {
-		f, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-		if err != nil {
-			log.Fatalln("error occurred when opening config file: " + err.Error())
-		}
-		defer func() {
-			if err := f.Close(); err != nil {
-				log.Println("error occurred when closing config file: " + err.Error())
-			}
-		}()
-
-		_, err = f.WriteString("[" + profile + "]\n" +
-			"key_id=" + cred.KeyId + "\n" +
-			"api_key=" + cred.APIKey + "\n" +
-			"access_key=" + cred.AccessKey + "\n" +
-			"api_endpoint=" + apiEndpoint + "\n" +
-			"use_shepherd=" + useShepherd + "\n" +
-			"min_shepherd_version=" + minShepherdVersion + "\n\n")
-
-		if err != nil {
-			log.Println("error occurred when updating config: " + err.Error())
-		}
+	configPath, err := conf.GetConfigPath()
+	if err != nil {
+		log.Fatalln("error occurred when getting config path: " + err.Error())
+	}
+	cfg, err := ini.Load(configPath)
+	if err != nil {
+		log.Fatalln("error occurred when loading config file: " + err.Error())
+	}
+	cfg.Section(profileConfig.Profile).Key("key_id").SetValue(profileConfig.KeyId)
+	cfg.Section(profileConfig.Profile).Key("api_key").SetValue(profileConfig.APIKey)
+	cfg.Section(profileConfig.Profile).Key("access_token").SetValue(profileConfig.AccessToken)
+	cfg.Section(profileConfig.Profile).Key("api_endpoint").SetValue(profileConfig.APIEndpoint)
+	cfg.Section(profileConfig.Profile).Key("use_shepherd").SetValue(profileConfig.UseShepherd)
+	cfg.Section(profileConfig.Profile).Key("min_shepherd_version").SetValue(profileConfig.MinShepherdVersion)
+	err = cfg.SaveTo(configPath)
+	if err != nil {
+		log.Println("error occurred when saving config file: " + err.Error())
 	}
 }
 
@@ -206,7 +179,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		[profile1]
 		key_id=key_id_example_1
 		api_key=api_key_example_1
-		access_key=access_key_example_1
+		access_token=access_token_example_1
 		api_endpoint=http://localhost:8000
 		use_shepherd=true
 		min_shepherd_version=2.0.0
@@ -214,7 +187,7 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		[profile2]
 		key_id=key_id_example_2
 		api_key=api_key_example_2
-		access_key=access_key_example_2
+		access_token=access_token_example_2
 		api_endpoint=http://localhost:8000
 		use_shepherd=false
 		min_shepherd_version=
@@ -224,73 +197,55 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		Returns:
 			An instance of Credential
 	*/
+
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		log.Fatalln("Error occurred when getting home directory: " + err.Error())
 	}
-	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "config")
-	cred := Credential{
+	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "gen3_client_config.ini")
+	profileConfig := Credential{
+		Profile:     profile,
 		KeyId:       "",
 		APIKey:      "",
-		AccessKey:   "",
+		AccessToken: "",
 		APIEndpoint: "",
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		log.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
 			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
-		return cred
+		return profileConfig
 	}
 
 	// If profile not in config file, prompt user to set up config first
-	content, err := ioutil.ReadFile(configPath)
+	cfg, err := ini.Load(configPath)
 	if err != nil {
 		log.Fatalln("Error occurred when reading config file: " + err.Error())
 	}
-	lines := strings.Split(string(content), "\n")
+	sec, err := cfg.GetSection(profile)
 
-	profileLine := -1
-	for i := 0; i < len(lines); i++ {
-		if lines[i] == "["+profile+"]" {
-			profileLine = i
-			break
-		}
-	}
-
-	if profileLine == -1 {
+	if err != nil {
 		log.Fatalln("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 	}
-	// Read in access key, secret key, endpoint for given profile
-	cred.KeyId, err = conf.ParseKeyValue(lines[profileLine+1], "^key_id=(\\S*)")
-	if err != nil {
-		log.Fatalf("key_id not found in profile. Err: %v", err)
+	// Read in API key, key ID and endpoint for given profile
+	profileConfig.KeyId = sec.Key("key_id").String()
+	if profileConfig.KeyId == "" {
+		log.Fatalln("key_id not found in profile.")
 	}
-	cred.APIKey, err = conf.ParseKeyValue(lines[profileLine+2], "^api_key=(\\S*)")
-	if err != nil {
-		log.Fatalf("api_key not found in profile. Err: %v", err)
+	profileConfig.APIKey = sec.Key("api_key").String()
+	if profileConfig.APIKey == "" {
+		log.Fatalln("api_key not found in profile.")
 	}
-	cred.AccessKey, err = conf.ParseKeyValue(lines[profileLine+3], "^access_key=(\\S*)")
-	if err != nil {
-		log.Fatalf("access_key not found in profile. Err: %v", err)
+	profileConfig.AccessToken = sec.Key("access_token").String()
+	if profileConfig.AccessToken == "" {
+		log.Fatalln("access_token not found in profile.")
 	}
-	cred.APIEndpoint, err = conf.ParseKeyValue(lines[profileLine+4], "^api_endpoint=(\\S*)")
-	if err != nil {
-		log.Fatalf("api_endpoint not found in profile. Err: %v", err)
+	profileConfig.APIEndpoint = sec.Key("api_endpoint").String()
+	if profileConfig.APIEndpoint == "" {
+		log.Fatalln("api_endpoint not found in profile.")
 	}
 	// UseShepherd and MinShepherdVersion are optional
-	cred.UseShepherd, _ = conf.ParseKeyValue(lines[profileLine+5], "^use_shepherd=(\\S*)")
-	cred.MinShepherdVersion, _ = conf.ParseKeyValue(lines[profileLine+6], "^min_shepherd_version=(\\S*)")
-	return cred
-}
-
-func (conf *Configure) TryReadFile(filePath string) ([]byte, error) {
-	if _, err := os.Stat(path.Dir(filePath)); os.IsNotExist(err) {
-		os.Mkdir(path.Join(path.Dir(filePath)), os.FileMode(0777))
-		os.Create(filePath)
-	}
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		os.Create(filePath)
-	}
-
-	return ioutil.ReadFile(filePath)
+	profileConfig.UseShepherd = sec.Key("use_shepherd").String()
+	profileConfig.MinShepherdVersion = sec.Key("min_shepherd_version").String()
+	return profileConfig
 }

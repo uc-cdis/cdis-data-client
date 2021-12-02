@@ -36,30 +36,26 @@ func (m *MockRequestInterface) EXPECT() *MockRequestInterfaceMockRecorder {
 }
 
 // MakeARequest mocks base method
-func (m *MockRequestInterface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer) (*http.Response, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5)
+func (m *MockRequestInterface) MakeARequest(arg0, arg1, arg2, arg3 string, arg4 map[string]string, arg5 *bytes.Buffer, arg6 bool) (*http.Response, error) {
+	ret := m.ctrl.Call(m, "MakeARequest", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(*http.Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // MakeARequest indicates an expected call of MakeARequest
-func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockRequestInterface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5)
+func (mr *MockRequestInterfaceMockRecorder) MakeARequest(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeARequest", reflect.TypeOf((*MockRequestInterface)(nil).MakeARequest), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
-// RequestNewAccessKey mocks base method
-func (m *MockRequestInterface) RequestNewAccessKey(arg0 string, arg1 *jwt.Credential) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequestNewAccessKey", arg0, arg1)
+// RequestNewAccessToken mocks base method
+func (m *MockRequestInterface) RequestNewAccessToken(arg0 string, arg1 *jwt.Credential) error {
+	ret := m.ctrl.Call(m, "RequestNewAccessToken", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RequestNewAccessKey indicates an expected call of RequestNewAccessKey
-func (mr *MockRequestInterfaceMockRecorder) RequestNewAccessKey(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessKey", reflect.TypeOf((*MockRequestInterface)(nil).RequestNewAccessKey), arg0, arg1)
+// RequestNewAccessToken indicates an expected call of RequestNewAccessToken
+func (mr *MockRequestInterfaceMockRecorder) RequestNewAccessToken(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestNewAccessToken", reflect.TypeOf((*MockRequestInterface)(nil).RequestNewAccessToken), arg0, arg1)
 }
