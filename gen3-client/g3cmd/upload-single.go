@@ -89,10 +89,10 @@ func init() {
 	}
 
 	uploadSingleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
-	uploadSingleCmd.MarkFlagRequired("profile")
+	uploadSingleCmd.MarkFlagRequired("profile") //nolint:errcheck
 	uploadSingleCmd.Flags().StringVar(&guid, "guid", "", "Specify the guid for the data you would like to work with")
-	uploadSingleCmd.MarkFlagRequired("guid")
+	uploadSingleCmd.MarkFlagRequired("guid") //nolint:errcheck
 	uploadSingleCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
-	uploadSingleCmd.MarkFlagRequired("file")
+	uploadSingleCmd.MarkFlagRequired("file") //nolint:errcheck
 	RootCmd.AddCommand(uploadSingleCmd)
 }

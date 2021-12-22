@@ -63,7 +63,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 	if fileType == "json" {
 		contentStr = strings.Replace(contentStr, "\n", "", -1)
 	}
-	return string(content[:])
+	return contentStr
 }
 
 func (conf *Configure) ValidateUrl(apiEndpoint string) (*url.URL, error) {

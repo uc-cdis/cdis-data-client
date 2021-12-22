@@ -55,6 +55,10 @@ func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 		log.Fatal("Error occurred when marshaling to JSON objects: " + err.Error())
 	}
 	err = succeededLogFile.Truncate(0)
+	if err != nil {
+		failedLogFile.Close()
+		log.Fatal("Error occurred when truncating file \"" + failedLogFilename + "\": " + err.Error())
+	}
 	_, err = succeededLogFile.WriteAt(jsonData, 0)
 	if err != nil {
 		succeededLogFile.Close()
