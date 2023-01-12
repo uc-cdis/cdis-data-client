@@ -54,7 +54,8 @@ func initConfig() {
 	}
 
 	// version checker
-	if gitversion != "" && gitversion != "N/A" {
+	if os.Getenv("GEN3_CLIENT_VERSION_CHECK") != "false" &&
+	gitversion != "" && gitversion != "N/A" {
 		githubTag := &latest.GithubTag{
 			Owner:      "uc-cdis",
 			Repository: "cdis-data-client",
