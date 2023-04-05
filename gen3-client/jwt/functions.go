@@ -131,7 +131,7 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		case 403:
 			return msg, errors.New("403 Forbidden error has occurred! You don't have permission to access the requested url \"" + resp.Request.URL.String() + "\"")
 		case 404:
-			return msg, errors.New("404 Not found error has occurred! The requested url \"" + resp.Request.URL.String() + "\" cannot be found")
+			return msg, errors.New("404 Not found error has occurred! The requested url \"" + resp.Request.URL.String() + "\" cannot be found or one of the requested resources cannot be found")
 		case 500:
 			return msg, errors.New("500 Internal Server error has occurred! Please try again later")
 		case 503:

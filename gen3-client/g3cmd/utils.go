@@ -335,7 +335,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
-		return "", "", errors.New("You don't have permission to upload data, detailed error message: " + err.Error())
+		return "", "", errors.New("Something went wrong. Maybe you don't have permission to upload data or Fence is misconfigured. Detailed error message: " + err.Error())
 	}
 	if msg.URL == "" || msg.GUID == "" {
 		return "", "", errors.New("Unknown error has occurred during presigned URL or GUID generation. Please check logs from Gen3 services")
