@@ -1,6 +1,7 @@
 #!groovy
 
-@Library('cdis-jenkins-lib@chore/add_gen3_client_tests_to_ci') _
+@Library('cdis-jenkins-lib@master') _
 
 testPipeline {
+    quayRegistry = "gen3-client"
 }
