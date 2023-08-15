@@ -12,6 +12,7 @@ import (
 )
 
 func init() {
+	var bucketName string
 	var includeSubDirName bool
 	var uploadPath string
 	var batch bool
@@ -166,7 +167,7 @@ func init() {
 						log.Println("Process filename error for file: " + err.Error())
 						continue
 					}
-					err = multipartUpload(gen3Interface, fileInfo, 0)
+					err = multipartUpload(gen3Interface, fileInfo, 0, bucketName)
 					if err != nil {
 						log.Println(err.Error())
 					} else {
@@ -192,5 +193,6 @@ func init() {
 	uploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	uploadCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
 	uploadCmd.Flags().BoolVar(&hasMetadata, "metadata", false, "Search for and upload file metadata alongside the file")
+	uploadCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded")
 	RootCmd.AddCommand(uploadCmd)
 }

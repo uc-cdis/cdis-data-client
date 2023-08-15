@@ -37,7 +37,7 @@ func retry(attempts int, filePath string, guid string, f func() error) (err erro
 	return fmt.Errorf("After %d attempts, last error: %s", attempts, err)
 }
 
-func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int) error {
+func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int, bucketName string) error {
 	// NOTE @mpingram -- multipartUpload does not yet use the new Shepherd API
 	// because Shepherd does not yet support multipart uploads.
 	file, err := os.Open(fileInfo.FilePath)
@@ -61,7 +61,7 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int) error 
 		return err
 	}
 
-	uploadID, guid, err := InitMultipartUpload(g3, fileInfo.Filename)
+	uploadID, guid, err := InitMultipartUpload(g3, fileInfo.Filename, bucketName)
 	if err != nil {
 		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", fileInfo.Filename, err.Error())
@@ -85,7 +85,7 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int) error 
 			for chunkIndex := range chunkIndexCh {
 				var presignedURL string
 				err = retry(MaxRetryCount, fileInfo.FilePath, guid, func() (err error) {
-					presignedURL, err = GenerateMultipartPresignedURL(g3, key, uploadID, chunkIndex)
+					presignedURL, err = GenerateMultipartPresignedURL(g3, key, uploadID, chunkIndex, bucketName)
 					return
 				})
 				if err != nil {
@@ -165,7 +165,7 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int) error 
 		return parts[i].PartNumber < parts[j].PartNumber // sort parts in ascending order
 	})
 
-	if err = CompleteMultipartUpload(g3, key, uploadID, parts); err != nil {
+	if err = CompleteMultipartUpload(g3, key, uploadID, parts, bucketName); err != nil {
 		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", fileInfo.Filename, err.Error())
 		return err

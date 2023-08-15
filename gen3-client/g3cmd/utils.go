@@ -38,6 +38,7 @@ type ManifestObject struct {
 // InitRequestObject represents the payload that sends to FENCE for getting a singlepart upload presignedURL or init a multipart upload for new object file
 type InitRequestObject struct {
 	Filename string `json:"file_name"`
+	Bucket *string `json:"bucket,omitempty"`
 }
 
 // ShepherdInitRequestObject represents the payload that sends to Shepherd for getting a singlepart upload presignedURL or init a multipart upload for new object file
@@ -57,6 +58,7 @@ type MultipartUploadRequestObject struct {
 	Key        string `json:"key"`
 	UploadID   string `json:"uploadId"`
 	PartNumber int    `json:"partNumber"`
+	Bucket *string `json:"bucket,omitempty"`
 }
 
 // MultipartCompleteRequestObject represents the payload that sends to FENCE for completeing a multipart upload
@@ -64,6 +66,7 @@ type MultipartCompleteRequestObject struct {
 	Key      string                `json:"key"`
 	UploadID string                `json:"uploadId"`
 	Parts    []MultipartPartObject `json:"parts"`
+	Bucket *string `json:"bucket,omitempty"`
 }
 
 // MultipartPartObject represents a part object
@@ -121,8 +124,12 @@ const MaxRetryCount = 5
 const maxWaitTime = 300
 
 // InitMultipartUpload helps sending requests to FENCE to init a multipart upload
-func InitMultipartUpload(g3 Gen3Interface, filename string) (string, string, error) {
-	multipartInitObject := InitRequestObject{Filename: filename}
+func InitMultipartUpload(g3 Gen3Interface, filename string, bucketName string) (string, string, error) {
+	var bucketPtr *string
+	if bucketName != "" {
+		bucketPtr = &bucketName
+	}
+	multipartInitObject := InitRequestObject{Filename: filename, Bucket: bucketPtr}
 	objectBytes, err := json.Marshal(multipartInitObject)
 	if err != nil {
 		return "", "", errors.New("Error has occurred during marshalling data for multipart upload initialization, detailed error message: " + err.Error())
@@ -143,7 +150,7 @@ func InitMultipartUpload(g3 Gen3Interface, filename string) (string, string, err
 }
 
 // GenerateMultipartPresignedURL helps sending requests to FENCE to get a presigned URL for a part during a multipart upload
-func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string, partNumber int) (string, error) {
+func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string, partNumber int, bucketName string) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -151,7 +158,12 @@ func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string
 	function.Config = configure
 	function.Request = request
 
-	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber}
+	var bucketPtr *string
+	if bucketName != "" {
+		bucketPtr = &bucketName
+	}
+
+	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber, Bucket: bucketPtr}
 	objectBytes, err := json.Marshal(multipartUploadObject)
 	if err != nil {
 		return "", errors.New("Error has occurred during marshalling data for multipart upload presigned url generation, detailed error message: " + err.Error())
@@ -169,7 +181,7 @@ func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string
 }
 
 // CompleteMultipartUpload helps sending requests to FENCE to complete a multipart upload
-func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, parts []MultipartPartObject) error {
+func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, parts []MultipartPartObject, bucketName string) error {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -177,7 +189,12 @@ func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, part
 	function.Config = configure
 	function.Request = request
 
-	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts}
+	var bucketPtr *string
+	if bucketName != "" {
+		bucketPtr = &bucketName
+	}
+
+	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts, Bucket: bucketPtr}
 	objectBytes, err := json.Marshal(multipartCompleteObject)
 	if err != nil {
 		return errors.New("Error has occurred during marshalling data for multipart upload, detailed error message: " + err.Error())
