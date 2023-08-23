@@ -37,7 +37,8 @@ type ManifestObject struct {
 
 // InitRequestObject represents the payload that sends to FENCE for getting a singlepart upload presignedURL or init a multipart upload for new object file
 type InitRequestObject struct {
-	Filename string `json:"file_name"`
+	Filename   string `json:"file_name"`
+	BucketName string `json:"bucket_name"`
 }
 
 // ShepherdInitRequestObject represents the payload that sends to Shepherd for getting a singlepart upload presignedURL or init a multipart upload for new object file
@@ -277,7 +278,7 @@ func sanitizeErrorMsg(errorMsg string, sensitiveURL string) string {
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata commonUtils.FileMetadata) (string, string, error) {
+func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata commonUtils.FileMetadata, bucketName string) (string, string, error) {
 	// Attempt to get the presigned URL of this file from Shepherd if it's deployed, otherwise fall back to Fence.
 	hasShepherd, err := g3.CheckForShepherdAPI(&profileConfig)
 	if err != nil {
@@ -327,7 +328,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 	}
 
 	// Otherwise, fall back to Fence
-	purObject := InitRequestObject{Filename: filename}
+	purObject := InitRequestObject{Filename: filename, BucketName: bucketName}
 	objectBytes, err := json.Marshal(purObject)
 	if err != nil {
 		return "", "", errors.New("Error occurred when marshalling object: " + err.Error())
