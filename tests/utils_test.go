@@ -145,6 +145,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 		Profile: "test-profile",
 	}
 	testFilename := "test-file"
+	testBucketname := "test-bucket"
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -156,7 +157,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 		Return(false, nil)
 
 	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
-	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v"}`, testFilename))
+	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v","bucket":"%v"}`, testFilename, testBucketname))
 	mockPresignedURL := "https://example.com/example.pfb"
 	mockGUID := "000000-0000000-0000000-000000"
 	mockUploadURLResponse := jwt.JsonMessage{
@@ -169,7 +170,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 		Return(mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, commonUtils.FileMetadata{})
+	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, commonUtils.FileMetadata{}, testBucketname)
 	if err != nil {
 		t.Error(err)
 	}
@@ -190,6 +191,7 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 		Profile: "test-profile",
 	}
 	testFilename := "test-file"
+	testBucketname := "test-bucket"
 	testMetadata := commonUtils.FileMetadata{
 		Aliases:  []string{"test-alias-1", "test-alias-2"},
 		Authz:    []string{"authz-resource-1", "authz-resource-2"},
@@ -238,7 +240,7 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 		Return("", &mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, testMetadata)
+	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, testMetadata, testBucketname)
 	if err != nil {
 		t.Error(err)
 	}

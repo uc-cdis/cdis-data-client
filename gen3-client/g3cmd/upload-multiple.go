@@ -17,6 +17,7 @@ import (
 )
 
 func init() {
+	var bucketName string
 	var manifestPath string
 	var uploadPath string
 	var batch bool
@@ -87,12 +88,12 @@ func init() {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 					if i == len(furObjects)-1 { // upload remainders
-						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
 					}
 				} else {
 					file, err := os.Open(furObject.FilePath)
@@ -135,5 +136,6 @@ func init() {
 	uploadMultipleCmd.MarkFlagRequired("upload-path") //nolint:errcheck
 	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
 	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
+	uploadMultipleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded")
 	RootCmd.AddCommand(uploadMultipleCmd)
 }
