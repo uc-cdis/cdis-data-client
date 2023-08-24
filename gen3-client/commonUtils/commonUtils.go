@@ -105,7 +105,7 @@ type RetryObject struct {
 	GUID         string
 	RetryCount   int
 	Multipart    bool
-	Bucket *string
+	Bucket 		 string
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning

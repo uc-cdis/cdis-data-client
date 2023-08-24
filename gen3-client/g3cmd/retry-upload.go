@@ -53,7 +53,6 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 	var guid string
 	var presignedURL string
 	var err error
-	var bucketPtr string
 
 	fmt.Println()
 	if len(failedLogMap) == 0 {
@@ -81,10 +80,6 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 		log.Printf("Sleep for %.0f seconds\n", GetWaitTime(ro.RetryCount).Seconds())
 		time.Sleep(GetWaitTime(ro.RetryCount)) // exponential wait for retry
 
-		if ro.Bucket !=nil || *ro.Bucket != "" {
-			bucketPtr = *ro.Bucket
-		}
-
 		if ro.GUID != "" {
 			msg, err := DeleteRecord(gen3Interface, ro.GUID)
 			if err == nil {
@@ -102,7 +97,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 
 		if ro.Multipart {
 			fileInfo := FileInfo{FilePath: ro.FilePath, Filename: ro.Filename}
-			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, bucketPtr)
+			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
