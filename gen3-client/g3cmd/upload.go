@@ -86,13 +86,13 @@ func init() {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
-				batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
+				batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
 
 				if len(errCh) > 0 {
 					close(errCh)
@@ -124,7 +124,7 @@ func init() {
 						continue
 					}
 					// The following flow is for singlepart upload flow
-					respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata)
+					respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata, bucketName)
 					if err != nil {
 						logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
 						log.Println(err.Error())

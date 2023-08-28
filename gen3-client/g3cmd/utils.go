@@ -280,7 +280,7 @@ func sanitizeErrorMsg(errorMsg string, sensitiveURL string) string {
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata commonUtils.FileMetadata) (string, string, error) {
+func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata commonUtils.FileMetadata, bucketName string) (string, string, error) {
 	// Attempt to get the presigned URL of this file from Shepherd if it's deployed, otherwise fall back to Fence.
 	hasShepherd, err := g3.CheckForShepherdAPI(&profileConfig)
 	if err != nil {
@@ -330,7 +330,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 	}
 
 	// Otherwise, fall back to Fence
-	purObject := InitRequestObject{Filename: filename}
+	purObject := InitRequestObject{Filename: filename, Bucket: bucketName}
 	objectBytes, err := json.Marshal(purObject)
 	if err != nil {
 		return "", "", errors.New("Error occurred when marshalling object: " + err.Error())
@@ -612,7 +612,7 @@ func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *htt
 	return workers, respCh, errCh, batchFURSlice
 }
 
-func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
+func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error, bucketName string) {
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
@@ -620,7 +620,7 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 
 	for i := range furObjects {
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(gen3Interface, furObjects[i].Filename, furObjects[i].FileMetadata)
+			respURL, guid, err = GeneratePresignedURL(gen3Interface, furObjects[i].Filename, furObjects[i].FileMetadata, bucketName)
 			if err != nil {
 				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, guid, 0, false, true)
 				errCh <- err
