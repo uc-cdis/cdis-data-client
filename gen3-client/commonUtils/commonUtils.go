@@ -74,6 +74,7 @@ type FileUploadRequestObject struct {
 	PresignedURL string
 	Request      *http.Request
 	Bar          *pb.ProgressBar
+	Bucket 	 	 string `json:"bucket,omitempty"`
 }
 
 // FileDownloadResponseObject defines a object for file download

@@ -350,7 +350,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 func GenerateUploadRequest(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
 	if furObject.PresignedURL == "" {
 		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID
-		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
+		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "application/json", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
 		}

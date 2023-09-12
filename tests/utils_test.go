@@ -157,7 +157,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 		Return(false, nil)
 
 	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
-	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v", "bucket":"%v"}`, testFilename, testBucketname))
+	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v","bucket":"%v"}`, testFilename, testBucketname))
 	mockPresignedURL := "https://example.com/example.pfb"
 	mockGUID := "000000-0000000-0000000-000000"
 	mockUploadURLResponse := jwt.JsonMessage{
