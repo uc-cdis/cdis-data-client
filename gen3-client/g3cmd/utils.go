@@ -535,8 +535,13 @@ func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.F
 	furObjects := make([]commonUtils.FileUploadRequestObject, 0)
 	for _, object := range objects {
 		guid := object.ObjectID
-		// Here we are assuming the local filename will be the same as GUID
-		filePath, err := getFullFilePath(uploadPath, object.ObjectID)
+		// use file_name if it is set
+		var fileName = object.Filename
+		if object.Filename == "" {
+			// Otherwise, here we are assuming the local filename will be the same as GUID
+			fileName = object.ObjectID
+		}
+		filePath, err := getFullFilePath(uploadPath, fileName)
 		if err != nil {
 			log.Println(err.Error())
 			continue
