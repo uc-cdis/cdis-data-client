@@ -564,6 +564,17 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	if resp.StatusCode != 200 {
 		logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, retryCount, false, true)
 		furObject.Bar.Finish()
+		// Log response status code
+		log.Printf("Error uploading file %s: Status Code %d", furObject.Filename, resp.StatusCode)
+
+		// Read response body and log it
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("Error reading response body: %v", err)
+		} else {
+			log.Printf("Response body: %s", string(bodyBytes))
+		}
+
 		return errors.New("Upload request got a non-200 response with status code " + strconv.Itoa(resp.StatusCode))
 	}
 	furObject.Bar.Finish()
