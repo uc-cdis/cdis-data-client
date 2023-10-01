@@ -349,7 +349,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 // GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar for single part upload
 func GenerateUploadRequest(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
 	if furObject.PresignedURL == "" {
-		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID
+		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID + "?file_name=" + url.QueryEscape(furObject.Filename)
 		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "application/json", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
@@ -535,12 +535,16 @@ func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.F
 	furObjects := make([]commonUtils.FileUploadRequestObject, 0)
 	for _, object := range objects {
 		guid := object.ObjectID
-		// use file_name if it is set
-		var fileName = object.Filename
-		if object.Filename == "" {
+		var fileName = ""
+
+		if object.Filename != "" {
+		    // conform to fence naming convention
+		    fileName = object.Filename
+		} else {
 			// Otherwise, here we are assuming the local filename will be the same as GUID
 			fileName = object.ObjectID
 		}
+
 		filePath, err := getFullFilePath(uploadPath, fileName)
 		if err != nil {
 			log.Println(err.Error())
@@ -552,7 +556,7 @@ func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.F
 			continue
 		}
 
-		furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filepath.Base(filePath), GUID: guid}
+		furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: fileName, GUID: guid}
 		furObjects = append(furObjects, furObject)
 	}
 	return furObjects
