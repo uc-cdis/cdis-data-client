@@ -348,8 +348,14 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 
 // GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar for single part upload
 func GenerateUploadRequest(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
-	if furObject.PresignedURL == "" {
-		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID + "?file_name=" + url.QueryEscape(furObject.Filename)
+        if furObject.PresignedURL == "" {
+               endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID + "?file_name=" + url.QueryEscape(furObject.Filename)
+
+                // ensure bucket is set
+                if furObject.Bucket != "" {
+                    endPointPostfix += "&bucket=" + furObject.Bucket
+                }
+
 		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "application/json", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
@@ -628,6 +634,9 @@ func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploa
 	var guid string
 
 	for i := range furObjects {
+                if furObjects[i].Bucket == "" {
+                    furObjects[i].Bucket = bucketName
+                }
 		if furObjects[i].GUID == "" {
 			respURL, guid, err = GeneratePresignedURL(gen3Interface, furObjects[i].Filename, furObjects[i].FileMetadata, bucketName)
 			if err != nil {
