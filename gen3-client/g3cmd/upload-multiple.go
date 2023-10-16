@@ -26,6 +26,7 @@ func init() {
 	var respCh chan *http.Response
 	var errCh chan error
 	var batchFURObjects []commonUtils.FileUploadRequestObject
+	var forceMultipart bool
 
 	var uploadMultipleCmd = &cobra.Command{
 		Use:     "upload-multiple",
@@ -78,13 +79,36 @@ func init() {
 			}
 
 			furObjects := validateObject(objects, uploadPath)
-
 			if batch {
 				workers, respCh, errCh, batchFURObjects = initBatchUploadChannels(numParallel, len(objects))
 			}
 
 			for i, furObject := range furObjects {
-				if batch {
+				if forceMultipart {
+					uploadPath := []string{furObjects[i].FilePath}
+					_, multipartFilePaths := validateFilePath(uploadPath, forceMultipart)
+					log.Println(multipartFilePaths)
+					if len(multipartFilePaths) > 0 {
+						log.Println("Multipart uploading....")
+						for _, filePath := range multipartFilePaths {
+							fileInfo, err := ProcessFilename(furObjects[i].FilePath, filePath, false, false)
+							if err != nil {
+								logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
+								log.Println("Process filename error for file: " + err.Error())
+								continue
+							}
+							err = multipartUpload(gen3Interface, fileInfo, 0, bucketName)
+							if err != nil {
+								log.Println(err.Error())
+							} else {
+								logs.IncrementScore(0)
+							}
+						}
+						if !logs.IsFailedLogMapEmpty() {
+							retryUpload(logs.GetFailedLogMap())
+						}
+					}
+				} else if batch {
 					if len(batchFURObjects) < workers {
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
@@ -137,5 +161,6 @@ func init() {
 	uploadMultipleCmd.Flags().BoolVar(&batch, "batch", true, "Upload in parallel")
 	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	uploadMultipleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded")
+	uploadMultipleCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
 	RootCmd.AddCommand(uploadMultipleCmd)
 }
