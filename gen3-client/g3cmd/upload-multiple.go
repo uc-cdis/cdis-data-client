@@ -27,6 +27,7 @@ func init() {
 	var errCh chan error
 	var batchFURObjects []commonUtils.FileUploadRequestObject
 	var forceMultipart bool
+	var includeSubDirName bool
 
 	var uploadMultipleCmd = &cobra.Command{
 		Use:     "upload-multiple",
@@ -85,9 +86,92 @@ func init() {
 
 			for i, furObject := range furObjects {
 				if forceMultipart {
-					uploadPath := []string{furObjects[i].FilePath}
-					_, multipartFilePaths := validateFilePath(uploadPath, forceMultipart)
-					log.Println(multipartFilePaths)
+					uploadPath, _ := commonUtils.GetAbsolutePath(uploadPath)
+					filePaths, err := commonUtils.ParseFilePaths(uploadPath, false)
+					if err != nil {
+						log.Fatalf("Error when parsing file paths: " + err.Error())
+					}
+
+					singlepartFilePaths, multipartFilePaths := validateFilePath(filePaths, forceMultipart)
+
+					if len(singlepartFilePaths) > 0 {
+						if batch {
+							workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
+							for _, filePath := range singlepartFilePaths {
+								fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, false)
+								if err != nil {
+									logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
+									log.Println("Process filename error: " + err.Error())
+									continue
+								}
+								if len(batchFURObjects) < workers {
+									furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
+									batchFURObjects = append(batchFURObjects, furObject)
+								} else {
+									batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
+									batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
+									furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
+									batchFURObjects = append(batchFURObjects, furObject)
+								}
+							}
+							batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
+
+							if len(errCh) > 0 {
+								close(errCh)
+								for err := range errCh {
+									if err != nil {
+										log.Printf("Error occurred during uploading: %s\n", err.Error())
+									}
+								}
+							}
+						} else {
+							for _, filePath := range singlepartFilePaths {
+								file, err := os.Open(filePath)
+								if err != nil {
+									logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
+									log.Println("File open error: " + err.Error())
+									continue
+								}
+
+								fi, err := file.Stat()
+								if err != nil {
+									logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
+									log.Println("File stat error for file" + fi.Name() + ", file may be missing or unreadable because of permissions.\n")
+									continue
+								}
+								fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, false)
+								if err != nil {
+									logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
+									log.Println("Process filename error for file: " + err.Error())
+									continue
+								}
+								// The following flow is for singlepart upload flow
+								respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata, bucketName)
+								if err != nil {
+									logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
+									log.Println(err.Error())
+									continue
+								}
+								// update failed log with new guid
+								logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
+
+								furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, GUID: guid, PresignedURL: respURL}
+								furObject, err = GenerateUploadRequest(gen3Interface, furObject, file)
+								if err != nil {
+									file.Close()
+									log.Printf("Error occurred during request generation: %s\n", err.Error())
+									continue
+								}
+								err = uploadFile(furObject, 0)
+								if err != nil {
+									log.Println(err.Error())
+								} else {
+									logs.IncrementScore(0)
+								}
+								file.Close()
+							}
+						}
+					}
 					if len(multipartFilePaths) > 0 {
 						log.Println("Multipart uploading....")
 						for _, filePath := range multipartFilePaths {
@@ -162,5 +246,6 @@ func init() {
 	uploadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 3, "Number of uploads to run in parallel")
 	uploadMultipleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded")
 	uploadMultipleCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
+	uploadMultipleCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	RootCmd.AddCommand(uploadMultipleCmd)
 }
