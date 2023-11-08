@@ -553,6 +553,61 @@ func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.F
 	return furObjects
 }
 
+func separateSingleMultipartUploads(objects []ManifestObject, uploadPath string, forceMultipart bool) ([]string, []string) {
+	fileSizeLimit := FileSizeLimit // 5GB
+	if forceMultipart {
+		fileSizeLimit = minMultipartChunkSize // 5MB
+	}
+	singlepartFilePaths := make([]string, 0)
+	multipartFilePaths := make([]string, 0)
+	for _, object := range objects {
+		// Here we are assuming the local filename will be the same as GUID
+		filePath, err := getFullFilePath(uploadPath, object.ObjectID)
+		if err != nil {
+			log.Println(err.Error())
+			continue
+		}
+
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			log.Printf("The file you specified \"%s\" does not exist locally", filePath)
+			continue
+		}
+
+		func() {
+			file, err := os.Open(filePath)
+			if err != nil {
+				log.Println("File open error occurred when validating file path: " + err.Error())
+				return
+			}
+			defer file.Close()
+
+			fi, err := file.Stat()
+			if err != nil {
+				log.Println("File stat error occurred when validating file path: " + err.Error())
+				return
+			}
+			if fi.IsDir() {
+				return
+			}
+
+			if logs.ExistsInSucceededLog(filePath) {
+				log.Println("File \"" + filePath + "\" has been found in local submission history and has been skipped for preventing duplicated submissions.")
+				return
+			}
+			logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
+
+			if fi.Size() > MultipartFileSizeLimit {
+				log.Printf("The file size of %s has exceeded the limit allowed and cannot be uploaded. The maximum allowed file size is %s\n", fi.Name(), FormatSize(MultipartFileSizeLimit))
+			} else if fi.Size() > int64(fileSizeLimit) {
+				multipartFilePaths = append(multipartFilePaths, filePath)
+			} else {
+				singlepartFilePaths = append(singlepartFilePaths, filePath)
+			}
+		}()
+	}
+	return singlepartFilePaths, multipartFilePaths
+}
+
 func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) error {
 	log.Println("Uploading data ...")
 	furObject.Bar.Start()
