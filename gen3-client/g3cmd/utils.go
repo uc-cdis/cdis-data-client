@@ -27,7 +27,7 @@ import (
 
 // go:generate mockgen -destination=./gen3-client/mocks/mock_gen3interface.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/g3cmd Gen3Interface
 
-// ManifestObject represents an object from manifest that downloaded from windmill
+// ManifestObject represents an object from manifest that downloaded from windmill / data-portal
 type ManifestObject struct {
 	ObjectID  string `json:"object_id"`
 	SubjectID string `json:"subject_id"`
