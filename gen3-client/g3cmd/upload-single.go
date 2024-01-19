@@ -95,6 +95,6 @@ func init() {
 	uploadSingleCmd.MarkFlagRequired("guid") //nolint:errcheck
 	uploadSingleCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
 	uploadSingleCmd.MarkFlagRequired("file") //nolint:errcheck
-	uploadSingleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded")
+	uploadSingleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded. If not provided, defaults to Gen3's configured DATA_UPLOAD_BUCKET.")
 	RootCmd.AddCommand(uploadSingleCmd)
 }
