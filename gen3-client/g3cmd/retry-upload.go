@@ -53,6 +53,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 	var guid string
 	var presignedURL string
 	var err error
+
 	fmt.Println()
 	if len(failedLogMap) == 0 {
 		log.Println("No failed file in log, no need to retry upload.")
@@ -96,7 +97,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 
 		if ro.Multipart {
 			fileInfo := FileInfo{FilePath: ro.FilePath, Filename: ro.Filename}
-			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount)
+			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
@@ -109,7 +110,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				}
 			}
 		} else {
-			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, ro.Filename, ro.FileMetadata)
+			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, ro.Filename, ro.FileMetadata, ro.Bucket)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, guid, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, true)

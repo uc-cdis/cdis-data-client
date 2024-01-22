@@ -27,7 +27,7 @@ import (
 
 // go:generate mockgen -destination=./gen3-client/mocks/mock_gen3interface.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/g3cmd Gen3Interface
 
-// ManifestObject represents an object from manifest that downloaded from windmill
+// ManifestObject represents an object from manifest that downloaded from windmill / data-portal
 type ManifestObject struct {
 	ObjectID  string `json:"object_id"`
 	SubjectID string `json:"subject_id"`
@@ -38,6 +38,7 @@ type ManifestObject struct {
 // InitRequestObject represents the payload that sends to FENCE for getting a singlepart upload presignedURL or init a multipart upload for new object file
 type InitRequestObject struct {
 	Filename string `json:"file_name"`
+	Bucket 	 string `json:"bucket,omitempty"`
 }
 
 // ShepherdInitRequestObject represents the payload that sends to Shepherd for getting a singlepart upload presignedURL or init a multipart upload for new object file
@@ -57,6 +58,7 @@ type MultipartUploadRequestObject struct {
 	Key        string `json:"key"`
 	UploadID   string `json:"uploadId"`
 	PartNumber int    `json:"partNumber"`
+	Bucket 	   string `json:"bucket,omitempty"`
 }
 
 // MultipartCompleteRequestObject represents the payload that sends to FENCE for completeing a multipart upload
@@ -64,6 +66,7 @@ type MultipartCompleteRequestObject struct {
 	Key      string                `json:"key"`
 	UploadID string                `json:"uploadId"`
 	Parts    []MultipartPartObject `json:"parts"`
+	Bucket 	 string `json:"bucket,omitempty"`
 }
 
 // MultipartPartObject represents a part object
@@ -121,8 +124,8 @@ const MaxRetryCount = 5
 const maxWaitTime = 300
 
 // InitMultipartUpload helps sending requests to FENCE to init a multipart upload
-func InitMultipartUpload(g3 Gen3Interface, filename string) (string, string, error) {
-	multipartInitObject := InitRequestObject{Filename: filename}
+func InitMultipartUpload(g3 Gen3Interface, filename string, bucketName string) (string, string, error) {
+	multipartInitObject := InitRequestObject{Filename: filename, Bucket: bucketName}
 	objectBytes, err := json.Marshal(multipartInitObject)
 	if err != nil {
 		return "", "", errors.New("Error has occurred during marshalling data for multipart upload initialization, detailed error message: " + err.Error())
@@ -143,7 +146,7 @@ func InitMultipartUpload(g3 Gen3Interface, filename string) (string, string, err
 }
 
 // GenerateMultipartPresignedURL helps sending requests to FENCE to get a presigned URL for a part during a multipart upload
-func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string, partNumber int) (string, error) {
+func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string, partNumber int, bucketName string) (string, error) {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -151,7 +154,7 @@ func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string
 	function.Config = configure
 	function.Request = request
 
-	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber}
+	multipartUploadObject := MultipartUploadRequestObject{Key: key, UploadID: uploadID, PartNumber: partNumber, Bucket: bucketName}
 	objectBytes, err := json.Marshal(multipartUploadObject)
 	if err != nil {
 		return "", errors.New("Error has occurred during marshalling data for multipart upload presigned url generation, detailed error message: " + err.Error())
@@ -169,7 +172,7 @@ func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string
 }
 
 // CompleteMultipartUpload helps sending requests to FENCE to complete a multipart upload
-func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, parts []MultipartPartObject) error {
+func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, parts []MultipartPartObject, bucketName string) error {
 	request := new(jwt.Request)
 	configure := new(jwt.Configure)
 	function := new(jwt.Functions)
@@ -177,7 +180,7 @@ func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, part
 	function.Config = configure
 	function.Request = request
 
-	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts}
+	multipartCompleteObject := MultipartCompleteRequestObject{Key: key, UploadID: uploadID, Parts: parts, Bucket: bucketName}
 	objectBytes, err := json.Marshal(multipartCompleteObject)
 	if err != nil {
 		return errors.New("Error has occurred during marshalling data for multipart upload, detailed error message: " + err.Error())
@@ -277,7 +280,7 @@ func sanitizeErrorMsg(errorMsg string, sensitiveURL string) string {
 }
 
 // GeneratePresignedURL helps sending requests to Shepherd/Fence and parsing the response in order to get presigned URL for the new upload flow
-func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata commonUtils.FileMetadata) (string, string, error) {
+func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata commonUtils.FileMetadata, bucketName string) (string, string, error) {
 	// Attempt to get the presigned URL of this file from Shepherd if it's deployed, otherwise fall back to Fence.
 	hasShepherd, err := g3.CheckForShepherdAPI(&profileConfig)
 	if err != nil {
@@ -327,7 +330,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 	}
 
 	// Otherwise, fall back to Fence
-	purObject := InitRequestObject{Filename: filename}
+	purObject := InitRequestObject{Filename: filename, Bucket: bucketName}
 	objectBytes, err := json.Marshal(purObject)
 	if err != nil {
 		return "", "", errors.New("Error occurred when marshalling object: " + err.Error())
@@ -345,9 +348,15 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 
 // GenerateUploadRequest helps preparing the HTTP request for upload and the progress bar for single part upload
 func GenerateUploadRequest(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, file *os.File) (commonUtils.FileUploadRequestObject, error) {
-	if furObject.PresignedURL == "" {
-		endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID
-		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
+        if furObject.PresignedURL == "" {
+               endPointPostfix := commonUtils.FenceDataUploadEndpoint + "/" + furObject.GUID + "?file_name=" + url.QueryEscape(furObject.Filename)
+
+                // ensure bucket is set
+                if furObject.Bucket != "" {
+                    endPointPostfix += "&bucket=" + furObject.Bucket
+                }
+
+		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "application/json", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
 		}
@@ -408,7 +417,7 @@ func DeleteRecord(g3 Gen3Interface, guid string) (string, error) {
 	return msg, err
 }
 
-func validateFilePath(filePaths []string, forceMultipart bool) ([]string, []string) {
+func separateSingleAndMultipartUploads(filePaths []string, forceMultipart bool) ([]string, []string) {
 	fileSizeLimit := FileSizeLimit // 5GB
 	if forceMultipart {
 		fileSizeLimit = minMultipartChunkSize // 5MB
@@ -528,28 +537,6 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	}
 }
 
-func validateObject(objects []ManifestObject, uploadPath string) []commonUtils.FileUploadRequestObject {
-	furObjects := make([]commonUtils.FileUploadRequestObject, 0)
-	for _, object := range objects {
-		guid := object.ObjectID
-		// Here we are assuming the local filename will be the same as GUID
-		filePath, err := getFullFilePath(uploadPath, object.ObjectID)
-		if err != nil {
-			log.Println(err.Error())
-			continue
-		}
-
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			log.Printf("The file you specified \"%s\" does not exist locally.\n", filePath)
-			continue
-		}
-
-		furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filepath.Base(filePath), GUID: guid}
-		furObjects = append(furObjects, furObject)
-	}
-	return furObjects
-}
-
 func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) error {
 	log.Println("Uploading data ...")
 	furObject.Bar.Start()
@@ -609,15 +596,18 @@ func initBatchUploadChannels(numParallel int, inputSliceLen int) (int, chan *htt
 	return workers, respCh, errCh, batchFURSlice
 }
 
-func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error) {
+func batchUpload(gen3Interface Gen3Interface, furObjects []commonUtils.FileUploadRequestObject, workers int, respCh chan *http.Response, errCh chan error, bucketName string) {
 	bars := make([]*pb.ProgressBar, 0)
 	respURL := ""
 	var err error
 	var guid string
 
 	for i := range furObjects {
+                if furObjects[i].Bucket == "" {
+                    furObjects[i].Bucket = bucketName
+                }
 		if furObjects[i].GUID == "" {
-			respURL, guid, err = GeneratePresignedURL(gen3Interface, furObjects[i].Filename, furObjects[i].FileMetadata)
+			respURL, guid, err = GeneratePresignedURL(gen3Interface, furObjects[i].Filename, furObjects[i].FileMetadata, bucketName)
 			if err != nil {
 				logs.AddToFailedLog(furObjects[i].FilePath, furObjects[i].Filename, furObjects[i].FileMetadata, guid, 0, false, true)
 				errCh <- err

@@ -74,6 +74,7 @@ type FileUploadRequestObject struct {
 	PresignedURL string
 	Request      *http.Request
 	Bar          *pb.ProgressBar
+	Bucket 	 	 string `json:"bucket,omitempty"`
 }
 
 // FileDownloadResponseObject defines a object for file download
@@ -105,6 +106,7 @@ type RetryObject struct {
 	GUID         string
 	RetryCount   int
 	Multipart    bool
+	Bucket 		 string
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning

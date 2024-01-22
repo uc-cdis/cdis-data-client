@@ -12,6 +12,7 @@ import (
 )
 
 func init() {
+	var bucketName string
 	var includeSubDirName bool
 	var uploadPath string
 	var batch bool
@@ -70,7 +71,7 @@ func init() {
 			}
 			fmt.Println()
 
-			singlepartFilePaths, multipartFilePaths := validateFilePath(filePaths, forceMultipart)
+			singlepartFilePaths, multipartFilePaths := separateSingleAndMultipartUploads(filePaths, forceMultipart)
 
 			if batch {
 				workers, respCh, errCh, batchFURObjects := initBatchUploadChannels(numParallel, len(singlepartFilePaths))
@@ -85,13 +86,13 @@ func init() {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					} else {
-						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject)
 					}
 				}
-				batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh)
+				batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
 
 				if len(errCh) > 0 {
 					close(errCh)
@@ -123,7 +124,7 @@ func init() {
 						continue
 					}
 					// The following flow is for singlepart upload flow
-					respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata)
+					respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata, bucketName)
 					if err != nil {
 						logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
 						log.Println(err.Error())
@@ -153,26 +154,7 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				// NOTE(@mpingram) - For the moment Shepherd doesn't support multipart uploads.
 				// Throw an error if Shepherd is enabled and user attempts to multipart upload.
-				profileConfig := conf.ParseConfig(profile)
-				if profileConfig.UseShepherd == "true" ||
-					profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
-					log.Fatalf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ gen3-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
-				}
-				log.Println("Multipart uploading....")
-				for _, filePath := range multipartFilePaths {
-					fileInfo, err := ProcessFilename(uploadPath, filePath, includeSubDirName, false)
-					if err != nil {
-						logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
-						log.Println("Process filename error for file: " + err.Error())
-						continue
-					}
-					err = multipartUpload(gen3Interface, fileInfo, 0)
-					if err != nil {
-						log.Println(err.Error())
-					} else {
-						logs.IncrementScore(0)
-					}
-				}
+				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
@@ -192,5 +174,6 @@ func init() {
 	uploadCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
 	uploadCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
 	uploadCmd.Flags().BoolVar(&hasMetadata, "metadata", false, "Search for and upload file metadata alongside the file")
+	uploadCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded. If not provided, defaults to Gen3's configured DATA_UPLOAD_BUCKET.")
 	RootCmd.AddCommand(uploadCmd)
 }
