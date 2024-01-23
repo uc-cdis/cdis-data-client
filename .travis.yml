@@ -32,7 +32,7 @@ jobs:
         skip_cleanup: true
         provider: releases
         api_key:
-          secure: "CD5lzjmswisty9ldfNZL+Xj5cySlzk04OZZwMFAmeY+iGXIDceWBJOdxkjFwzHr7alBZW9w7c95sreH5unVmv/jHuorwaYQ0Rln6O93uctPKVtWoiVWD7lilaAq3kHOefGuRcvQ/MGFYKUDK4G0ToNp0ucX+8gsRwTFe90gnBhBCEebUH3jK2q6q6lxuPsy+tbl/uwrwqPO+j64s2JYGgAJbjTKjBbYKluLtNdlzq3+7JpPYvXA6PnXKNf7OZroVwofXDphOQFfttCMxQTjZX+kbFuFGSLPrasDfDL1fv26iGzVxA+pFYt6+NgsPv3A7Tw2MQlgDZ2KjdvNErCnAbWDjqBNwcD3lyVpSk/08Pk5a7NrQGfsGoBTgwzDpw6qShwMcDDFfTzvdx2YUkSSgVX7MMv+pME5fkIgVHksVO5NbSRShPVD6MMEnq7KsQgxO9B2mUHoUbNNP+91AbezvJOmgHpr2fX0m0N24bBcARmPXaHrSEVbWdNq+NguVEfsZEaYnChzhUgz7tClYaJcpDkJ6lds9F4y3xbWrWt6KMPX3z/KykEQmwYWJhlgrJrclge4ByYWuBHhGvXCqUU8Ai2Fdl6RsejnWWbaR/otzp1Y5YrQQnzLaP45RIfj5DRL115nYB5W8EsOGWG/euwIotjP30L7BvKgkk2m4CwYJQ0k="
+          secure: "FCU39nJmWa7Hv+aNsu64H0r1RR3fVg6K4teuskU7V1UQZtBya6Bw/SiSwjWB2an4v6X9ldK482Xw53bnoFyFraxG4gwsogiPfTQip8LoypEnxa+k/fMS769nCUHDbV5nsZIAVAZRy5mI45KcWvDZ5iui8fxHELk7vfN1dWYVP5T2huEhBzvyL905eGrnV7G0JaY2FJC1X2cofakVt3xuSzDCkd7pgdtpccRGFWfUd5amfa9MvMA4fx/N8wBXMFOSgL/jc/W9U1fiwIPavEoGQDCihiT2En2AXVQ6C+U9OH0dDKivC+QwaO6k2OS+jKVPvhNHwsaBZwHha6B3dQyX8UfL6QYju4e89XeJQeJgs3z9CM5D1RqNIKswrkwfxGxY/kElPro9fnKKCkCs3K2D9iRITWoXpbnN2/se1ogos0wdA25a4VAmzVvZNFxzNtDJizC5eZVtllwLbkzWjkpdICJrkOHz/GdSowiOVgR3vpTCvQSYZSNlngqxzi33Wu8+Ef17q5r/uc9msfLSdE9jVf6NoXIuXpxnwoZW/iPhNAJbMsFzkf5c/yQwlgNGDBWkpahqNhIO0Wqe3OHpPp+UP+R0XUo2ASqE2QEBB6DC2HUGO9bzDvcbwwYVJ3+ZT1ynfasR2MbLSaz3csfNG/pqpazmSvyexSI7q0o84JEdA+Y="
         file:
           - /home/travis/shared/dataclient_win64.zip
           - /home/travis/shared/dataclient_osx.zip
