@@ -82,13 +82,14 @@ func init() {
 			filePaths := make([]string, 0)
 			for _, object := range objects {
 				var filePath = ""
+				var err error
 
 				if object.Filename != "" {
 		    			// conform to fence naming convention
-					filePath, err := getFullFilePath(uploadPath, object.Filename)
+					filePath, err = getFullFilePath(uploadPath, object.Filename)
 				} else {
 					// Otherwise, here we are assuming the local filename will be the same as GUID
-					filePath, err := getFullFilePath(uploadPath, object.ObjectID)
+					filePath, err = getFullFilePath(uploadPath, object.ObjectID)
 				}
 				if err != nil {
 					log.Println(err.Error())
