@@ -81,7 +81,7 @@ func init() {
 
 			filePaths := make([]string, 0)
 			for _, object := range objects {
-				var filePath = ""
+				var filePath string
 				var err error
 
 				if object.Filename != "" {
