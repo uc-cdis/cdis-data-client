@@ -11,6 +11,7 @@ jobs:
     name: Integration tests
     uses: uc-cdis/.github/.github/workflows/integration_tests.yaml@master
     with:
+      # Tag used in tests that depend on this repo (https://github.com/uc-cdis/gen3-code-vigil/blob/master/gen3-integration-tests/pyproject.toml)
       SERVICE_TO_TEST: gen3_client
     secrets:
       CI_AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
