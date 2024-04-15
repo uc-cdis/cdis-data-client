@@ -1,4 +1,0 @@
-'@gen3-client':
-  - '**/*'
-'skip-quay-build':
-  - '**/*'
