@@ -39,6 +39,8 @@ type ManifestObject struct {
 type InitRequestObject struct {
 	Filename string `json:"file_name"`
 	Bucket 	 string `json:"bucket,omitempty"`
+	ObjectID string `json:"did,omitempty"`
+	CreateRecord bool `json:"create_record,omitempty"`
 }
 
 // ShepherdInitRequestObject represents the payload that sends to Shepherd for getting a singlepart upload presignedURL or init a multipart upload for new object file
@@ -124,9 +126,16 @@ const MaxRetryCount = 5
 const maxWaitTime = 300
 
 // InitMultipartUpload helps sending requests to FENCE to init a multipart upload
-func InitMultipartUpload(g3 Gen3Interface, filename string, bucketName string) (string, string, error) {
-	multipartInitObject := InitRequestObject{Filename: filename, Bucket: bucketName}
+func InitMultipartUpload(g3 Gen3Interface, filename string, bucketName string, fileNameToIDMap map[string]string, createRecord bool) (string, string, error) {
+	var did string
+	log.Println(fileNameToIDMap)
+	if fileNameToIDMap != nil{
+		did = fileNameToIDMap[filename]
+	}
+	multipartInitObject := InitRequestObject{Filename: filename, Bucket: bucketName, ObjectID:did, CreateRecord:createRecord}
 	objectBytes, err := json.Marshal(multipartInitObject)
+	log.Println(multipartInitObject)
+
 	if err != nil {
 		return "", "", errors.New("Error has occurred during marshalling data for multipart upload initialization, detailed error message: " + err.Error())
 	}

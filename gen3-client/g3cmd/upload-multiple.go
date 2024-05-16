@@ -23,6 +23,7 @@ func init() {
 	var numParallel int
 	var forceMultipart bool
 	var includeSubDirName bool
+	var createRecord bool
 
 	var uploadMultipleCmd = &cobra.Command{
 		Use:     "upload-multiple",
@@ -80,14 +81,25 @@ func init() {
 			}
 
 			filePaths := make([]string, 0)
+			fileNameToIDMap := make(map[string]string)
 			for _, object := range objects {
 				var filePath string
 				var err error
-
-				if object.Filename != "" {
-		    			// conform to fence naming convention
+				if createRecord == true && object.Filename != "" && object.ObjectID != "" {
+					var fileName string
+					// Case where guid already exists in indexd and ObjectID is given to associate guid to filename
+					if object.Filename != "" {
+						fileName = object.Filename
+					} else {
+						fileName = object.ObjectID
+					}
+					filePath, err = getFullFilePath(uploadPath, fileName)
+					// Associating filenam to object_id
+					fileNameToIDMap[fileName] = object.ObjectID
+				} else if object.Filename != "" && object.ObjectID == "" {
+					// conform to fence naming convention
 					filePath, err = getFullFilePath(uploadPath, object.Filename)
-				} else {
+				} else if object.Filename == "" && object.ObjectID != "" {
 					// Otherwise, here we are assuming the local filename will be the same as GUID
 					filePath, err = getFullFilePath(uploadPath, object.ObjectID)
 				}
@@ -126,7 +138,7 @@ func init() {
 				processSingleUploads(gen3Interface, singlePartFilePaths, bucketName, includeSubDirName, uploadPath)
 			}
 			if len(multipartFilePaths) > 0 {
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath, fileNameToIDMap, createRecord)
 			}
 			if !logs.IsFailedLogMapEmpty() {
 				retryUpload(logs.GetFailedLogMap())
@@ -147,6 +159,7 @@ func init() {
 	uploadMultipleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded. If not provided, defaults to Gen3's configured DATA_UPLOAD_BUCKET.")
 	uploadMultipleCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload when possible (file size >= 5MB)")
 	uploadMultipleCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
+	uploadMultipleCmd.Flags().BoolVar(&createRecord, "create-record", true, "Create blank index in indexd")
 	RootCmd.AddCommand(uploadMultipleCmd)
 }
 
@@ -205,7 +218,7 @@ func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *o
 	file.Close()
 }
 
-func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) {
+func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string, fileNameToIDMap map[string]string, createRecord bool) {
 	profileConfig := conf.ParseConfig(profile)
 	if profileConfig.UseShepherd == "true" ||
 		profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
@@ -220,7 +233,7 @@ func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []st
 			log.Println("Process filename error for file: " + err.Error())
 			continue
 		}
-		err = multipartUpload(gen3Interface, fileInfo, 0, bucketName)
+		err = multipartUpload(gen3Interface, fileInfo, 0, bucketName, fileNameToIDMap, createRecord)
 		if err != nil {
 			log.Println(err.Error())
 		} else {

@@ -97,7 +97,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 
 		if ro.Multipart {
 			fileInfo := FileInfo{FilePath: ro.FilePath, Filename: ro.Filename}
-			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket)
+			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket, ro.fileNameToIDMap, ro.CreateRecord)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
