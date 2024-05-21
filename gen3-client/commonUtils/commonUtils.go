@@ -107,8 +107,6 @@ type RetryObject struct {
 	RetryCount   int
 	Multipart    bool
 	Bucket 		 string
-	fileNameToIDMap	 map[string]string
-	CreateRecord bool
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning

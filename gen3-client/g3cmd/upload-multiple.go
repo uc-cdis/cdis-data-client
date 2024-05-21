@@ -23,7 +23,6 @@ func init() {
 	var numParallel int
 	var forceMultipart bool
 	var includeSubDirName bool
-	var createRecord bool
 
 	var uploadMultipleCmd = &cobra.Command{
 		Use:     "upload-multiple",
@@ -85,7 +84,7 @@ func init() {
 			for _, object := range objects {
 				var filePath string
 				var err error
-				if createRecord == true && object.Filename != "" && object.ObjectID != "" {
+				if object.Filename != "" && object.ObjectID != "" {
 					var fileName string
 					// Case where guid already exists in indexd and ObjectID is given to associate guid to filename
 					if object.Filename != "" {
@@ -125,23 +124,23 @@ func init() {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject) //nolint:ineffassign
 					} else {
-						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName, fileNameToIDMap)
 						batchFURObjects = make([]commonUtils.FileUploadRequestObject, 0)
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
 						batchFURObjects = append(batchFURObjects, furObject) //nolint:ineffassign
 					}
 					if !forceMultipart && i == len(singlePartFilePaths)-1 { // upload remainders
-						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName)
+						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName, fileNameToIDMap)
 					}
 				}
 			} else {
-				processSingleUploads(gen3Interface, singlePartFilePaths, bucketName, includeSubDirName, uploadPath)
+				processSingleUploads(gen3Interface, singlePartFilePaths, bucketName, includeSubDirName, uploadPath, fileNameToIDMap)
 			}
 			if len(multipartFilePaths) > 0 {
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath, fileNameToIDMap, createRecord)
+				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath, fileNameToIDMap)
 			}
 			if !logs.IsFailedLogMapEmpty() {
-				retryUpload(logs.GetFailedLogMap())
+				retryUpload(logs.GetFailedLogMap(), fileNameToIDMap)
 			}
 			logs.PrintScoreBoard()
 			logs.CloseAll()
@@ -159,11 +158,10 @@ func init() {
 	uploadMultipleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded. If not provided, defaults to Gen3's configured DATA_UPLOAD_BUCKET.")
 	uploadMultipleCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload when possible (file size >= 5MB)")
 	uploadMultipleCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
-	uploadMultipleCmd.Flags().BoolVar(&createRecord, "create-record", true, "Create blank index in indexd")
 	RootCmd.AddCommand(uploadMultipleCmd)
 }
 
-func processSingleUploads(gen3Interface Gen3Interface, singleFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) {
+func processSingleUploads(gen3Interface Gen3Interface, singleFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string, fileNameToIDMap map[string]string) {
 	for _, filePath := range singleFilePaths {
 		file, err := os.Open(filePath)
 		if err != nil {
@@ -172,12 +170,12 @@ func processSingleUploads(gen3Interface Gen3Interface, singleFilePaths []string,
 			continue
 		}
 
-		startSingleFileUpload(gen3Interface, filePath, file, bucketName, includeSubDirName, uploadPath)
+		startSingleFileUpload(gen3Interface, filePath, file, bucketName, includeSubDirName, uploadPath, fileNameToIDMap)
 		file.Close()
 	}
 }
 
-func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *os.File, bucketName string, includeSubDirName bool, uploadPath string) {
+func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *os.File, bucketName string, includeSubDirName bool, uploadPath string, fileNameToIDMap map[string]string) {
 	fi, err := file.Stat()
 	if err != nil {
 		logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
@@ -192,7 +190,7 @@ func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *o
 		return
 	}
 
-	respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata, bucketName)
+	respURL, guid, err := GeneratePresignedURL(gen3Interface, fileInfo.Filename, fileInfo.FileMetadata, bucketName, fileNameToIDMap)
 	if err != nil {
 		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, 0, false, true)
 		log.Println(err.Error())
@@ -218,7 +216,7 @@ func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *o
 	file.Close()
 }
 
-func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string, fileNameToIDMap map[string]string, createRecord bool) {
+func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string, fileNameToIDMap map[string]string) {
 	profileConfig := conf.ParseConfig(profile)
 	if profileConfig.UseShepherd == "true" ||
 		profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
@@ -233,7 +231,7 @@ func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []st
 			log.Println("Process filename error for file: " + err.Error())
 			continue
 		}
-		err = multipartUpload(gen3Interface, fileInfo, 0, bucketName, fileNameToIDMap, createRecord)
+		err = multipartUpload(gen3Interface, fileInfo, 0, bucketName, fileNameToIDMap)
 		if err != nil {
 			log.Println(err.Error())
 		} else {
