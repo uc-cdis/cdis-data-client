@@ -133,7 +133,6 @@ func InitMultipartUpload(g3 Gen3Interface, filename string, bucketName string, f
 	}
 	multipartInitObject := InitRequestObject{Filename: filename, Bucket: bucketName, ObjectID:did}
 	objectBytes, err := json.Marshal(multipartInitObject)
-	log.Println(multipartInitObject)
 
 	if err != nil {
 		return "", "", errors.New("Error has occurred during marshalling data for multipart upload initialization, detailed error message: " + err.Error())
