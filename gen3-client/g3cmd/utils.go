@@ -39,7 +39,7 @@ type ManifestObject struct {
 type InitRequestObject struct {
 	Filename string `json:"file_name"`
 	Bucket 	 string `json:"bucket,omitempty"`
-	ObjectID string `json:"did,omitempty"`
+	ObjectID string `json:"guid,omitempty"`
 }
 
 // ShepherdInitRequestObject represents the payload that sends to Shepherd for getting a singlepart upload presignedURL or init a multipart upload for new object file
@@ -126,12 +126,12 @@ const maxWaitTime = 300
 
 // InitMultipartUpload helps sending requests to FENCE to init a multipart upload
 func InitMultipartUpload(g3 Gen3Interface, filename string, bucketName string, fileNameToIDMap map[string]string) (string, string, error) {
-	var did string
+	var guid string
 
 	if fileNameToIDMap != nil{
-		did = fileNameToIDMap[filename]
+		guid = fileNameToIDMap[filename]
 	}
-	multipartInitObject := InitRequestObject{Filename: filename, Bucket: bucketName, ObjectID:did}
+	multipartInitObject := InitRequestObject{Filename: filename, Bucket: bucketName, ObjectID:guid}
 	objectBytes, err := json.Marshal(multipartInitObject)
 
 	if err != nil {

@@ -272,7 +272,7 @@ func TestGeneratePresignedURL_with_fileNameToIDMap(t *testing.T) {
 	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
 	mockPresignedURL := "https://example.com/example.pfb"
 	mockGUID := "000000-0000000-0000000-000000"
-	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v","bucket":"%v","did":"%v"}`, testFilename, testBucketname, mockGUID))
+	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v","bucket":"%v","guid":"%v"}`, testFilename, testBucketname, mockGUID))
 	mockUploadURLResponse := jwt.JsonMessage{
 		URL:  mockPresignedURL,
 		GUID: mockGUID,
