@@ -122,6 +122,10 @@ func init() {
 					}
 					if len(batchFURObjects) < workers {
 						furObject := commonUtils.FileUploadRequestObject{FilePath: fileInfo.FilePath, Filename: fileInfo.Filename, FileMetadata: fileInfo.FileMetadata, GUID: ""}
+						// If objectID/GUID is found in the map, assign it to the furObject
+						if objectID, ok := fileNameToIDMap[fileInfo.Filename]; ok {
+							furObject.GUID = objectID
+						}
 						batchFURObjects = append(batchFURObjects, furObject) //nolint:ineffassign
 					} else {
 						batchUpload(gen3Interface, batchFURObjects, workers, respCh, errCh, bucketName, fileNameToIDMap)
