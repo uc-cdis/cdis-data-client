@@ -295,6 +295,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 
 	if fileNameToIDMap != nil {
 		log.Println("Filename to ID map found. Attempting to upload to existing Indexd records using Fence...")
+		log.Printf("%+v\n", fileNameToIDMap)
 		guid = fileNameToIDMap[filename]
 	} else if err != nil {
 		log.Println("Error occurred when checking for Shepherd API: " + err.Error())

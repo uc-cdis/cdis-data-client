@@ -23,6 +23,7 @@ func init() {
 	var numParallel int
 	var forceMultipart bool
 	var includeSubDirName bool
+	var createBlank bool
 
 	var uploadMultipleCmd = &cobra.Command{
 		Use:     "upload-multiple",
@@ -81,26 +82,32 @@ func init() {
 
 			filePaths := make([]string, 0)
 			fileNameToIDMap := make(map[string]string)
+
 			for _, object := range objects {
 				var filePath string
 				var err error
-				if object.Filename != "" && object.ObjectID != "" {
+				if createBlank == false {
+					if object.Filename == "" {
+						log.Println("Filename not provided in manifest.")
+						return
+					} else if object.ObjectID == "" {
+						log.Println("ObjectID not provided in manifest.")
+						return
+					}
 					var fileName string
 					// Case where guid already exists in indexd and ObjectID is given to associate guid to filename
-					if object.Filename != "" {
-						fileName = object.Filename
-					} else {
-						fileName = object.ObjectID
-					}
+					fileName = object.Filename
 					filePath, err = getFullFilePath(uploadPath, fileName)
 					// Associating filenam to object_id
 					fileNameToIDMap[fileName] = object.ObjectID
-				} else if object.Filename != "" && object.ObjectID == "" {
-					// conform to fence naming convention
-					filePath, err = getFullFilePath(uploadPath, object.Filename)
-				} else if object.Filename == "" && object.ObjectID != "" {
-					// Otherwise, here we are assuming the local filename will be the same as GUID
-					filePath, err = getFullFilePath(uploadPath, object.ObjectID)
+				} else {
+					if object.Filename != "" {
+						// conform to fence naming convention
+						filePath, err = getFullFilePath(uploadPath, object.Filename)
+					} else if object.ObjectID != "" {
+						// Otherwise, here we are assuming the local filename will be the same as GUID
+						filePath, err = getFullFilePath(uploadPath, object.ObjectID)
+					}
 				}
 				if err != nil {
 					log.Println(err.Error())
@@ -162,6 +169,7 @@ func init() {
 	uploadMultipleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded. If not provided, defaults to Gen3's configured DATA_UPLOAD_BUCKET.")
 	uploadMultipleCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload when possible (file size >= 5MB)")
 	uploadMultipleCmd.Flags().BoolVar(&includeSubDirName, "include-subdirname", false, "Include subdirectory names in file name")
+	uploadMultipleCmd.Flags().BoolVar(&createBlank, "create-blank-record", true, "Create blank index record in IndexD")
 	RootCmd.AddCommand(uploadMultipleCmd)
 }
 
