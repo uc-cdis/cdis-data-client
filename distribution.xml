@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Gen3 Client</title>
+    <background file="gen3_scaled.png" alignment="bottomleft" mime-type="image/png" scaling="proportional" />
+    <background-darkAqua file="gen3_scaled_darkmode.png" alignment="bottomleft" mime-type="image/png" scaling="proportional" />
+    <welcome file="Welcome.html" mime-type="text/html"/>
+    <conclusion file="Conclusion.html" mime-type="text/html"/>
+
+    <pkg-ref id="org.uc-cdis.gen3-client"/>
+    <options customize="never" require-scripts="false" hostArchitectures="x86_64,arm64"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="org.uc-cdis.gen3-client"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="org.uc-cdis.gen3-client" visible="false">
+        <pkg-ref id="org.uc-cdis.gen3-client"/>
+    </choice>
+    <pkg-ref id="org.uc-cdis.gen3-client" version="1.0.0" onConclusion="none">installer.pkg</pkg-ref>
+</installer-gui-script>
