@@ -16,7 +16,8 @@ jobs:
           go-version: '1.17'
 
       - name: Run Setup Script
-        run: ./.github/scripts/before_install.sh
+        run: |
+          bash ./.github/scripts/before_install.sh
         env:
           TRAVIS_BRANCH: ${{ github.ref_name }}
           ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
