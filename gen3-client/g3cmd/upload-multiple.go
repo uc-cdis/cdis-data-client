@@ -86,7 +86,7 @@ func init() {
 			for _, object := range objects {
 				var filePath string
 				var err error
-				if createBlank == false {
+				if !createBlank {
 					if object.Filename == "" {
 						log.Println("Filename not provided in manifest.")
 						return
@@ -94,9 +94,8 @@ func init() {
 						log.Println("ObjectID not provided in manifest.")
 						return
 					}
-					var fileName string
 					// Case where guid already exists in indexd and ObjectID is given to associate guid to filename
-					fileName = object.Filename
+					var fileName = object.Filename
 					filePath, err = getFullFilePath(uploadPath, fileName)
 					// Associating filenam to object_id
 					fileNameToIDMap[fileName] = object.ObjectID
