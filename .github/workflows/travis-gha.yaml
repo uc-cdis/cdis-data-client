@@ -185,39 +185,6 @@ jobs:
         with:
           name: build-artifact-windows
 
-      - name: Checkout Code For gen3git to find repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install gen3 release helper
-        run: pip install --user --editable git+https://github.com/uc-cdis/release-helper.git@master#egg=gen3git
-
-      - name: Add bin to PATH
-        run: echo "export PATH=\"`python -m site --user-base`/bin:\$PATH\"" >> ~/.bash_profile
-
-      - name: Generate Release Notes
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            GH_TAG: ${{ github.ref_name }}
-        run: |
-          raw=$(git branch -r --contains ${{ github.ref }})
-          branch="$(echo ${raw//origin\//} | tr -d '\n')"
-          echo $branch
-          echo $raw
-          git checkout $branch
-          # gen3git --github-access-token $GH_TOKEN --from-tag $GH_TAG gen --markdown
-          ls
-          gen3git gen --markdown --file-name release_notes
-
-      - name: Find Release Notes
-        run: |
-          ls
-          cd src
-          ls
-          cd gen3git
-          ls
-
       - name: Create Release gh cli
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
