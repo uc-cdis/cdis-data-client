@@ -1,8 +1,5 @@
 name: "Travis GHA Integration for push"
-on:
-  push:
-    branches:
-      - chore/travis-gha
+on: push
 
 
 jobs:
@@ -167,11 +164,34 @@ jobs:
 
 
 
+  get_tagged_branch:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: [build,sign]
+    outputs:
+      branch: ${{ steps.check_step.outputs.branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get current branch
+        id: check_step
+        # 1. Get the list of branches ref where this tag exists
+        # 2. Remove 'origin/' from that result
+        # 3. Put that string in output
+        # => We can now use function 'contains(list, item)''
+        run: |
+          raw=$(git branch -r --contains ${{ github.ref }})
+          branch="$(echo ${raw//origin\//} | tr -d '\n')"
+          echo "{name}=branch" >> $GITHUB_OUTPUT
+          echo "Branches where this tag exists : $branch."
 
 
   deploy:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: [build,sign]
+    needs: get_tagged_branch
+    if: startsWith(github.ref, 'refs/tags/') && contains(${{ needs.get_tagged_branch.outputs.branch }}, 'chore/travis-gha')
     runs-on: ubuntu-latest
     steps:
       - name: Download Linux Artifact
