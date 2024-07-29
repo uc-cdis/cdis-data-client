@@ -1,5 +1,9 @@
 name: "Travis GHA Integration for push"
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - travis-gha
+
 
 jobs:
 
