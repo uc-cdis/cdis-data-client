@@ -9,4 +9,4 @@ printf "package g3cmd\n\nconst (" >gen3-client/g3cmd/gitversion.go \
     && VERSION=`git describe --always --tags` && echo "    gitversion=\"${VERSION}\"" >>gen3-client/g3cmd/gitversion.go \
     && echo ")" >>gen3-client/g3cmd/gitversion.go
 mkdir -p ~/shared
-aws s3 sync s3://cdis-dc-builds/$TRAVIS_BRANCH ~/shared
+aws s3 sync s3://cdis-dc-builds/$GITHUB_BRANCH ~/shared
