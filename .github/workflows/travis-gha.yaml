@@ -2,7 +2,7 @@ name: "Travis GHA Integration for push"
 on:
   push:
     branches:
-      - travis-gha
+      - chore/travis-gha
 
 
 jobs:
