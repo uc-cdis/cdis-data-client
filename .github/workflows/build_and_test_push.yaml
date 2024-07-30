@@ -1,4 +1,4 @@
-name: "Travis GHA Integration for push"
+name: "Test, build, sync to AWS, and create release (on tagged push)"
 on: push
 
 

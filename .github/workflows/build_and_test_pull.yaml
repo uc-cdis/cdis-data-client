@@ -1,4 +1,4 @@
-name: "Travis GHA Integration for pull request"
+name: "Test and build binary for pull request"
 on:
     pull_request:
         branches:
