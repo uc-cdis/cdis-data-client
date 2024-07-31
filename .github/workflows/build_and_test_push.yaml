@@ -1,0 +1,244 @@
+name: "Test, build, sync to AWS, and create release (on tagged push)"
+on: push
+
+
+jobs:
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go 1.17
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.17'
+
+      - name: Run Setup Script
+        run: |
+          bash ./.github/scripts/before_install.sh
+        env:
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+          SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+
+      - name: Run Tests
+        run: go test -v github.com/uc-cdis/gen3-client/tests
+
+  build:
+    env:
+      goarch: amd64
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            zipfile: dataclient_linux.zip
+          - goos: darwin
+            goarch: amd64
+            zipfile: dataclient_osx.zip
+          - goos: windows
+            goarch: amd64
+            zipfile: dataclient_win64.zip
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go 1.17
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.17'
+
+      - name: Run Setup Script
+        run: |
+          bash .github/scripts/before_install.sh
+        env:
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+          SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+
+
+      - name: Run Build Script
+        run: |
+          bash .github/scripts/build.sh
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ env.goarch }}
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          GITHUB_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact-${{ matrix.goos }}
+          path: ~/shared/${{ matrix.zipfile }}
+          retention-days: 3
+
+
+  sign:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Download OSX Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact-darwin
+          path: ./dist
+      - name: Unzip OSX Artifact and remove zip file
+        run: |
+          cd ./dist
+          ls
+          unzip dataclient_osx.zip
+          rm dataclient_osx.zip
+
+
+
+      - name: Build executable
+        shell: bash
+        env:
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_NOTARY_UUID: ${{ secrets.APPLE_NOTARY_UUID }}
+          APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY}}
+          APPLE_NOTARY_DATA: ${{ secrets.APPLE_NOTARY_DATA }}
+          APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+          APPLICATION_CERT_PASSWORD: ${{ secrets.APPLICATION_CERT_PASSWORD }}
+          APPLICATION_CERT_DATA: ${{ secrets.APPLICATION_CERT_DATA }}
+          APPLE_TEAM_ID: WYQ7U7YUC9
+
+        run: |
+          # Setup
+          SIGNFILE="$(pwd)/dist/gen3-client"
+
+          # Export certs
+          echo "$APPLE_CERT_DATA" | base64 --decode > /tmp/certs.p12
+          echo "$APPLE_NOTARY_DATA" | base64 --decode > /tmp/notary.p8
+          echo "$APPLICATION_CERT_DATA" | base64 --decode > /tmp/app_certs.p12
+
+          # Create keychain
+          security create-keychain -p actions macos-build.keychain
+          security default-keychain -s macos-build.keychain
+          security unlock-keychain -p actions macos-build.keychain
+          security set-keychain-settings -t 3600 -u macos-build.keychain
+
+          # Import certs to keychain
+          security import /tmp/certs.p12 -k ~/Library/Keychains/macos-build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+          security import /tmp/app_certs.p12 -k ~/Library/Keychains/macos-build.keychain -P "$APPLICATION_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+
+          # Key signing
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions macos-build.keychain
+
+          # Verify keychain things
+          security find-identity -v macos-build.keychain | grep "$APPLE_TEAM_ID" | grep "Developer ID Application"
+          security find-identity -v macos-build.keychain | grep "$APPLE_TEAM_ID" | grep "Developer ID Installer"
+
+          # Force the codesignature
+          codesign --force --options=runtime --keychain "/Users/runner/Library/Keychains/macos-build.keychain-db" -s "$APPLE_TEAM_ID" "$SIGNFILE"
+
+          # Verify the code signature
+          codesign -v "$SIGNFILE" --verbose
+
+          mkdir -p ./dist/pkg
+          cp ./dist/gen3-client ./dist/pkg/gen3-client
+          pkgbuild --identifier "org.uc-cdis.gen3-client.pkg" --timestamp --install-location /Applications --root ./dist/pkg installer.pkg
+          pwd
+          ls
+          productbuild --resources ./resources --distribution ./distribution.xml gen3-client.pkg
+          productsign --sign "$APPLE_TEAM_ID" --timestamp gen3-client.pkg gen3-client_signed.pkg
+
+          xcrun notarytool store-credentials "notarytool-profile" --issuer $APPLE_NOTARY_UUID --key-id $APPLE_NOTARY_KEY --key /tmp/notary.p8
+          xcrun notarytool submit gen3-client_signed.pkg --keychain-profile "notarytool-profile" --wait
+          xcrun stapler staple gen3-client_signed.pkg
+          mv gen3-client_signed.pkg dataclient_osx.pkg
+
+      - name: Upload signed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact-darwin-signed
+          path: dataclient_osx.pkg
+
+  sync_signed_to_aws:
+    runs-on: ubuntu-latest
+    needs: sign
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Run Setup Script
+        run: |
+          bash ./.github/scripts/before_install.sh
+        env:
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+          SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+
+      - name: Download OSX Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact-darwin-signed
+
+      - name: Sync to AWS
+        env:
+          GITHUB_BRANCH: ${{ github.ref_name }}
+        run: |
+          rm ~/shared/dataclient_osx.zip
+          zip dataclient_osx_signed.zip dataclient_osx.pkg
+          mv dataclient_osx_signed.zip ~/shared/
+          aws s3 sync ~/shared s3://cdis-dc-builds/$GITHUB_BRANCH
+
+
+  get_tagged_branch:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: [build,sign]
+    outputs:
+      branch: ${{ steps.check_step.outputs.branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get current branch
+        id: check_step
+        # 1. Get the list of branches ref where this tag exists
+        # 2. Remove 'origin/' from that result
+        # 3. Put that string in output
+        # => We can now use function 'contains(list, item)''
+        run: |
+          raw=$(git branch -r --contains ${{ github.ref }})
+          branch="$(echo ${raw//origin\//} | tr -d '\n')"
+          echo "{name}=branch" >> $GITHUB_OUTPUT
+          echo "Branches where this tag exists : $branch."
+
+
+  deploy:
+    needs: get_tagged_branch
+    if: startsWith(github.ref, 'refs/tags/') && contains(${{ needs.get_tagged_branch.outputs.branch }}, 'master')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact-linux
+
+      - name: Download OSX Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact-darwin-signed
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact-windows
+
+      - name: Create Release gh cli
+        env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GH_TAG: ${{ github.ref_name }}
+        run: gh release create "$GH_TAG"  dataclient_linux.zip dataclient_osx.pkg dataclient_win64.zip --repo="$GITHUB_REPOSITORY"
