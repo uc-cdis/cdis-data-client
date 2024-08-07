@@ -170,7 +170,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 		Return(mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, commonUtils.FileMetadata{}, testBucketname)
+	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, commonUtils.FileMetadata{}, testBucketname, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -240,7 +240,52 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 		Return("", &mockUploadURLResponse, nil)
 	// ----------
 
-	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, testMetadata, testBucketname)
+	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, testMetadata, testBucketname, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	if url != mockPresignedURL {
+		t.Errorf("Wanted the presignedURL to be set to %v, got %v", mockPresignedURL, url)
+	}
+	if guid != mockGUID {
+		t.Errorf("Wanted generated GUID to be %v, got %v", mockGUID, guid)
+	}
+}
+
+func TestGeneratePresignedURL_with_fileNameToIDMap(t *testing.T) {
+	// -- SETUP --
+	testProfileConfig := &jwt.Credential{
+		Profile: "test-profile",
+	}
+	testFilename := "test-file"
+	testBucketname := "test-bucket"
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// Mock the request that checks if Shepherd is deployed.
+	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
+	mockGen3Interface.
+		EXPECT().
+		CheckForShepherdAPI(gomock.AssignableToTypeOf(testProfileConfig)).
+		Return(false, nil)
+
+	// Mock the request to Fence's data upload endpoint to create a presigned url for this file name.
+	mockPresignedURL := "https://example.com/example.pfb"
+	mockGUID := "000000-0000000-0000000-000000"
+	expectedReqBody := []byte(fmt.Sprintf(`{"file_name":"%v","bucket":"%v","guid":"%v"}`, testFilename, testBucketname, mockGUID))
+	mockUploadURLResponse := jwt.JsonMessage{
+		URL:  mockPresignedURL,
+		GUID: mockGUID,
+	}
+	fileNameToIDMap := map[string]string{
+		testFilename: mockGUID,
+	}
+	mockGen3Interface.
+		EXPECT().
+		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), commonUtils.FenceDataUploadEndpoint, "application/json", expectedReqBody).
+		Return(mockUploadURLResponse, nil)
+	// ----------
+	url, guid, err := g3cmd.GeneratePresignedURL(mockGen3Interface, testFilename, commonUtils.FileMetadata{}, testBucketname, fileNameToIDMap)
 	if err != nil {
 		t.Error(err)
 	}
