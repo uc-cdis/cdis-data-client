@@ -1,0 +1,72 @@
+name: "Test and build binary for pull request"
+on:
+    pull_request:
+        branches:
+            - master
+jobs:
+    test:
+        name: test
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout Code
+            uses: actions/checkout@v4
+
+          - name: Setup Go 1.17
+            uses: actions/setup-go@v4
+            with:
+              go-version: '1.17'
+
+          - name: Run Setup Script
+            run: |
+              bash ./.github/scripts/before_install.sh
+            env:
+              GITHUB_BRANCH: ${{ github.ref_name }}
+              ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+              SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+
+          - name: Run Tests
+            run: go test -v github.com/uc-cdis/gen3-client/tests
+
+    build:
+        env:
+          goarch: amd64
+        needs: test
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            include:
+              - goos: linux
+                goarch: amd64
+                zipfile: dataclient_linux.zip
+              - goos: darwin
+                goarch: amd64
+                zipfile: dataclient_osx.zip
+              - goos: windows
+                goarch: amd64
+                zipfile: dataclient_win64.zip
+        steps:
+          - name: Checkout Code
+            uses: actions/checkout@v4
+
+          - name: Setup Go 1.17
+            uses: actions/setup-go@v4
+            with:
+              go-version: '1.17'
+
+          - name: Run Setup Script
+            run: |
+              bash .github/scripts/before_install.sh
+            env:
+              GITHUB_BRANCH: ${{ github.ref_name }}
+              ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+              SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+
+
+          - name: Run Build Script
+            run: |
+              bash .github/scripts/build.sh
+            env:
+              GOOS: ${{ matrix.goos }}
+              GOARCH: ${{ env.goarch }}
+              GITHUB_BRANCH: ${{ github.ref_name }}
+              GITHUB_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
