@@ -448,7 +448,7 @@ func separateSingleAndMultipartUploads(filePaths []string, forceMultipart bool) 
 			}
 
 			if logs.ExistsInSucceededLog(filePath) {
-				log.Println("File \"" + filePath + "\" has been found in local submission history and has been skipped for preventing duplicated submissions.")
+				log.Println("File \"" + filePath + "\" has been found in local submission history and has been skipped to prevent duplicated submissions.")
 				return
 			}
 			logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
