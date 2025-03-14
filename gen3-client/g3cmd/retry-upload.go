@@ -64,7 +64,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 	retryObjCh := make(chan commonUtils.RetryObject, len(failedLogMap))
 	for _, v := range failedLogMap {
 		if logs.ExistsInSucceededLog(v.FilePath) {
-			log.Println("File \"" + v.FilePath + "\" has been found in local submission history and has been skipped for preventing duplicated submissions.")
+			log.Println("File \"" + v.FilePath + "\" has been found in local submission history and has been skipped to prevent duplicated submissions.")
 			continue
 		}
 		retryObjCh <- v
