@@ -41,7 +41,7 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 	// log something to log file called transfer.log
 	f, err := os.OpenFile("transfer.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("error opening log file: %w", err)
 	}
 	defer f.Close()
 	log.SetOutput(f)
