@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -178,7 +178,7 @@ func (f *Functions) CheckForShepherdAPI(profileConfig *Credential) (bool, error)
 	if res.StatusCode != 200 {
 		return false, nil
 	}
-	bodyBytes, err := ioutil.ReadAll(res.Body)
+	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return false, errors.New("Error occurred when reading HTTP request: " + err.Error())
 	}
@@ -232,7 +232,10 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}
-		f.Config.UpdateConfigFile(*profileConfig)
+		err = f.Config.UpdateConfigFile(profileConfig)
+		if err != nil {
+			return prefixEndPoint, resp, err
+		}
 
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes), false)
 		if err != nil {

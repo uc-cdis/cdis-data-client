@@ -177,9 +177,16 @@ func init() {
 			logs.InitFailedLog(profile)
 			logs.SetToBoth()
 			logs.InitScoreBoard(MaxRetryCount)
-			profileConfig = conf.ParseConfig(profile)
+			_, err := conf.ParseConfig(profile)
+			if err != nil {
+				log.Println(err.Error())
+			}
 
-			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
+			failedLogPath, err = commonUtils.ParseRootPath(failedLogPath)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
 			logs.LoadFailedLogFile(failedLogPath)
 			retryUpload(logs.GetFailedLogMap())
 			logs.PrintScoreBoard()

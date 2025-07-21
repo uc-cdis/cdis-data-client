@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -158,9 +157,9 @@ func processOriginalFilename(downloadPath string, actualFilename string) string 
 	}
 }
 
-func validateFilenameFormat(downloadPath string, filenameFormat string, rename bool, noPrompt bool) {
+func validateFilenameFormat(downloadPath string, filenameFormat string, rename bool, noPrompt bool) error{
 	if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
-		log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
+		return fmt.Errorf("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
 	}
 	if filenameFormat == "guid" || filenameFormat == "combined" {
 		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" will be overwritten\n", downloadPath)
@@ -177,6 +176,7 @@ func validateFilenameFormat(downloadPath string, filenameFormat string, rename b
 	} else {
 		fmt.Printf("NOTICE: flag \"rename\" was set to true in \"original\" mode, duplicated files under \"%s\" will be renamed by appending a counter value to the original filenames\n", downloadPath)
 	}
+	return nil
 }
 
 func validateLocalFileStat(downloadPath string, filename string, filesize int64, skipCompleted bool) commonUtils.FileDownloadResponseObject {
@@ -284,12 +284,15 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	return succeeded
 }
 
-func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) {
+func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) error {
 	if numParallel < 1 {
-		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
+		return fmt.Errorf("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
 	}
 
-	downloadPath = commonUtils.ParseRootPath(downloadPath)
+	downloadPath, err := commonUtils.ParseRootPath(downloadPath)
+	if err != nil {
+		return fmt.Errorf("downloadFile Error: %s",err.Error())
+	}
 	if !strings.HasSuffix(downloadPath, "/") {
 		downloadPath += "/"
 	}
@@ -305,9 +308,9 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 		protocolText = "?protocol=" + protocol
 	}
 
-	err := os.MkdirAll(downloadPath, 0766)
-	if err != nil {
-		log.Fatalln("Cannot create folder \"" + downloadPath + "\"")
+	err = os.MkdirAll(downloadPath, 0766)
+	if err != nil {	
+		return fmt.Errorf("Cannot create folder \"" + downloadPath + "\"")
 	}
 
 	renamedFiles := make([]RenamedOrSkippedFileInfo, 0)
@@ -381,6 +384,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 			log.Println(err.Error())
 		}
 	}
+	return nil
 }
 
 func init() {
@@ -401,7 +405,6 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
-			profileConfig = conf.ParseConfig(profile)
 
 			manifestPath, _ = commonUtils.GetAbsolutePath(manifestPath)
 			manifestFile, err := os.Open(manifestPath)
@@ -420,13 +423,13 @@ func init() {
 
 			manifestFileReader := manifestFileBar.NewProxyReader(manifestFile)
 
-			manifestBytes, err := ioutil.ReadAll(manifestFileReader)
-			manifestFileBar.Finish()
-
+			manifestBytes, err := io.ReadAll(manifestFileReader)
 			if err != nil {
 				log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
-				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer from a data common's portal")
+				return
 			}
+			manifestFileBar.Finish()
+
 			var objects []ManifestObject
 			err = json.Unmarshal(manifestBytes, &objects)
 			if err != nil {

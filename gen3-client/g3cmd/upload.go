@@ -39,10 +39,14 @@ func init() {
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
-			profileConfig = conf.ParseConfig(profile)
+			profileConfig, err := conf.ParseConfig(profile)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
 
 			if hasMetadata {
-				hasShepherd, err := gen3Interface.CheckForShepherdAPI(&profileConfig)
+				hasShepherd, err := gen3Interface.CheckForShepherdAPI(profileConfig)
 				if err != nil {
 					log.Printf("WARNING: Error when checking for Shepherd API: %v", err)
 				} else {

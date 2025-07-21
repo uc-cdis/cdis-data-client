@@ -35,9 +35,9 @@ type ConfigureInterface interface {
 	ReadFile(string, string) string
 	ValidateUrl(string) (*url.URL, error)
 	GetConfigPath() (string, error)
-	UpdateConfigFile(Credential)
+	UpdateConfigFile(*Credential) error
 	ParseKeyValue(str string, expr string) (string, error)
-	ParseConfig(profile string) Credential
+	ParseConfig(profile string) (*Credential, error)
 }
 
 func (conf *Configure) ReadFile(filePath string, fileType string) string {
@@ -77,16 +77,18 @@ func (conf *Configure) ValidateUrl(apiEndpoint string) (*url.URL, error) {
 	return parsedURL, nil
 }
 
-func (conf *Configure) ReadCredentials(filePath string) Credential {
+func (conf *Configure) ReadCredentials(filePath string) (*Credential, error) {
 	var profileConfig Credential
 	jsonContent := conf.ReadFile(filePath, "json")
 	jsonContent = strings.Replace(jsonContent, "key_id", "KeyId", -1)
 	jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
 	err := json.Unmarshal([]byte(jsonContent), &profileConfig)
 	if err != nil {
-		log.Fatalln("Cannot read json file: " + err.Error())
+		errs := fmt.Errorf("Cannot read json file: " + err.Error())
+		log.Println(errs.Error())
+		return nil, errs
 	}
-	return profileConfig
+	return &profileConfig, nil
 }
 
 func (conf *Configure) GetConfigPath() (string, error) {
@@ -128,7 +130,7 @@ func (conf *Configure) InitConfigFile() error {
 	return err
 }
 
-func (conf *Configure) UpdateConfigFile(profileConfig Credential) {
+func (conf *Configure) UpdateConfigFile(profileConfig *Credential) error{
 	/*
 		Overwrite the config file with new credential
 
@@ -138,11 +140,15 @@ func (conf *Configure) UpdateConfigFile(profileConfig Credential) {
 	*/
 	configPath, err := conf.GetConfigPath()
 	if err != nil {
-		log.Fatalln("error occurred when getting config path: " + err.Error())
+		errs := fmt.Errorf("error occurred when getting config path: " + err.Error())
+		log.Println(errs.Error())
+		return errs
 	}
 	cfg, err := ini.Load(configPath)
 	if err != nil {
-		log.Fatalln("error occurred when loading config file: " + err.Error())
+		errs := fmt.Errorf("error occurred when loading config file: " + err.Error())
+		log.Println(errs.Error())
+		return errs
 	}
 	cfg.Section(profileConfig.Profile).Key("key_id").SetValue(profileConfig.KeyId)
 	cfg.Section(profileConfig.Profile).Key("api_key").SetValue(profileConfig.APIKey)
@@ -154,6 +160,7 @@ func (conf *Configure) UpdateConfigFile(profileConfig Credential) {
 	if err != nil {
 		log.Println("error occurred when saving config file: " + err.Error())
 	}
+	return nil
 }
 
 func (conf *Configure) ParseKeyValue(str string, expr string) (string, error) {
@@ -168,7 +175,7 @@ func (conf *Configure) ParseKeyValue(str string, expr string) (string, error) {
 	return match[1], nil
 }
 
-func (conf *Configure) ParseConfig(profile string) Credential {
+func (conf *Configure) ParseConfig(profile string) (*Credential, error) {
 	/*
 		Looking profile in config file. The config file is a text file located at ~/.gen3 directory. It can
 		contain more than 1 profile. If there is no profile found, the user is asked to run a command to
@@ -200,10 +207,12 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 
 	homeDir, err := homedir.Dir()
 	if err != nil {
-		log.Fatalln("Error occurred when getting home directory: " + err.Error())
+		errs := fmt.Errorf("Error occurred when getting home directory: " + err.Error())
+		log.Println(errs.Error())
+		return nil, err
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "gen3_client_config.ini")
-	profileConfig := Credential{
+	profileConfig := &Credential{
 		Profile:     profile,
 		KeyId:       "",
 		APIKey:      "",
@@ -214,38 +223,49 @@ func (conf *Configure) ParseConfig(profile string) Credential {
 		log.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
 			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
-		return profileConfig
+		return nil, fmt.Errorf("No config file found in ~/.gen3/")
 	}
 
 	// If profile not in config file, prompt user to set up config first
 	cfg, err := ini.Load(configPath)
 	if err != nil {
-		log.Fatalln("Error occurred when reading config file: " + err.Error())
+		errs := fmt.Errorf("Error occurred when reading config file: " + err.Error())
+		log.Println(errs)
+		return nil, errs
 	}
 	sec, err := cfg.GetSection(profile)
-
 	if err != nil {
-		log.Fatalln("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
+		errs := fmt.Errorf("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
+		fmt.Println(errs.Error())
+		return nil, err
 	}
 	// Read in API key, key ID and endpoint for given profile
 	profileConfig.KeyId = sec.Key("key_id").String()
 	if profileConfig.KeyId == "" {
-		log.Fatalln("key_id not found in profile.")
+		errs := fmt.Errorf("key_id not found in profile.")
+		log.Println(errs)
+		return nil, errs
 	}
 	profileConfig.APIKey = sec.Key("api_key").String()
 	if profileConfig.APIKey == "" {
-		log.Fatalln("api_key not found in profile.")
+		errs := fmt.Errorf("api_key not found in profile.")
+		log.Println(errs)
+		return nil, errs
 	}
 	profileConfig.AccessToken = sec.Key("access_token").String()
 	if profileConfig.AccessToken == "" {
-		log.Fatalln("access_token not found in profile.")
+		errs := fmt.Errorf("access_token not found in profile.")
+		log.Println(errs)
+		return nil, errs
 	}
 	profileConfig.APIEndpoint = sec.Key("api_endpoint").String()
 	if profileConfig.APIEndpoint == "" {
-		log.Fatalln("api_endpoint not found in profile.")
+		errs := fmt.Errorf("api_endpoint not found in profile.")
+		log.Println(errs)
+		return nil, errs
 	}
 	// UseShepherd and MinShepherdVersion are optional
 	profileConfig.UseShepherd = sec.Key("use_shepherd").String()
 	profileConfig.MinShepherdVersion = sec.Key("min_shepherd_version").String()
-	return profileConfig
+	return profileConfig, nil
 }

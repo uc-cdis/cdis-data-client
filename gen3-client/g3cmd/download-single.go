@@ -24,14 +24,17 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
-			profileConfig = conf.ParseConfig(profile)
+			_, err := conf.ParseConfig(profile)
+			if err != nil {
+				log.Println(err.Error())
+			}
 
 			obj := ManifestObject{
 				ObjectID: guid,
 			}
 			objects := []ManifestObject{obj}
 			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
-			err := logs.CloseMessageLog()
+			err = logs.CloseMessageLog()
 			if err != nil {
 				log.Println(err.Error())
 			}

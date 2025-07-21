@@ -20,9 +20,12 @@ func init() {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
 			gen3Interface := NewGen3Interface()
-			profileConfig = conf.ParseConfig(profile)
+			profileConfig, err := conf.ParseConfig(profile)
+			if err != nil {
+				log.Fatalf("Fatal config parse error: %s\n", err)
+			}
 
-			host, resourceAccess, err := gen3Interface.CheckPrivileges(&profileConfig)
+			host, resourceAccess, err := gen3Interface.CheckPrivileges(profileConfig)
 
 			if err != nil {
 				log.Fatalf("Fatal authentication error: %s\n", err)

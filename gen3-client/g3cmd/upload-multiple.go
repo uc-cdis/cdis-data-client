@@ -34,9 +34,12 @@ func init() {
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
-			profileConfig = conf.ParseConfig(profile)
+			profileConfig, err := conf.ParseConfig(profile)
+			if err != nil {
+				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
+			}
 
-			host, err := gen3Interface.GetHost(&profileConfig)
+			host, err := gen3Interface.GetHost(profileConfig)
 			if err != nil {
 				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
 			}
@@ -205,11 +208,14 @@ func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *o
 	file.Close()
 }
 
-func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) {
-	profileConfig := conf.ParseConfig(profile)
+func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) error {
+	profileConfig, err := conf.ParseConfig(profile)
+	if err != nil {
+		return err
+	}
 	if profileConfig.UseShepherd == "true" ||
 		profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
-		log.Fatalf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ gen3-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
+		return fmt.Errorf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ gen3-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
 	}
 	log.Println("Multipart uploading....")
 
@@ -227,4 +233,5 @@ func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []st
 			logs.IncrementScore(0)
 		}
 	}
+	return nil
 }
