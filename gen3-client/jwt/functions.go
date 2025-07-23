@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -207,7 +207,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 	var err error
 
 	if profileConfig.APIKey == "" && profileConfig.AccessToken == "" && profileConfig.APIEndpoint == "" {
-		return "", resp, errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
+		return "", resp, errors.New(fmt.Sprintf("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first %s", profileConfig))
 	}
 	host, _ := url.Parse(profileConfig.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
@@ -232,7 +232,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}
-		err = f.Config.UpdateConfigFile(profileConfig)
+		err = f.Config.UpdateConfigFile(*profileConfig)
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}
@@ -254,7 +254,7 @@ func (f *Functions) GetHost(profileConfig *Credential) (*url.URL, error) {
 	return host, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
+func (f *Functions) DoRequestWithSignedHeader(profileConfig Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
 	/*
 	   Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
@@ -266,7 +266,7 @@ func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, endpoin
 		method = "POST"
 	}
 
-	_, resp, err := f.GetResponse(profileConfig, endpointPostPrefix, method, contentType, bodyBytes)
+	_, resp, err := f.GetResponse(&profileConfig, endpointPostPrefix, method, contentType, bodyBytes)
 	if err != nil {
 		return msg, err
 	}

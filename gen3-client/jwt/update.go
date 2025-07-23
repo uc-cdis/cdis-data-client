@@ -55,7 +55,7 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	profileConfig.MinShepherdVersion = minShepherdVersion
 
 	// Store user info in ~/.gen3/gen3_client_config.ini
-	conf.UpdateConfigFile(profileConfig)
+	conf.UpdateConfigFile(*profileConfig)
 	log.Println(`Profile '` + profile + `' has been configured successfully.`)
 	err = logs.CloseMessageLog()
 	if err != nil {

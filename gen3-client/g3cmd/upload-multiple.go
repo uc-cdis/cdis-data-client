@@ -34,12 +34,13 @@ func init() {
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
-			profileConfig, err := conf.ParseConfig(profile)
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
 			if err != nil {
 				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
 			}
 
-			host, err := gen3Interface.GetHost(profileConfig)
+			host, err := gen3Interface.GetHost(&profileConfig)
 			if err != nil {
 				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
 			}
@@ -209,7 +210,8 @@ func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *o
 }
 
 func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) error {
-	profileConfig, err := conf.ParseConfig(profile)
+	var err error
+	profileConfig, err = conf.ParseConfig(profile)
 	if err != nil {
 		return err
 	}

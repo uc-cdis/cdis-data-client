@@ -68,7 +68,7 @@ func AskGen3ForFileInfo(gen3Interface Gen3Interface, guid string, protocol strin
 	} else {
 		// Attempt to get the filename from Indexd
 		endPointPostfix := commonUtils.IndexdIndexEndpoint + "/" + guid
-		indexdMsg, err := gen3Interface.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
+		indexdMsg, err := gen3Interface.DoRequestWithSignedHeader(profileConfig, endPointPostfix, "", nil)
 		if err != nil {
 			log.Println("Error occurred when querying filename from IndexD: " + err.Error())
 			log.Println("Using GUID for filename instead.")
@@ -157,7 +157,7 @@ func processOriginalFilename(downloadPath string, actualFilename string) string 
 	}
 }
 
-func validateFilenameFormat(downloadPath string, filenameFormat string, rename bool, noPrompt bool) error{
+func validateFilenameFormat(downloadPath string, filenameFormat string, rename bool, noPrompt bool) error {
 	if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
 		return fmt.Errorf("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
 	}
@@ -291,7 +291,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 
 	downloadPath, err := commonUtils.ParseRootPath(downloadPath)
 	if err != nil {
-		return fmt.Errorf("downloadFile Error: %s",err.Error())
+		return fmt.Errorf("downloadFile Error: %s", err.Error())
 	}
 	if !strings.HasSuffix(downloadPath, "/") {
 		downloadPath += "/"
@@ -309,7 +309,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 	}
 
 	err = os.MkdirAll(downloadPath, 0766)
-	if err != nil {	
+	if err != nil {
 		return fmt.Errorf("Cannot create folder \"" + downloadPath + "\"")
 	}
 
@@ -405,6 +405,11 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
+			if err != nil {
+				log.Fatalf("Failed to parse config on profile %s, %v", profile, err)
+			}
 
 			manifestPath, _ = commonUtils.GetAbsolutePath(manifestPath)
 			manifestFile, err := os.Open(manifestPath)

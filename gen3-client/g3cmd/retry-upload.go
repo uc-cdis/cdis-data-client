@@ -177,7 +177,8 @@ func init() {
 			logs.InitFailedLog(profile)
 			logs.SetToBoth()
 			logs.InitScoreBoard(MaxRetryCount)
-			_, err := conf.ParseConfig(profile)
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
 			if err != nil {
 				log.Println(err.Error())
 			}

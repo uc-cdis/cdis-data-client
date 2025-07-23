@@ -57,7 +57,7 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 
 	// Instantiate interface to Gen3
 	gen3Interface := NewGen3Interface()
-	_, err = conf.ParseConfig(profile)
+	profileConfig, err = conf.ParseConfig(profile)
 	if err != nil {
 		return err
 	}

@@ -35,9 +35,9 @@ type ConfigureInterface interface {
 	ReadFile(string, string) string
 	ValidateUrl(string) (*url.URL, error)
 	GetConfigPath() (string, error)
-	UpdateConfigFile(*Credential) error
+	UpdateConfigFile(Credential) error
 	ParseKeyValue(str string, expr string) (string, error)
-	ParseConfig(profile string) (*Credential, error)
+	ParseConfig(profile string) (Credential, error)
 }
 
 func (conf *Configure) ReadFile(filePath string, fileType string) string {
@@ -130,7 +130,7 @@ func (conf *Configure) InitConfigFile() error {
 	return err
 }
 
-func (conf *Configure) UpdateConfigFile(profileConfig *Credential) error{
+func (conf *Configure) UpdateConfigFile(profileConfig Credential) error {
 	/*
 		Overwrite the config file with new credential
 
@@ -175,7 +175,7 @@ func (conf *Configure) ParseKeyValue(str string, expr string) (string, error) {
 	return match[1], nil
 }
 
-func (conf *Configure) ParseConfig(profile string) (*Credential, error) {
+func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 	/*
 		Looking profile in config file. The config file is a text file located at ~/.gen3 directory. It can
 		contain more than 1 profile. If there is no profile found, the user is asked to run a command to
@@ -209,10 +209,10 @@ func (conf *Configure) ParseConfig(profile string) (*Credential, error) {
 	if err != nil {
 		errs := fmt.Errorf("Error occurred when getting home directory: " + err.Error())
 		log.Println(errs.Error())
-		return nil, err
+		return Credential{}, err
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "gen3_client_config.ini")
-	profileConfig := &Credential{
+	profileConfig := Credential{
 		Profile:     profile,
 		KeyId:       "",
 		APIKey:      "",
@@ -223,7 +223,7 @@ func (conf *Configure) ParseConfig(profile string) (*Credential, error) {
 		log.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
 			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
-		return nil, fmt.Errorf("No config file found in ~/.gen3/")
+		return Credential{}, fmt.Errorf("No config file found in ~/.gen3/")
 	}
 
 	// If profile not in config file, prompt user to set up config first
@@ -231,38 +231,38 @@ func (conf *Configure) ParseConfig(profile string) (*Credential, error) {
 	if err != nil {
 		errs := fmt.Errorf("Error occurred when reading config file: " + err.Error())
 		log.Println(errs)
-		return nil, errs
+		return Credential{}, errs
 	}
 	sec, err := cfg.GetSection(profile)
 	if err != nil {
 		errs := fmt.Errorf("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 		fmt.Println(errs.Error())
-		return nil, err
+		return Credential{}, err
 	}
 	// Read in API key, key ID and endpoint for given profile
 	profileConfig.KeyId = sec.Key("key_id").String()
 	if profileConfig.KeyId == "" {
 		errs := fmt.Errorf("key_id not found in profile.")
 		log.Println(errs)
-		return nil, errs
+		return Credential{}, errs
 	}
 	profileConfig.APIKey = sec.Key("api_key").String()
 	if profileConfig.APIKey == "" {
 		errs := fmt.Errorf("api_key not found in profile.")
 		log.Println(errs)
-		return nil, errs
+		return Credential{}, errs
 	}
 	profileConfig.AccessToken = sec.Key("access_token").String()
 	if profileConfig.AccessToken == "" {
 		errs := fmt.Errorf("access_token not found in profile.")
 		log.Println(errs)
-		return nil, errs
+		return Credential{}, errs
 	}
 	profileConfig.APIEndpoint = sec.Key("api_endpoint").String()
 	if profileConfig.APIEndpoint == "" {
 		errs := fmt.Errorf("api_endpoint not found in profile.")
 		log.Println(errs)
-		return nil, errs
+		return Credential{}, errs
 	}
 	// UseShepherd and MinShepherdVersion are optional
 	profileConfig.UseShepherd = sec.Key("use_shepherd").String()

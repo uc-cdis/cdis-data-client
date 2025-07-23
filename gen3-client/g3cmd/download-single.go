@@ -24,7 +24,8 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
-			_, err := conf.ParseConfig(profile)
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
 			if err != nil {
 				log.Println(err.Error())
 			}

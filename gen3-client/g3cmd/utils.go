@@ -131,7 +131,7 @@ func InitMultipartUpload(g3 Gen3Interface, filename string, bucketName string) (
 		return "", "", errors.New("Error has occurred during marshalling data for multipart upload initialization, detailed error message: " + err.Error())
 	}
 
-	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartInitEndpoint, "application/json", objectBytes)
+	msg, err := g3.DoRequestWithSignedHeader(profileConfig, commonUtils.FenceDataMultipartInitEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
@@ -160,7 +160,7 @@ func GenerateMultipartPresignedURL(g3 Gen3Interface, key string, uploadID string
 		return "", errors.New("Error has occurred during marshalling data for multipart upload presigned url generation, detailed error message: " + err.Error())
 	}
 
-	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartUploadEndpoint, "application/json", objectBytes)
+	msg, err := g3.DoRequestWithSignedHeader(profileConfig, commonUtils.FenceDataMultipartUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", errors.New("Error has occurred during multipart upload presigned url generation, detailed error message: " + err.Error())
@@ -186,7 +186,7 @@ func CompleteMultipartUpload(g3 Gen3Interface, key string, uploadID string, part
 		return errors.New("Error has occurred during marshalling data for multipart upload, detailed error message: " + err.Error())
 	}
 
-	_, err = g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataMultipartCompleteEndpoint, "application/json", objectBytes)
+	_, err = g3.DoRequestWithSignedHeader(profileConfig, commonUtils.FenceDataMultipartCompleteEndpoint, "application/json", objectBytes)
 	if err != nil {
 		return errors.New("Error has occurred during completing multipart upload, detailed error message: " + err.Error())
 	}
@@ -229,7 +229,7 @@ func GetDownloadResponse(g3 Gen3Interface, fdrObject *commonUtils.FileDownloadRe
 		}
 	} else {
 		endPointPostfix := commonUtils.FenceDataDownloadEndpoint + "/" + fdrObject.GUID + protocolText
-		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
+		msg, err := g3.DoRequestWithSignedHeader(profileConfig, endPointPostfix, "", nil)
 
 		if err != nil || msg.URL == "" {
 			errorMsg := "Error occurred when getting download URL for object " + fdrObject.GUID
@@ -335,7 +335,7 @@ func GeneratePresignedURL(g3 Gen3Interface, filename string, fileMetadata common
 	if err != nil {
 		return "", "", errors.New("Error occurred when marshalling object: " + err.Error())
 	}
-	msg, err := g3.DoRequestWithSignedHeader(&profileConfig, commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
+	msg, err := g3.DoRequestWithSignedHeader(profileConfig, commonUtils.FenceDataUploadEndpoint, "application/json", objectBytes)
 
 	if err != nil {
 		return "", "", errors.New("Something went wrong. Maybe you don't have permission to upload data or Fence is misconfigured. Detailed error message: " + err.Error())
@@ -356,7 +356,7 @@ func GenerateUploadRequest(g3 Gen3Interface, furObject commonUtils.FileUploadReq
 			endPointPostfix += "&bucket=" + furObject.Bucket
 		}
 
-		msg, err := g3.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "application/json", nil)
+		msg, err := g3.DoRequestWithSignedHeader(profileConfig, endPointPostfix, "application/json", nil)
 		if err != nil && !strings.Contains(err.Error(), "No GUID found") {
 			return furObject, errors.New("Upload error: " + err.Error())
 		}
@@ -719,7 +719,7 @@ type Gen3Interface interface {
 	CheckPrivileges(profileConfig *jwt.Credential) (string, map[string]interface{}, error)
 	CheckForShepherdAPI(profileConfig *jwt.Credential) (bool, error)
 	GetResponse(profileConfig *jwt.Credential, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
-	DoRequestWithSignedHeader(profileConfig *jwt.Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (jwt.JsonMessage, error)
+	DoRequestWithSignedHeader(profileConfig jwt.Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (jwt.JsonMessage, error)
 	MakeARequest(method string, apiEndpoint string, accessToken string, contentType string, headers map[string]string, body *bytes.Buffer, noTimeout bool) (*http.Response, error)
 	GetHost(profileConfig *jwt.Credential) (*url.URL, error)
 }
