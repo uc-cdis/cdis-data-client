@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 var MainLogPath string

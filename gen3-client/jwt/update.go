@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-version"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/gen3-client/gen3-client/logs"
 )
 
 func UpdateConfig(profile string, apiEndpoint string, credFile string, useShepherd string, minShepherdVersion string) error {

@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
-	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
+	"github.com/calypr/gen3-client/gen3-client/jwt"
+	"github.com/calypr/gen3-client/gen3-client/mocks"
 )
 
 func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {

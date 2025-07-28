@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 	latest "github.com/tcnksm/go-latest"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/gen3-client/gen3-client/jwt"
+	"github.com/calypr/gen3-client/gen3-client/logs"
 )
 
 var profile string

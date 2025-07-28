@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/gen3-client/gen3-client/jwt"
+	"github.com/calypr/gen3-client/gen3-client/logs"
 )
 
 var conf jwt.Configure // Why is this a global variable?

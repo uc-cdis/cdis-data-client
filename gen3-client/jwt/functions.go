@@ -1,7 +1,7 @@
 package jwt
 
-//go:generate mockgen -destination=./gen3-client/mocks/mock_functions.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/jwt FunctionInterface
-//go:generate mockgen -destination=./gen3-client/mocks/mock_request.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/jwt RequestInterface
+//go:generate mockgen -destination=./gen3-client/mocks/mock_functions.go -package=mocks github.com/calypr/gen3-client/gen3-client/jwt FunctionInterface
+//go:generate mockgen -destination=./gen3-client/mocks/mock_request.go -package=mocks github.com/calypr/gen3-client/gen3-client/jwt RequestInterface
 
 import (
 	"bytes"
@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
 	"github.com/hashicorp/go-version"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 type Functions struct {

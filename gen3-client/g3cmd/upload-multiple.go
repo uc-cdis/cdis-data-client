@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/gen3-client/gen3-client/logs"
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func init() {
@@ -89,7 +89,7 @@ func init() {
 				var err error
 
 				if object.Filename != "" {
-		    			// conform to fence naming convention
+					// conform to fence naming convention
 					filePath, err = getFullFilePath(uploadPath, object.Filename)
 				} else {
 					// Otherwise, here we are assuming the local filename will be the same as GUID

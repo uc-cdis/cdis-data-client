@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	g3cmd "github.com/uc-cdis/gen3-client/gen3-client/g3cmd"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
-	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	g3cmd "github.com/calypr/gen3-client/gen3-client/g3cmd"
+	"github.com/calypr/gen3-client/gen3-client/jwt"
+	"github.com/calypr/gen3-client/gen3-client/mocks"
 )
 
 // Expect GetDownloadResponse to:

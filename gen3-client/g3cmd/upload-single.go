@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
 )
 
 func init() {

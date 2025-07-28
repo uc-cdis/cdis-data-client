@@ -18,14 +18,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/gen3-client/gen3-client/logs"
 
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
+	"github.com/calypr/gen3-client/gen3-client/jwt"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-// go:generate mockgen -destination=./gen3-client/mocks/mock_gen3interface.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/g3cmd Gen3Interface
+// go:generate mockgen -destination=./gen3-client/mocks/mock_gen3interface.go -package=mocks github.com/calypr/gen3-client/gen3-client/g3cmd Gen3Interface
 
 // ManifestObject represents an object from manifest that downloaded from windmill / data-portal
 type ManifestObject struct {

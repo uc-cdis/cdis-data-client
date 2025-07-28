@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/gen3-client/gen3-client/logs"
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"

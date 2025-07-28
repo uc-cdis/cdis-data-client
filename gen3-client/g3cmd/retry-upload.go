@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/gen3-client/gen3-client/logs"
 )
 
 func updateRetryObject(ro *commonUtils.RetryObject, filePath string, filename string, fileMetadata commonUtils.FileMetadata, guid string, retryCount int, isMultipart bool) {

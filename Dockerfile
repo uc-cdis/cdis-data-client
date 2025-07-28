@@ -4,7 +4,7 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
 
-WORKDIR $GOPATH/src/github.com/uc-cdis/gen3-client/
+WORKDIR $GOPATH/src/github.com/calypr/gen3-client/
 
 COPY go.mod .
 COPY go.sum .
