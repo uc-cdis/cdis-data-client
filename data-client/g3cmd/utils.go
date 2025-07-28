@@ -18,14 +18,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/calypr/gen3-client/gen3-client/commonUtils"
-	"github.com/calypr/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 
-	"github.com/calypr/gen3-client/gen3-client/jwt"
+	"github.com/calypr/data-client/data-client/jwt"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-// go:generate mockgen -destination=./gen3-client/mocks/mock_gen3interface.go -package=mocks github.com/calypr/gen3-client/gen3-client/g3cmd Gen3Interface
+// go:generate mockgen -destination=./data-client/mocks/mock_gen3interface.go -package=mocks github.com/calypr/data-client/data-client/g3cmd Gen3Interface
 
 // ManifestObject represents an object from manifest that downloaded from windmill / data-portal
 type ManifestObject struct {
@@ -507,7 +507,7 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 			}
 		} else {
 			// No metadata file was found for this file -- proceed, but warn the user.
-			log.Printf("WARNING: File metadata is enabled, but could not find the metadata file %v for file %v. Execute `gen3-client upload --help` for more info on file metadata.\n", metadataFilePath, filePath)
+			log.Printf("WARNING: File metadata is enabled, but could not find the metadata file %v for file %v. Execute `data-client upload --help` for more info on file metadata.\n", metadataFilePath, filePath)
 		}
 	}
 	return FileInfo{filePath, filename, metadata}, err

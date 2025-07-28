@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/calypr/gen3-client/gen3-client/commonUtils"
-	"github.com/calypr/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 	"github.com/spf13/cobra"
 )
 
@@ -28,9 +28,9 @@ func init() {
 		Use:     "upload-multiple",
 		Short:   "Upload multiple of files from a specified manifest",
 		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then upload all of them. Options to run multipart uploads for large files and running multiple workers to batch upload available.`,
-		Example: `./gen3-client upload-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/> --bucket=<bucket-name> --force-multipart=<boolean> --include-subdirname=<boolean> --batch=<boolean>`,
+		Example: `./data-client upload-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/> --bucket=<bucket-name> --force-multipart=<boolean> --include-subdirname=<boolean> --batch=<boolean>`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n\n")
+			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./data-client upload\" instead.\n\n")
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
@@ -217,7 +217,7 @@ func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []st
 	}
 	if profileConfig.UseShepherd == "true" ||
 		profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
-		return fmt.Errorf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ gen3-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
+		return fmt.Errorf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ data-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
 	}
 	log.Println("Multipart uploading....")
 

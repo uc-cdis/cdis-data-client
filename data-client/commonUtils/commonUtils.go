@@ -17,13 +17,13 @@ import (
 
 // DefaultUseShepherd sets whether gen3client will attempt to use the Shepherd / Object Management API
 // endpoints if available.
-// The user can override this default using the `gen3-client configure` command.
+// The user can override this default using the `data-client configure` command.
 const DefaultUseShepherd = false
 
 // DefaultMinShepherdVersion is the minimum version of Shepherd that the gen3client will use.
 // Before attempting to use Shepherd, the client will check for Shepherd's version, and if the version is
 // below this number the gen3client will instead warn the user and fall back to fence/indexd.
-// The user can override this default using the `gen3-client configure` command.
+// The user can override this default using the `data-client configure` command.
 const DefaultMinShepherdVersion = "2.0.0"
 
 // ShepherdEndpoint is the endpoint postfix for SHEPHERD / the Object Management API

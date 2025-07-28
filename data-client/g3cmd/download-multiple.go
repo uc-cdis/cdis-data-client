@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/calypr/gen3-client/gen3-client/commonUtils"
-	"github.com/calypr/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
@@ -401,7 +401,7 @@ func init() {
 		Use:     "download-multiple",
 		Short:   "Download multiple of files from a specified manifest",
 		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then download all of them.`,
-		Example: `./gen3-client download-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
+		Example: `./data-client download-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/calypr/gen3-client/gen3-client/commonUtils"
-	"github.com/calypr/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 )
 
 func updateRetryObject(ro *commonUtils.RetryObject, filePath string, filename string, fileMetadata commonUtils.FileMetadata, guid string, retryCount int, isMultipart bool) {
@@ -170,7 +170,7 @@ func init() {
 		Use:     "retry-upload",
 		Short:   "Retry upload file(s) to object storage.",
 		Long:    `Re-submit files found in a given failed log by using sequential (non-batching) uploading and exponential backoff.`,
-		Example: "For retrying file upload:\n./gen3-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
+		Example: "For retrying file upload:\n./data-client retry-upload --profile=<profile-name> --failed-log-path=<path-to-failed-log>\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			// initialize transmission logs
 			logs.InitSucceededLog(profile)

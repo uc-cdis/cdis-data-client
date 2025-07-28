@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/calypr/gen3-client/gen3-client/commonUtils"
-	"github.com/calypr/gen3-client/gen3-client/jwt"
-	"github.com/calypr/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/jwt"
+	"github.com/calypr/data-client/data-client/logs"
 )
 
 var conf jwt.Configure // Why is this a global variable?
@@ -21,7 +21,7 @@ func init() {
 		Short: "Add or modify a configuration profile to your config file",
 		Long: `Configuration file located at ~/.gen3/gen3_client_config.ini
 	If a field is left empty, the existing value (if it exists) will remain unchanged`,
-		Example: `./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org`,
+		Example: `./data-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()

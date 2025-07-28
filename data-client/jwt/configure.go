@@ -1,6 +1,6 @@
 package jwt
 
-//go:generate mockgen -destination=./gen3-client/mocks/mock_configure.go -package=mocks github.com/calypr/gen3-client/gen3-client/jwt ConfigureInterface
+//go:generate mockgen -destination=./data-client/mocks/mock_configure.go -package=mocks github.com/calypr/data-client/data-client/jwt ConfigureInterface
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/data-client/data-client/commonUtils"
 	"gopkg.in/ini.v1"
 )
 
@@ -222,7 +222,7 @@ func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		log.Println("No config file found in ~/.gen3/")
 		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
-			"Example: ./gen3-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
+			"Example: ./data-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
 		return Credential{}, fmt.Errorf("No config file found in ~/.gen3/")
 	}
 
@@ -235,7 +235,7 @@ func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 	}
 	sec, err := cfg.GetSection(profile)
 	if err != nil {
-		errs := fmt.Errorf("Profile not in config file. Need to run \"gen3-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
+		errs := fmt.Errorf("Profile not in config file. Need to run \"data-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
 		fmt.Println(errs.Error())
 		return Credential{}, err
 	}

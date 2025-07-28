@@ -1,7 +1,7 @@
 package jwt
 
-//go:generate mockgen -destination=./gen3-client/mocks/mock_functions.go -package=mocks github.com/calypr/gen3-client/gen3-client/jwt FunctionInterface
-//go:generate mockgen -destination=./gen3-client/mocks/mock_request.go -package=mocks github.com/calypr/gen3-client/gen3-client/jwt RequestInterface
+//go:generate mockgen -destination=./data-client/mocks/mock_functions.go -package=mocks github.com/calypr/data-client/data-client/jwt FunctionInterface
+//go:generate mockgen -destination=./data-client/mocks/mock_request.go -package=mocks github.com/calypr/data-client/data-client/jwt RequestInterface
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/calypr/gen3-client/gen3-client/commonUtils"
+	"github.com/calypr/data-client/data-client/commonUtils"
 	"github.com/hashicorp/go-version"
 )
 
@@ -207,7 +207,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 	var err error
 
 	if profileConfig.APIKey == "" && profileConfig.AccessToken == "" && profileConfig.APIEndpoint == "" {
-		return "", resp, errors.New(fmt.Sprintf("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first %s", profileConfig))
+		return "", resp, errors.New(fmt.Sprintf("No credentials found in the configuration file! Please use \"./data-client configure\" to configure your credentials first %s", profileConfig))
 	}
 	host, _ := url.Parse(profileConfig.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
@@ -248,7 +248,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 
 func (f *Functions) GetHost(profileConfig *Credential) (*url.URL, error) {
 	if profileConfig.APIEndpoint == "" {
-		return nil, errors.New("No APIEndpoint found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
+		return nil, errors.New("No APIEndpoint found in the configuration file! Please use \"./data-client configure\" to configure your credentials first")
 	}
 	host, _ := url.Parse(profileConfig.APIEndpoint)
 	return host, nil

@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 	latest "github.com/tcnksm/go-latest"
-	"github.com/calypr/gen3-client/gen3-client/jwt"
-	"github.com/calypr/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/jwt"
+	"github.com/calypr/data-client/data-client/logs"
 )
 
 var profile string
@@ -18,9 +18,9 @@ var profileConfig jwt.Credential
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:     "gen3-client",
-	Short:   "Use the gen3-client to interact with a Gen3 Data Commons",
-	Long:    "Gen3 Client for downloading, uploading and submitting data to data commons.\ngen3-client version: " + gitversion + ", commit: " + gitcommit,
+	Use:     "data-client",
+	Short:   "Use the data-client to interact with a Gen3 Data Commons",
+	Long:    "Gen3 Client for downloading, uploading and submitting data to data commons.\ndata-client version: " + gitversion + ", commit: " + gitcommit,
 	Version: gitversion,
 }
 
@@ -82,8 +82,8 @@ func initConfig() {
 		if err != nil {
 			log.Println("Error occurred when checking for latest version: " + err.Error())
 		} else if res.Outdated {
-			log.Println("A new version of gen3-client is available! The latest version is " + res.Current + ". You are using version " + gitversion)
-			log.Println("Please download the latest gen3-client release from https://github.com/uc-cdis/cdis-data-client/releases/latest")
+			log.Println("A new version of data-client is available! The latest version is " + res.Current + ". You are using version " + gitversion)
+			log.Println("Please download the latest data-client release from https://github.com/uc-cdis/cdis-data-client/releases/latest")
 		}
 	}
 	logs.SetToMessageLog()
