@@ -48,10 +48,10 @@ func (mr *MockConfigureInterfaceMockRecorder) GetConfigPath() *gomock.Call {
 }
 
 // ParseConfig mocks base method
-func (m *MockConfigureInterface) ParseConfig(arg0 string) jwt.Credential {
+func (m *MockConfigureInterface) ParseConfig(arg0 string) (jwt.Credential, error) {
 	ret := m.ctrl.Call(m, "ParseConfig", arg0)
 	ret0, _ := ret[0].(jwt.Credential)
-	return ret0
+	return ret0, nil
 }
 
 // ParseConfig indicates an expected call of ParseConfig
@@ -85,8 +85,9 @@ func (mr *MockConfigureInterfaceMockRecorder) ReadFile(arg0, arg1 interface{}) *
 }
 
 // UpdateConfigFile mocks base method
-func (m *MockConfigureInterface) UpdateConfigFile(arg0 jwt.Credential) {
+func (m *MockConfigureInterface) UpdateConfigFile(arg0 jwt.Credential) error {
 	m.ctrl.Call(m, "UpdateConfigFile", arg0)
+	return nil
 }
 
 // UpdateConfigFile indicates an expected call of UpdateConfigFile

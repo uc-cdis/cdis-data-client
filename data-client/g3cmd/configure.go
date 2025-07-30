@@ -2,11 +2,12 @@ package g3cmd
 
 import (
 	"fmt"
+	"log"
 
-	"github.com/spf13/cobra"
 	"github.com/calypr/data-client/data-client/commonUtils"
 	"github.com/calypr/data-client/data-client/jwt"
 	"github.com/calypr/data-client/data-client/logs"
+	"github.com/spf13/cobra"
 )
 
 var conf jwt.Configure // Why is this a global variable?
@@ -26,7 +27,10 @@ func init() {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
 
-			jwt.UpdateConfig(profile, apiEndpoint, credFile, useShepherd, minShepherdVersion)
+			err := jwt.UpdateConfig(profile, apiEndpoint, credFile, useShepherd, minShepherdVersion)
+			if err != nil {
+				log.Println(err.Error())
+			}
 
 		},
 	}

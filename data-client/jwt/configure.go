@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -14,8 +13,8 @@ import (
 	"regexp"
 	"strings"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/calypr/data-client/data-client/commonUtils"
+	homedir "github.com/mitchellh/go-homedir"
 	"gopkg.in/ini.v1"
 )
 
@@ -52,7 +51,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 		return ""
 	}
 
-	content, err := ioutil.ReadFile(fullFilePath)
+	content, err := os.ReadFile(fullFilePath)
 	if err != nil {
 		log.Println("error occurred when reading file: " + err.Error())
 		return ""

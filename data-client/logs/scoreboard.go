@@ -14,6 +14,7 @@ var ScoreBoardLen int
 func InitScoreBoard(maxRetryCount int) {
 	scoreBoard = make([]int, maxRetryCount+2)
 	ScoreBoardLen = len(scoreBoard)
+
 }
 
 func PrintScoreBoard() {

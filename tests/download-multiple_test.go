@@ -2,16 +2,16 @@ package tests
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/calypr/data-client/data-client/commonUtils"
 	g3cmd "github.com/calypr/data-client/data-client/g3cmd"
 	"github.com/calypr/data-client/data-client/jwt"
 	"github.com/calypr/data-client/data-client/mocks"
+	"github.com/golang/mock/gomock"
 )
 
 // If Shepherd is deployed, attempt to get the filename from the Shepherd API.
@@ -42,7 +42,7 @@ func Test_askGen3ForFileInfo_withShepherd(t *testing.T) {
 }`
 	testResponse := http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader(testBody)),
+		Body:       io.NopCloser(strings.NewReader(testBody)),
 	}
 	mockGen3Interface := mocks.NewMockGen3Interface(mockCtrl)
 	mockGen3Interface.

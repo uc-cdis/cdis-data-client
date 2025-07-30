@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
@@ -497,7 +496,7 @@ func ProcessFilename(uploadPath string, filePath string, includeSubDirName bool,
 		metadataFilePath := strings.TrimSuffix(filePath, filepath.Ext(filePath)) + "_metadata.json"
 		var metadataFileBytes []byte
 		if _, err := os.Stat(metadataFilePath); err == nil {
-			metadataFileBytes, err = ioutil.ReadFile(metadataFilePath)
+			metadataFileBytes, err = os.ReadFile(metadataFilePath)
 			if err != nil {
 				return FileInfo{}, errors.New("Error reading metadata file " + metadataFilePath + ": " + err.Error())
 			}

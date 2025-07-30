@@ -4,7 +4,6 @@ package g3cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -64,7 +63,7 @@ func init() {
 
 			switch {
 			case strings.EqualFold(filepath.Ext(manifestPath), ".json"):
-				manifestBytes, err := ioutil.ReadFile(manifestPath)
+				manifestBytes, err := os.ReadFile(manifestPath)
 				if err != nil {
 					log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
 					log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)

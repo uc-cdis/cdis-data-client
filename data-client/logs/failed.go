@@ -2,7 +2,7 @@ package logs
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -47,7 +47,7 @@ func LoadFailedLogFile(filePath string) {
 
 	if fi.Size() > 0 {
 		var tempRetryObjectSlice []commonUtils.RetryObject
-		data, err := ioutil.ReadAll(file)
+		data, err := io.ReadAll(file)
 		if err != nil {
 			file.Close()
 			failedLogFile.Close()
