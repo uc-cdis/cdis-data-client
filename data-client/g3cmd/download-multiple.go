@@ -68,7 +68,7 @@ func AskGen3ForFileInfo(gen3Interface Gen3Interface, guid string, protocol strin
 	} else {
 		// Attempt to get the filename from Indexd
 		endPointPostfix := commonUtils.IndexdIndexEndpoint + "/" + guid
-		indexdMsg, err := gen3Interface.DoRequestWithSignedHeader(profileConfig, endPointPostfix, "", nil)
+		indexdMsg, err := gen3Interface.DoRequestWithSignedHeader(&profileConfig, endPointPostfix, "", nil)
 		if err != nil {
 			log.Println("Error occurred when querying filename from IndexD: " + err.Error())
 			log.Println("Using GUID for filename instead.")
@@ -301,7 +301,10 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 		fmt.Println("NOTICE: flag \"rename\" only works if flag \"filename-format\" is \"original\"")
 		rename = false
 	}
-	validateFilenameFormat(downloadPath, filenameFormat, rename, noPrompt)
+	err = validateFilenameFormat(downloadPath, filenameFormat, rename, noPrompt)
+	if err != nil {
+		return err
+	}
 
 	protocolText := ""
 	if protocol != "" {

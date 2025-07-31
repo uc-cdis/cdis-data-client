@@ -18,6 +18,8 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+var ErrProfileNotFound = errors.New("profile not found in config file")
+
 type Credential struct {
 	Profile            string
 	KeyId              string
@@ -157,7 +159,8 @@ func (conf *Configure) UpdateConfigFile(profileConfig Credential) error {
 	cfg.Section(profileConfig.Profile).Key("min_shepherd_version").SetValue(profileConfig.MinShepherdVersion)
 	err = cfg.SaveTo(configPath)
 	if err != nil {
-		log.Println("error occurred when saving config file: " + err.Error())
+		errs := fmt.Errorf("error occurred when saving config file: " + err.Error())
+		return errs
 	}
 	return nil
 }
@@ -207,8 +210,7 @@ func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		errs := fmt.Errorf("Error occurred when getting home directory: " + err.Error())
-		log.Println(errs.Error())
-		return Credential{}, err
+		return Credential{}, errs
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "gen3_client_config.ini")
 	profileConfig := Credential{
@@ -219,48 +221,39 @@ func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 		APIEndpoint: "",
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Println("No config file found in ~/.gen3/")
-		fmt.Println("Run configure command (with a profile if desired) to set up account credentials \n" +
-			"Example: ./data-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org")
-		return Credential{}, fmt.Errorf("No config file found in ~/.gen3/")
+		return Credential{}, fmt.Errorf("%w Run configure command (with a profile if desired) to set up account credentials \n"+
+			"Example: ./data-client configure --profile=<profile-name> --cred=<path-to-credential/cred.json> --apiendpoint=https://data.mycommons.org", ErrProfileNotFound)
 	}
 
 	// If profile not in config file, prompt user to set up config first
 	cfg, err := ini.Load(configPath)
 	if err != nil {
 		errs := fmt.Errorf("Error occurred when reading config file: " + err.Error())
-		log.Println(errs)
 		return Credential{}, errs
 	}
 	sec, err := cfg.GetSection(profile)
 	if err != nil {
-		errs := fmt.Errorf("Profile not in config file. Need to run \"data-client configure --profile=" + profile + " --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first")
-		fmt.Println(errs.Error())
-		return Credential{}, err
+		return Credential{}, fmt.Errorf("%w: Need to run \"data-client configure --profile="+profile+" --cred=<path-to-credential/cred.json> --apiendpoint=<api_endpoint_url>\" first", ErrProfileNotFound)
 	}
 	// Read in API key, key ID and endpoint for given profile
 	profileConfig.KeyId = sec.Key("key_id").String()
 	if profileConfig.KeyId == "" {
 		errs := fmt.Errorf("key_id not found in profile.")
-		log.Println(errs)
 		return Credential{}, errs
 	}
 	profileConfig.APIKey = sec.Key("api_key").String()
 	if profileConfig.APIKey == "" {
 		errs := fmt.Errorf("api_key not found in profile.")
-		log.Println(errs)
 		return Credential{}, errs
 	}
 	profileConfig.AccessToken = sec.Key("access_token").String()
 	if profileConfig.AccessToken == "" {
 		errs := fmt.Errorf("access_token not found in profile.")
-		log.Println(errs)
 		return Credential{}, errs
 	}
 	profileConfig.APIEndpoint = sec.Key("api_endpoint").String()
 	if profileConfig.APIEndpoint == "" {
 		errs := fmt.Errorf("api_endpoint not found in profile.")
-		log.Println(errs)
 		return Credential{}, errs
 	}
 	// UseShepherd and MinShepherdVersion are optional

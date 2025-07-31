@@ -5,9 +5,9 @@ import (
 	"log"
 	"strings"
 
-	"github.com/hashicorp/go-version"
 	"github.com/calypr/data-client/data-client/commonUtils"
 	"github.com/calypr/data-client/data-client/logs"
+	"github.com/hashicorp/go-version"
 )
 
 func UpdateConfig(profile string, apiEndpoint string, credFile string, useShepherd string, minShepherdVersion string) error {
@@ -55,7 +55,10 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	profileConfig.MinShepherdVersion = minShepherdVersion
 
 	// Store user info in ~/.gen3/gen3_client_config.ini
-	conf.UpdateConfigFile(*profileConfig)
+	err = conf.UpdateConfigFile(*profileConfig)
+	if err != nil {
+		return err
+	}
 	log.Println(`Profile '` + profile + `' has been configured successfully.`)
 	err = logs.CloseMessageLog()
 	if err != nil {

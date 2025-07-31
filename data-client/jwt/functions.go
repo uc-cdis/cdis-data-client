@@ -254,7 +254,7 @@ func (f *Functions) GetHost(profileConfig *Credential) (*url.URL, error) {
 	return host, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profileConfig Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
+func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
 	/*
 	   Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
@@ -266,7 +266,7 @@ func (f *Functions) DoRequestWithSignedHeader(profileConfig Credential, endpoint
 		method = "POST"
 	}
 
-	_, resp, err := f.GetResponse(&profileConfig, endpointPostPrefix, method, contentType, bodyBytes)
+	_, resp, err := f.GetResponse(profileConfig, endpointPostPrefix, method, contentType, bodyBytes)
 	if err != nil {
 		return msg, err
 	}

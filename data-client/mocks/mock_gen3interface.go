@@ -64,7 +64,7 @@ func (mr *MockGen3InterfaceMockRecorder) CheckPrivileges(arg0 interface{}) *gomo
 }
 
 // DoRequestWithSignedHeader mocks base method
-func (m *MockGen3Interface) DoRequestWithSignedHeader(arg0 jwt.Credential, arg1, arg2 string, arg3 []byte) (jwt.JsonMessage, error) {
+func (m *MockGen3Interface) DoRequestWithSignedHeader(arg0 *jwt.Credential, arg1, arg2 string, arg3 []byte) (jwt.JsonMessage, error) {
 	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(jwt.JsonMessage)
 	ret1, _ := ret[1].(error)

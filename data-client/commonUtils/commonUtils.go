@@ -125,7 +125,7 @@ func ParseRootPath(filePath string) (string, error) {
 func GetAbsolutePath(filePath string) (string, error) {
 	fullFilePath, err := ParseRootPath(filePath)
 	if err != nil {
-		return fullFilePath, err
+		return "", err
 	}
 	fullFilePath, err = filepath.Abs(fullFilePath)
 	return fullFilePath, err
