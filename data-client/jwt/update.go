@@ -26,7 +26,7 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	}
 	parsedURL, err := conf.ValidateUrl(apiEndpoint)
 	if err != nil {
-		return fmt.Errorf("Errr occurred when validating apiendpoint URL: " + err.Error())
+		return fmt.Errorf("Errr occurred when validating apiendpoint URL: %s", err.Error())
 	}
 
 	prefixEndPoint := parsedURL.Scheme + "://" + parsedURL.Host
@@ -39,7 +39,7 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 		} else if strings.Contains(receivedErrorString, "404") || strings.Contains(receivedErrorString, "405") || strings.Contains(receivedErrorString, "no such host") {
 			errorMessageString = `The provided apiendpoint '` + prefixEndPoint + `' is possibly not a valid Gen3 data commons`
 		}
-		return fmt.Errorf("Error occurred when validating profile config: " + errorMessageString)
+		return fmt.Errorf("Error occurred when validating profile config: %s", errorMessageString)
 	}
 	profileConfig.APIEndpoint = apiEndpoint
 

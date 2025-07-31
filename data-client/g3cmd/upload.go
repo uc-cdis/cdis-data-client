@@ -159,7 +159,10 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				// NOTE(@mpingram) - For the moment Shepherd doesn't support multipart uploads.
 				// Throw an error if Shepherd is enabled and user attempts to multipart upload.
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				err := processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				if err != nil {
+					log.Println(err.Error())
+				}
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
