@@ -3,15 +3,15 @@ package tests
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/calypr/data-client/data-client/jwt"
+	"github.com/calypr/data-client/data-client/mocks"
 	"github.com/golang/mock/gomock"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
-	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
 )
 
 func TestDoRequestWithSignedHeaderNoProfile(t *testing.T) {
@@ -41,7 +41,7 @@ func TestDoRequestWithSignedHeaderGoodToken(t *testing.T) {
 
 	profileConfig := jwt.Credential{Profile: "test", KeyId: "", APIKey: "fake_api_key", AccessToken: "non_expired_token", APIEndpoint: "http://www.test.com", UseShepherd: "false", MinShepherdVersion: ""}
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"http://www.test.com/user/data/download/test_uuid\"}")),
+		Body:       io.NopCloser(bytes.NewBufferString("{\"url\": \"http://www.test.com/user/data/download/test_uuid\"}")),
 		StatusCode: 200,
 	}
 
@@ -65,7 +65,7 @@ func TestDoRequestWithSignedHeaderCreateNewToken(t *testing.T) {
 
 	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
+		Body:       io.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
 		StatusCode: 200,
 	}
 
@@ -91,7 +91,7 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 
 	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "expired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
+		Body:       io.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
 		StatusCode: 401,
 	}
 
@@ -135,7 +135,7 @@ func TestCheckPrivilegesNoAccess(t *testing.T) {
 
 	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "non_expired_token", APIEndpoint: "http://www.test.com"}
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"project_access\": {}}")),
+		Body:       io.NopCloser(bytes.NewBufferString("{\"project_access\": {}}")),
 		StatusCode: 200,
 	}
 
@@ -171,7 +171,7 @@ func TestCheckPrivilegesGrantedAccess(t *testing.T) {
 		}`
 
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
+		Body:       io.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
 		StatusCode: 200,
 	}
 
@@ -225,7 +225,7 @@ func TestCheckPrivilegesGrantedAccessAuthz(t *testing.T) {
 	}`
 
 	mockedResp := &http.Response{
-		Body:       ioutil.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
+		Body:       io.NopCloser(bytes.NewBufferString(grantedAccessJSON)),
 		StatusCode: 200,
 	}
 

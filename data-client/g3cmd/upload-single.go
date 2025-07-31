@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/calypr/data-client/data-client/commonUtils"
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 func init() {
@@ -21,10 +21,13 @@ func init() {
 		Use:     "upload-single",
 		Short:   "Upload a single file to a GUID",
 		Long:    `Gets a presigned URL for which to upload a file associated with a GUID and then uploads the specified file.`,
-		Example: `./gen3-client upload-single --profile=<profile-name> --guid=f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=<path-to-file>`,
+		Example: `./data-client upload-single --profile=<profile-name> --guid=f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=<path-to-file>`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./gen3-client upload\" instead.\n\n")
-			UploadSingle(profile, guid, filePath, bucketName)
+			fmt.Printf("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./data-client upload\" instead.\n\n")
+			err := UploadSingle(profile, guid, filePath, bucketName)
+			if err != nil {
+				log.Fatalln(err.Error())
+			}
 		},
 	}
 	uploadSingleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")
@@ -57,7 +60,10 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 
 	// Instantiate interface to Gen3
 	gen3Interface := NewGen3Interface()
-	profileConfig = conf.ParseConfig(profile)
+	profileConfig, err = conf.ParseConfig(profile)
+	if err != nil {
+		return err
+	}
 
 	log.Println("INSIDE: profile config parsed")
 
@@ -68,7 +74,8 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 		return errors.New(errorStr)
 	}
 	if err != nil {
-		log.Fatalln("File path parsing error: " + err.Error())
+		log.Println("File path parsing error: " + err.Error())
+		return err
 	}
 	if len(filePaths) == 1 {
 		filePath = filePaths[0]
@@ -80,21 +87,23 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 		// logs.IncrementScore(logs.ScoreBoardLen - 1)
 		// logs.PrintScoreBoard()
 		// logs.CloseAll()
-		log.Fatalf("The file you specified \"%s\" does not exist locally.", filePath)
+		errStr := fmt.Errorf("[ERROR] The file you specified \"%s\" does not exist locally.", filePath)
+		log.Println(errStr.Error())
+		return errStr
 	}
 
 	log.Println("INSIDE: file path parsed")
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		errorStr := fmt.Sprintf("[ERROR] when opening file path %s, an error occurred: %s", filePath, err.Error())
-		log.Println(errorStr)
+		errorStr := fmt.Errorf("[ERROR] when opening file path %s, an error occurred: %s", filePath, err.Error())
+		log.Println(errorStr.Error())
 		// logs.AddToFailedLog(filePath, filename, commonUtils.FileMetadata{}, "", 0, false, true)
 		// logs.IncrementScore(logs.ScoreBoardLen - 1)
 		// logs.PrintScoreBoard()
 		// logs.CloseAll()
 		// log.Fatalln("File open error: " + err.Error())
-		return errors.New(errorStr)
+		return errorStr
 	}
 	defer file.Close()
 
@@ -105,24 +114,24 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 	furObject, err = GenerateUploadRequest(gen3Interface, furObject, file)
 	if err != nil {
 		file.Close()
-		errorStr := fmt.Sprintf("[ERROR] Error occurred during request generation for file %s: %s", filePath, err.Error())
-		log.Println(errorStr)
+		errorStr := fmt.Errorf("[ERROR] Error occurred during request generation for file %s: %s", filePath, err.Error())
+		log.Println(errorStr.Error())
 		// logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
 		// logs.IncrementScore(logs.ScoreBoardLen - 1)
 		// logs.PrintScoreBoard()
 		// logs.CloseAll()
 		// log.Fatalf("Error occurred during request generation: %s", err.Error())
-		return errors.New(errorStr)
+		return errorStr
 	}
 	err = uploadFile(furObject, 0)
 	if err != nil {
-		errStr := fmt.Sprintf("[ERROR] Error uploading file %s: %s", filePath, err.Error())
-		log.Println(errStr)
-		return errors.New(errStr)
+		errStr := fmt.Errorf("[ERROR] Error uploading file %s: %s", filePath, err.Error())
+		log.Println(errStr.Error())
+		return errStr
 		// logs.IncrementScore(logs.ScoreBoardLen - 1) // update failed score
-	} else {
-		// logs.IncrementScore(0) // update succeeded score
-	}
+	} /*else {
+	// logs.IncrementScore(0) // update succeeded score
+	}*/
 	// logs.PrintScoreBoard()
 	// logs.CloseAll()
 	log.Println("INSIDE: upload complete")

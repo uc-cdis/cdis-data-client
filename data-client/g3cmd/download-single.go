@@ -3,8 +3,8 @@ package g3cmd
 import (
 	"log"
 
+	"github.com/calypr/data-client/data-client/logs"
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func init() {
@@ -20,18 +20,25 @@ func init() {
 		Use:     "download-single",
 		Short:   "Download a single file from a GUID",
 		Long:    `Gets a presigned URL for a file from a GUID and then downloads the specified file.`,
-		Example: `./gen3-client download-single --profile=<profile-name> --guid=206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc`,
+		Example: `./data-client download-single --profile=<profile-name> --guid=206dfaa6-bcf1-4bc9-b2d0-77179f0f48fc`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
-			profileConfig = conf.ParseConfig(profile)
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
+			if err != nil {
+				log.Println(err.Error())
+			}
 
 			obj := ManifestObject{
 				ObjectID: guid,
 			}
 			objects := []ManifestObject{obj}
-			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
-			err := logs.CloseMessageLog()
+			err = downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
+			if err != nil {
+				log.Println(err.Error())
+			}
+			err = logs.CloseMessageLog()
 			if err != nil {
 				log.Println(err.Error())
 			}

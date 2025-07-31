@@ -5,9 +5,9 @@ import (
 	"log"
 	"strings"
 
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 	"github.com/hashicorp/go-version"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func UpdateConfig(profile string, apiEndpoint string, credFile string, useShepherd string, minShepherdVersion string) error {
@@ -15,7 +15,10 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	var conf Configure
 	var req Request
 
-	profileConfig := conf.ReadCredentials(credFile)
+	profileConfig, err := conf.ReadCredentials(credFile)
+	if err != nil {
+		return err
+	}
 	profileConfig.Profile = profile
 	apiEndpoint = strings.TrimSpace(apiEndpoint)
 	if apiEndpoint[len(apiEndpoint)-1:] == "/" {
@@ -23,12 +26,11 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	}
 	parsedURL, err := conf.ValidateUrl(apiEndpoint)
 	if err != nil {
-		// log.Fatalln("Error occurred when validating apiendpoint URL: " + err.Error())
-		return fmt.Errorf("Errr occurred when validating apiendpoint URL: " + err.Error())
+		return fmt.Errorf("Errr occurred when validating apiendpoint URL: %s", err.Error())
 	}
 
 	prefixEndPoint := parsedURL.Scheme + "://" + parsedURL.Host
-	err = req.RequestNewAccessToken(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, &profileConfig)
+	err = req.RequestNewAccessToken(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, profileConfig)
 	if err != nil {
 		receivedErrorString := err.Error()
 		errorMessageString := receivedErrorString
@@ -37,8 +39,7 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 		} else if strings.Contains(receivedErrorString, "404") || strings.Contains(receivedErrorString, "405") || strings.Contains(receivedErrorString, "no such host") {
 			errorMessageString = `The provided apiendpoint '` + prefixEndPoint + `' is possibly not a valid Gen3 data commons`
 		}
-		// log.Fatalln("Error occurred when validating profile config: " + errorMessageString)
-		return fmt.Errorf("Error occurred when validating profile config: " + errorMessageString)
+		return fmt.Errorf("Error occurred when validating profile config: %s", errorMessageString)
 	}
 	profileConfig.APIEndpoint = apiEndpoint
 
@@ -48,14 +49,16 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	if minShepherdVersion != "" {
 		_, err = version.NewVersion(minShepherdVersion)
 		if err != nil {
-			// log.Fatalln("Error occurred when validating minShepherdVersion: " + err.Error())
-			return fmt.Errorf("Error occurred when validating minShepherdVersion: " + err.Error())
+			return fmt.Errorf("Error occurred when validating minShepherdVersion: %s", err.Error())
 		}
 	}
 	profileConfig.MinShepherdVersion = minShepherdVersion
 
 	// Store user info in ~/.gen3/gen3_client_config.ini
-	conf.UpdateConfigFile(profileConfig)
+	err = conf.UpdateConfigFile(*profileConfig)
+	if err != nil {
+		return err
+	}
 	log.Println(`Profile '` + profile + `' has been configured successfully.`)
 	err = logs.CloseMessageLog()
 	if err != nil {

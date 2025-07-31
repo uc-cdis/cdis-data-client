@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 	pb "gopkg.in/cheggaaa/pb.v1"
 
 	"github.com/spf13/cobra"
@@ -158,9 +157,9 @@ func processOriginalFilename(downloadPath string, actualFilename string) string 
 	}
 }
 
-func validateFilenameFormat(downloadPath string, filenameFormat string, rename bool, noPrompt bool) {
+func validateFilenameFormat(downloadPath string, filenameFormat string, rename bool, noPrompt bool) error {
 	if filenameFormat != "original" && filenameFormat != "guid" && filenameFormat != "combined" {
-		log.Fatalln("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
+		return fmt.Errorf("Invalid option found! Option \"filename-format\" can either be \"original\", \"guid\" or \"combined\" only")
 	}
 	if filenameFormat == "guid" || filenameFormat == "combined" {
 		fmt.Printf("WARNING: in \"guid\" or \"combined\" mode, duplicated files under \"%s\" will be overwritten\n", downloadPath)
@@ -177,6 +176,7 @@ func validateFilenameFormat(downloadPath string, filenameFormat string, rename b
 	} else {
 		fmt.Printf("NOTICE: flag \"rename\" was set to true in \"original\" mode, duplicated files under \"%s\" will be renamed by appending a counter value to the original filenames\n", downloadPath)
 	}
+	return nil
 }
 
 func validateLocalFileStat(downloadPath string, filename string, filesize int64, skipCompleted bool) commonUtils.FileDownloadResponseObject {
@@ -284,12 +284,15 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	return succeeded
 }
 
-func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) {
+func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) error {
 	if numParallel < 1 {
-		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
+		return fmt.Errorf("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
 	}
 
-	downloadPath = commonUtils.ParseRootPath(downloadPath)
+	downloadPath, err := commonUtils.ParseRootPath(downloadPath)
+	if err != nil {
+		return fmt.Errorf("downloadFile Error: %s", err.Error())
+	}
 	if !strings.HasSuffix(downloadPath, "/") {
 		downloadPath += "/"
 	}
@@ -298,16 +301,19 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 		fmt.Println("NOTICE: flag \"rename\" only works if flag \"filename-format\" is \"original\"")
 		rename = false
 	}
-	validateFilenameFormat(downloadPath, filenameFormat, rename, noPrompt)
+	err = validateFilenameFormat(downloadPath, filenameFormat, rename, noPrompt)
+	if err != nil {
+		return err
+	}
 
 	protocolText := ""
 	if protocol != "" {
 		protocolText = "?protocol=" + protocol
 	}
 
-	err := os.MkdirAll(downloadPath, 0766)
+	err = os.MkdirAll(downloadPath, 0766)
 	if err != nil {
-		log.Fatalln("Cannot create folder \"" + downloadPath + "\"")
+		return fmt.Errorf("Cannot create folder %s", downloadPath)
 	}
 
 	renamedFiles := make([]RenamedOrSkippedFileInfo, 0)
@@ -381,6 +387,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 			log.Println(err.Error())
 		}
 	}
+	return nil
 }
 
 func init() {
@@ -397,11 +404,15 @@ func init() {
 		Use:     "download-multiple",
 		Short:   "Download multiple of files from a specified manifest",
 		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then download all of them.`,
-		Example: `./gen3-client download-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
+		Example: `./data-client download-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --download-path=<path-to-file-dir/>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
-			profileConfig = conf.ParseConfig(profile)
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
+			if err != nil {
+				log.Fatalf("Failed to parse config on profile %s, %v", profile, err)
+			}
 
 			manifestPath, _ = commonUtils.GetAbsolutePath(manifestPath)
 			manifestFile, err := os.Open(manifestPath)
@@ -420,23 +431,25 @@ func init() {
 
 			manifestFileReader := manifestFileBar.NewProxyReader(manifestFile)
 
-			manifestBytes, err := ioutil.ReadAll(manifestFileReader)
+			manifestBytes, err := io.ReadAll(manifestFileReader)
+			if err != nil {
+				log.Fatalf("Failed reading manifest %s, %v\n", manifestPath, err)
+			}
 			manifestFileBar.Finish()
 
-			if err != nil {
-				log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
-				log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button in Data Explorer from a data common's portal")
-			}
 			var objects []ManifestObject
 			err = json.Unmarshal(manifestBytes, &objects)
 			if err != nil {
 				log.Fatalf("Error has occurred during unmarshalling manifest object: %v\n", err)
 			}
 
-			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
+			err = downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
+			if err != nil {
+				log.Fatalln(err.Error())
+			}
 			err = logs.CloseMessageLog()
 			if err != nil {
-				log.Println(err.Error())
+				log.Fatalln(err.Error())
 			}
 		},
 	}
