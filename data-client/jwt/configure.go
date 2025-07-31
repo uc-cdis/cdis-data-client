@@ -159,7 +159,7 @@ func (conf *Configure) UpdateConfigFile(profileConfig Credential) error {
 	cfg.Section(profileConfig.Profile).Key("min_shepherd_version").SetValue(profileConfig.MinShepherdVersion)
 	err = cfg.SaveTo(configPath)
 	if err != nil {
-		errs := fmt.Errorf("error occurred when saving config file: " + err.Error())
+		errs := fmt.Errorf("error occurred when saving config file: %s", err.Error())
 		return errs
 	}
 	return nil
@@ -209,7 +209,7 @@ func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 
 	homeDir, err := homedir.Dir()
 	if err != nil {
-		errs := fmt.Errorf("Error occurred when getting home directory: " + err.Error())
+		errs := fmt.Errorf("Error occurred when getting home directory: %s", err.Error())
 		return Credential{}, errs
 	}
 	configPath := path.Join(homeDir + commonUtils.PathSeparator + ".gen3" + commonUtils.PathSeparator + "gen3_client_config.ini")
@@ -228,7 +228,7 @@ func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 	// If profile not in config file, prompt user to set up config first
 	cfg, err := ini.Load(configPath)
 	if err != nil {
-		errs := fmt.Errorf("Error occurred when reading config file: " + err.Error())
+		errs := fmt.Errorf("Error occurred when reading config file: %s", err.Error())
 		return Credential{}, errs
 	}
 	sec, err := cfg.GetSection(profile)

@@ -129,7 +129,10 @@ func init() {
 				processSingleUploads(gen3Interface, singlePartFilePaths, bucketName, includeSubDirName, uploadPath)
 			}
 			if len(multipartFilePaths) > 0 {
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				err := processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				if err != nil {
+					log.Fatalln(err.Error())
+				}
 			}
 			if !logs.IsFailedLogMapEmpty() {
 				retryUpload(logs.GetFailedLogMap())

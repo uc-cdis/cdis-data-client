@@ -24,7 +24,10 @@ func init() {
 		Example: `./data-client upload-single --profile=<profile-name> --guid=f6923cf3-xxxx-xxxx-xxxx-14ab3f84f9d6 --file=<path-to-file>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("Notice: this is the upload method which requires the user to provide a GUID. In this method file will be uploaded to a specified GUID.\nIf your intention is to upload file without pre-existing GUID, consider to use \"./data-client upload\" instead.\n\n")
-			UploadSingle(profile, guid, filePath, bucketName)
+			err := UploadSingle(profile, guid, filePath, bucketName)
+			if err != nil {
+				log.Fatalln(err.Error())
+			}
 		},
 	}
 	uploadSingleCmd.Flags().StringVar(&profile, "profile", "", "Specify profile to use")

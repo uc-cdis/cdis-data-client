@@ -313,7 +313,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 
 	err = os.MkdirAll(downloadPath, 0766)
 	if err != nil {
-		return fmt.Errorf("Cannot create folder \"" + downloadPath + "\"")
+		return fmt.Errorf("Cannot create folder %s", downloadPath)
 	}
 
 	renamedFiles := make([]RenamedOrSkippedFileInfo, 0)
@@ -445,11 +445,11 @@ func init() {
 
 			err = downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
 			if err != nil {
-				log.Fatalf(err.Error())
+				log.Fatalln(err.Error())
 			}
 			err = logs.CloseMessageLog()
 			if err != nil {
-				log.Fatalf(err.Error())
+				log.Fatalln(err.Error())
 			}
 		},
 	}

@@ -49,7 +49,7 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	if minShepherdVersion != "" {
 		_, err = version.NewVersion(minShepherdVersion)
 		if err != nil {
-			return fmt.Errorf("Error occurred when validating minShepherdVersion: " + err.Error())
+			return fmt.Errorf("Error occurred when validating minShepherdVersion: %s", err.Error())
 		}
 	}
 	profileConfig.MinShepherdVersion = minShepherdVersion

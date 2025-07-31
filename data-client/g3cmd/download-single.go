@@ -3,8 +3,8 @@ package g3cmd
 import (
 	"log"
 
-	"github.com/spf13/cobra"
 	"github.com/calypr/data-client/data-client/logs"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -34,7 +34,10 @@ func init() {
 				ObjectID: guid,
 			}
 			objects := []ManifestObject{obj}
-			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
+			err = downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
+			if err != nil {
+				log.Println(err.Error())
+			}
 			err = logs.CloseMessageLog()
 			if err != nil {
 				log.Println(err.Error())
