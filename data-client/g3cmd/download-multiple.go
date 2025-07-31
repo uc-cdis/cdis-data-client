@@ -433,8 +433,7 @@ func init() {
 
 			manifestBytes, err := io.ReadAll(manifestFileReader)
 			if err != nil {
-				log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
-				return
+				log.Fatalf("Failed reading manifest %s, %v\n", manifestPath, err)
 			}
 			manifestFileBar.Finish()
 
@@ -444,10 +443,13 @@ func init() {
 				log.Fatalf("Error has occurred during unmarshalling manifest object: %v\n", err)
 			}
 
-			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
+			err = downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
 			err = logs.CloseMessageLog()
 			if err != nil {
-				log.Println(err.Error())
+				log.Fatalf(err.Error())
 			}
 		},
 	}

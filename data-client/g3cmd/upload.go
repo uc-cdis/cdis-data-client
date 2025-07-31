@@ -60,7 +60,7 @@ func init() {
 			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath, hasMetadata)
 			if err != nil {
-				log.Fatalf("Error when parsing file paths: " + err.Error())
+				log.Fatalf("Error when parsing file paths: %s", err.Error())
 			}
 			if len(filePaths) == 0 {
 				log.Println("No file has been found in the provided location \"" + uploadPath + "\"")

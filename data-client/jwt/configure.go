@@ -85,7 +85,7 @@ func (conf *Configure) ReadCredentials(filePath string) (*Credential, error) {
 	jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
 	err := json.Unmarshal([]byte(jsonContent), &profileConfig)
 	if err != nil {
-		errs := fmt.Errorf("Cannot read json file: " + err.Error())
+		errs := fmt.Errorf("Cannot read json file: %s", err.Error())
 		log.Println(errs.Error())
 		return nil, errs
 	}
@@ -141,13 +141,13 @@ func (conf *Configure) UpdateConfigFile(profileConfig Credential) error {
 	*/
 	configPath, err := conf.GetConfigPath()
 	if err != nil {
-		errs := fmt.Errorf("error occurred when getting config path: " + err.Error())
+		errs := fmt.Errorf("error occurred when getting config path: %s", err.Error())
 		log.Println(errs.Error())
 		return errs
 	}
 	cfg, err := ini.Load(configPath)
 	if err != nil {
-		errs := fmt.Errorf("error occurred when loading config file: " + err.Error())
+		errs := fmt.Errorf("error occurred when loading config file: %s", err.Error())
 		log.Println(errs.Error())
 		return errs
 	}

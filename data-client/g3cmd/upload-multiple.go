@@ -79,7 +79,7 @@ func init() {
 
 			uploadPath, err := commonUtils.GetAbsolutePath(uploadPath)
 			if err != nil {
-				log.Fatalf("Error when parsing file paths: " + err.Error())
+				log.Fatalf("Error when parsing file paths: %s", err.Error())
 			}
 
 			filePaths := make([]string, 0)

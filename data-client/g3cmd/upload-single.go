@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
 	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -126,9 +126,9 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 		log.Println(errStr.Error())
 		return errStr
 		// logs.IncrementScore(logs.ScoreBoardLen - 1) // update failed score
-	} else {
-		// logs.IncrementScore(0) // update succeeded score
-	}
+	} /*else {
+	// logs.IncrementScore(0) // update succeeded score
+	}*/
 	// logs.PrintScoreBoard()
 	// logs.CloseAll()
 	log.Println("INSIDE: upload complete")

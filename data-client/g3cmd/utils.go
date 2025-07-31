@@ -24,7 +24,7 @@ import (
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
-// go:generate mockgen -destination=./data-client/mocks/mock_gen3interface.go -package=mocks github.com/calypr/data-client/data-client/g3cmd Gen3Interface
+//go:generate mockgen -destination=./data-client/mocks/mock_gen3interface.go -package=mocks github.com/calypr/data-client/data-client/g3cmd Gen3Interface
 
 // ManifestObject represents an object from manifest that downloaded from windmill / data-portal
 type ManifestObject struct {
