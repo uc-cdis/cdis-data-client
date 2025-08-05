@@ -10,12 +10,12 @@ import (
 	"github.com/hashicorp/go-version"
 )
 
-func UpdateConfig(profile string, apiEndpoint string, credFile string, useShepherd string, minShepherdVersion string) error {
+func UpdateConfig(profile string, apiEndpoint string, credFile string, fenceToken string, useShepherd string, minShepherdVersion string) error {
 
 	var conf Configure
 	var req Request
 
-	profileConfig, err := conf.ReadCredentials(credFile)
+	profileConfig, err := conf.ReadCredentials(credFile, fenceToken)
 	if err != nil {
 		return err
 	}
@@ -30,16 +30,18 @@ func UpdateConfig(profile string, apiEndpoint string, credFile string, useShephe
 	}
 
 	prefixEndPoint := parsedURL.Scheme + "://" + parsedURL.Host
-	err = req.RequestNewAccessToken(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, profileConfig)
-	if err != nil {
-		receivedErrorString := err.Error()
-		errorMessageString := receivedErrorString
-		if strings.Contains(receivedErrorString, "401") {
-			errorMessageString = `Invalid credentials for apiendpoint '` + prefixEndPoint + `': check if your credentials are expired or incorrect`
-		} else if strings.Contains(receivedErrorString, "404") || strings.Contains(receivedErrorString, "405") || strings.Contains(receivedErrorString, "no such host") {
-			errorMessageString = `The provided apiendpoint '` + prefixEndPoint + `' is possibly not a valid Gen3 data commons`
+	if profileConfig.AccessToken == "" {
+		err = req.RequestNewAccessToken(prefixEndPoint+commonUtils.FenceAccessTokenEndpoint, profileConfig)
+		if err != nil {
+			receivedErrorString := err.Error()
+			errorMessageString := receivedErrorString
+			if strings.Contains(receivedErrorString, "401") {
+				errorMessageString = `Invalid credentials for apiendpoint '` + prefixEndPoint + `': check if your credentials are expired or incorrect`
+			} else if strings.Contains(receivedErrorString, "404") || strings.Contains(receivedErrorString, "405") || strings.Contains(receivedErrorString, "no such host") {
+				errorMessageString = `The provided apiendpoint '` + prefixEndPoint + `' is possibly not a valid Gen3 data commons`
+			}
+			return fmt.Errorf("Error occurred when validating profile config: %s", errorMessageString)
 		}
-		return fmt.Errorf("Error occurred when validating profile config: %s", errorMessageString)
 	}
 	profileConfig.APIEndpoint = apiEndpoint
 

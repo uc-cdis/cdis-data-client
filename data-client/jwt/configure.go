@@ -78,16 +78,20 @@ func (conf *Configure) ValidateUrl(apiEndpoint string) (*url.URL, error) {
 	return parsedURL, nil
 }
 
-func (conf *Configure) ReadCredentials(filePath string) (*Credential, error) {
+func (conf *Configure) ReadCredentials(filePath string, fenceToken string) (*Credential, error) {
 	var profileConfig Credential
-	jsonContent := conf.ReadFile(filePath, "json")
-	jsonContent = strings.Replace(jsonContent, "key_id", "KeyId", -1)
-	jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
-	err := json.Unmarshal([]byte(jsonContent), &profileConfig)
-	if err != nil {
-		errs := fmt.Errorf("Cannot read json file: %s", err.Error())
-		log.Println(errs.Error())
-		return nil, errs
+	if filePath != "" {
+		jsonContent := conf.ReadFile(filePath, "json")
+		jsonContent = strings.Replace(jsonContent, "key_id", "KeyId", -1)
+		jsonContent = strings.Replace(jsonContent, "api_key", "APIKey", -1)
+		err := json.Unmarshal([]byte(jsonContent), &profileConfig)
+		if err != nil {
+			errs := fmt.Errorf("Cannot read json file: %s", err.Error())
+			log.Println(errs.Error())
+			return nil, errs
+		}
+	} else if fenceToken != "" {
+		profileConfig.AccessToken = fenceToken
 	}
 	return &profileConfig, nil
 }
@@ -237,18 +241,11 @@ func (conf *Configure) ParseConfig(profile string) (Credential, error) {
 	}
 	// Read in API key, key ID and endpoint for given profile
 	profileConfig.KeyId = sec.Key("key_id").String()
-	if profileConfig.KeyId == "" {
-		errs := fmt.Errorf("key_id not found in profile.")
-		return Credential{}, errs
-	}
 	profileConfig.APIKey = sec.Key("api_key").String()
-	if profileConfig.APIKey == "" {
-		errs := fmt.Errorf("api_key not found in profile.")
-		return Credential{}, errs
-	}
 	profileConfig.AccessToken = sec.Key("access_token").String()
-	if profileConfig.AccessToken == "" {
-		errs := fmt.Errorf("access_token not found in profile.")
+
+	if profileConfig.KeyId == "" && profileConfig.APIKey == "" && profileConfig.AccessToken == "" {
+		errs := fmt.Errorf("key_id, api_key and access_token not found in profile.")
 		return Credential{}, errs
 	}
 	profileConfig.APIEndpoint = sec.Key("api_endpoint").String()

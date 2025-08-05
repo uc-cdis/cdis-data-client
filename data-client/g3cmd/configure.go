@@ -14,6 +14,7 @@ var conf jwt.Configure // Why is this a global variable?
 
 func init() {
 	var credFile string
+	var fenceToken string
 	var apiEndpoint string
 	var useShepherd string
 	var minShepherdVersion string
@@ -27,7 +28,7 @@ func init() {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
 
-			err := jwt.UpdateConfig(profile, apiEndpoint, credFile, useShepherd, minShepherdVersion)
+			err := jwt.UpdateConfig(profile, apiEndpoint, credFile, fenceToken, useShepherd, minShepherdVersion)
 			if err != nil {
 				log.Println(err.Error())
 			}
@@ -39,6 +40,7 @@ func init() {
 	configureCmd.MarkFlagRequired("profile") //nolint:errcheck
 	configureCmd.Flags().StringVar(&credFile, "cred", "", "Specify the credential file that you want to use")
 	configureCmd.MarkFlagRequired("cred") //nolint:errcheck
+	configureCmd.Flags().StringVar(&fenceToken, "fenceToken", "", "Specify the fence token to use as a substitute for credential file")
 	configureCmd.Flags().StringVar(&apiEndpoint, "apiendpoint", "", "Specify the API endpoint of the data commons")
 	configureCmd.MarkFlagRequired("apiendpoint") //nolint:errcheck
 	configureCmd.Flags().StringVar(&useShepherd, "use-shepherd", "", fmt.Sprintf("Enables or disables support for the Shepherd API. If enabled, gen3client will use the Shepherd API if available. (Default: %v)", commonUtils.DefaultUseShepherd))
