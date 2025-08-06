@@ -4,6 +4,7 @@ package g3cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -41,14 +42,8 @@ func init() {
 }
 
 func UploadSingle(profile string, guid string, filePath string, bucketName string) error {
-	// log something to log file called transfer.log
-	f, err := os.OpenFile("transfer.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("error opening log file: %w", err)
-	}
-	defer f.Close()
-	log.SetOutput(f)
-	log.Println("INSIDE: start upload single for file:", filePath, "with guid:", guid, "and bucket:", bucketName)
+	// disable logs
+	log.SetOutput(io.Discard)
 
 	// // initialize transmission logs
 	// logs.InitSucceededLog(profile)
@@ -56,84 +51,63 @@ func UploadSingle(profile string, guid string, filePath string, bucketName strin
 	// logs.SetToBoth()
 	// logs.InitScoreBoard(0)
 
-	log.Println("INSIDE: logs initialized")
-
 	// Instantiate interface to Gen3
 	gen3Interface := NewGen3Interface()
-	profileConfig, err = conf.ParseConfig(profile)
+	_, err := conf.ParseConfig(profile)
 	if err != nil {
 		return err
 	}
-
-	log.Println("INSIDE: profile config parsed")
 
 	filePaths, err := commonUtils.ParseFilePaths(filePath, false)
 	if len(filePaths) > 1 {
-		errorStr := fmt.Sprintln("More than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path.")
-		log.Println(errorStr)
-		return errors.New(errorStr)
+		return errors.New("more than 1 file location has been found. Do not use \"*\" in file path or provide a folder as file path")
 	}
 	if err != nil {
-		log.Println("File path parsing error: " + err.Error())
-		return err
+		return errors.New("file path parsing error: " + err.Error())
 	}
 	if len(filePaths) == 1 {
 		filePath = filePaths[0]
 	}
 	filename := filepath.Base(filePath)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		log.Println("ERROR:", filePath, filename, commonUtils.FileMetadata{}, "", 0, false, true)
 		// logs.AddToFailedLog(filePath, filename, commonUtils.FileMetadata{}, "", 0, false, true)
 		// logs.IncrementScore(logs.ScoreBoardLen - 1)
 		// logs.PrintScoreBoard()
 		// logs.CloseAll()
-		errStr := fmt.Errorf("[ERROR] The file you specified \"%s\" does not exist locally.", filePath)
-		log.Println(errStr.Error())
-		return errStr
+		return fmt.Errorf("[ERROR] The file you specified \"%s\" does not exist locally", filePath)
 	}
-
-	log.Println("INSIDE: file path parsed")
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		errorStr := fmt.Errorf("[ERROR] when opening file path %s, an error occurred: %s", filePath, err.Error())
-		log.Println(errorStr.Error())
 		// logs.AddToFailedLog(filePath, filename, commonUtils.FileMetadata{}, "", 0, false, true)
 		// logs.IncrementScore(logs.ScoreBoardLen - 1)
 		// logs.PrintScoreBoard()
 		// logs.CloseAll()
 		// log.Fatalln("File open error: " + err.Error())
-		return errorStr
+		return fmt.Errorf("[ERROR] when opening file path %s, an error occurred: %s", filePath, err.Error())
 	}
 	defer file.Close()
-
-	log.Println("INSIDE: able to open file")
 
 	furObject := commonUtils.FileUploadRequestObject{FilePath: filePath, Filename: filename, GUID: guid, Bucket: bucketName}
 
 	furObject, err = GenerateUploadRequest(gen3Interface, furObject, file)
 	if err != nil {
 		file.Close()
-		errorStr := fmt.Errorf("[ERROR] Error occurred during request generation for file %s: %s", filePath, err.Error())
-		log.Println(errorStr.Error())
 		// logs.AddToFailedLog(furObject.FilePath, furObject.Filename, commonUtils.FileMetadata{}, furObject.GUID, 0, false, true)
 		// logs.IncrementScore(logs.ScoreBoardLen - 1)
 		// logs.PrintScoreBoard()
 		// logs.CloseAll()
 		// log.Fatalf("Error occurred during request generation: %s", err.Error())
-		return errorStr
+		return fmt.Errorf("[ERROR] Error occurred during request generation for file %s: %s", filePath, err.Error())
 	}
 	err = uploadFile(furObject, 0)
 	if err != nil {
-		errStr := fmt.Errorf("[ERROR] Error uploading file %s: %s", filePath, err.Error())
-		log.Println(errStr.Error())
-		return errStr
+		return fmt.Errorf("[ERROR] Error uploading file %s: %s", filePath, err.Error())
 		// logs.IncrementScore(logs.ScoreBoardLen - 1) // update failed score
 	} /*else {
 	// logs.IncrementScore(0) // update succeeded score
 	}*/
 	// logs.PrintScoreBoard()
 	// logs.CloseAll()
-	log.Println("INSIDE: upload complete")
 	return nil
 }
