@@ -17,13 +17,13 @@ import (
 
 // DefaultUseShepherd sets whether gen3client will attempt to use the Shepherd / Object Management API
 // endpoints if available.
-// The user can override this default using the `gen3-client configure` command.
+// The user can override this default using the `data-client configure` command.
 const DefaultUseShepherd = false
 
 // DefaultMinShepherdVersion is the minimum version of Shepherd that the gen3client will use.
 // Before attempting to use Shepherd, the client will check for Shepherd's version, and if the version is
 // below this number the gen3client will instead warn the user and fall back to fence/indexd.
-// The user can override this default using the `gen3-client configure` command.
+// The user can override this default using the `data-client configure` command.
 const DefaultMinShepherdVersion = "2.0.0"
 
 // ShepherdEndpoint is the endpoint postfix for SHEPHERD / the Object Management API
@@ -74,7 +74,7 @@ type FileUploadRequestObject struct {
 	PresignedURL string
 	Request      *http.Request
 	Bar          *pb.ProgressBar
-	Bucket 	 	 string `json:"bucket,omitempty"`
+	Bucket       string `json:"bucket,omitempty"`
 }
 
 // FileDownloadResponseObject defines a object for file download
@@ -106,25 +106,28 @@ type RetryObject struct {
 	GUID         string
 	RetryCount   int
 	Multipart    bool
-	Bucket 		 string
+	Bucket       string
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning
-func ParseRootPath(filePath string) string {
+func ParseRootPath(filePath string) (string, error) {
 	if filePath != "" && filePath[0] == '~' {
 		homeDir, err := homedir.Dir()
 		if err != nil {
-			log.Fatalln(err)
+			return "", err
 		}
-		return homeDir + filePath[1:]
+		return homeDir + filePath[1:], nil
 	}
-	return filePath
+	return filePath, nil
 }
 
 // GetAbsolutePath parses input file path to its absolute path and removes the "~" in the beginning
 func GetAbsolutePath(filePath string) (string, error) {
-	fullFilePath := ParseRootPath(filePath)
-	fullFilePath, err := filepath.Abs(fullFilePath)
+	fullFilePath, err := ParseRootPath(filePath)
+	if err != nil {
+		return "", err
+	}
+	fullFilePath, err = filepath.Abs(fullFilePath)
 	return fullFilePath, err
 }
 

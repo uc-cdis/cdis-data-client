@@ -4,15 +4,14 @@ package g3cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func init() {
@@ -28,13 +27,17 @@ func init() {
 		Use:     "upload-multiple",
 		Short:   "Upload multiple of files from a specified manifest",
 		Long:    `Get presigned URLs for multiple of files specified in a manifest file and then upload all of them. Options to run multipart uploads for large files and running multiple workers to batch upload available.`,
-		Example: `./gen3-client upload-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/> --bucket=<bucket-name> --force-multipart=<boolean> --include-subdirname=<boolean> --batch=<boolean>`,
+		Example: `./data-client upload-multiple --profile=<profile-name> --manifest=<path-to-manifest/manifest.json> --upload-path=<path-to-file-dir/> --bucket=<bucket-name> --force-multipart=<boolean> --include-subdirname=<boolean> --batch=<boolean>`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./gen3-client upload\" instead.\n\n")
+			fmt.Printf("Notice: this is the upload method which requires the user to provide GUIDs. In this method files will be uploaded to specified GUIDs.\nIf your intention is to upload files without pre-existing GUIDs, consider to use \"./data-client upload\" instead.\n\n")
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
-			profileConfig = conf.ParseConfig(profile)
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
+			if err != nil {
+				log.Fatalln("Error occurred during parsing config file for hostname: " + err.Error())
+			}
 
 			host, err := gen3Interface.GetHost(&profileConfig)
 			if err != nil {
@@ -60,7 +63,7 @@ func init() {
 
 			switch {
 			case strings.EqualFold(filepath.Ext(manifestPath), ".json"):
-				manifestBytes, err := ioutil.ReadFile(manifestPath)
+				manifestBytes, err := os.ReadFile(manifestPath)
 				if err != nil {
 					log.Printf("Failed reading manifest %s, %v\n", manifestPath, err)
 					log.Fatalln("A valid manifest can be acquired by using the \"Download Manifest\" button on " + dataExplorerURL)
@@ -76,7 +79,7 @@ func init() {
 
 			uploadPath, err := commonUtils.GetAbsolutePath(uploadPath)
 			if err != nil {
-				log.Fatalf("Error when parsing file paths: " + err.Error())
+				log.Fatalf("Error when parsing file paths: %s", err.Error())
 			}
 
 			filePaths := make([]string, 0)
@@ -85,7 +88,7 @@ func init() {
 				var err error
 
 				if object.Filename != "" {
-		    			// conform to fence naming convention
+					// conform to fence naming convention
 					filePath, err = getFullFilePath(uploadPath, object.Filename)
 				} else {
 					// Otherwise, here we are assuming the local filename will be the same as GUID
@@ -126,7 +129,10 @@ func init() {
 				processSingleUploads(gen3Interface, singlePartFilePaths, bucketName, includeSubDirName, uploadPath)
 			}
 			if len(multipartFilePaths) > 0 {
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				err := processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				if err != nil {
+					log.Fatalln(err.Error())
+				}
 			}
 			if !logs.IsFailedLogMapEmpty() {
 				retryUpload(logs.GetFailedLogMap())
@@ -205,11 +211,15 @@ func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *o
 	file.Close()
 }
 
-func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) {
-	profileConfig := conf.ParseConfig(profile)
+func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) error {
+	var err error
+	profileConfig, err = conf.ParseConfig(profile)
+	if err != nil {
+		return err
+	}
 	if profileConfig.UseShepherd == "true" ||
 		profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
-		log.Fatalf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ gen3-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
+		return fmt.Errorf("Error: Shepherd currently does not support multipart uploads. For the moment, please disable Shepherd with\n	$ data-client configure --profile=%v --use-shepherd=false\nand try again.\n", profile)
 	}
 	log.Println("Multipart uploading....")
 
@@ -227,4 +237,5 @@ func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []st
 			logs.IncrementScore(0)
 		}
 	}
+	return nil
 }

@@ -1,22 +1,22 @@
 package jwt
 
-//go:generate mockgen -destination=./gen3-client/mocks/mock_functions.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/jwt FunctionInterface
-//go:generate mockgen -destination=./gen3-client/mocks/mock_request.go -package=mocks github.com/uc-cdis/gen3-client/gen3-client/jwt RequestInterface
+//go:generate mockgen -destination=./data-client/mocks/mock_functions.go -package=mocks github.com/calypr/data-client/data-client/jwt FunctionInterface
+//go:generate mockgen -destination=./data-client/mocks/mock_request.go -package=mocks github.com/calypr/data-client/data-client/jwt RequestInterface
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/calypr/data-client/data-client/commonUtils"
 	"github.com/hashicorp/go-version"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
 )
 
 type Functions struct {
@@ -178,7 +178,7 @@ func (f *Functions) CheckForShepherdAPI(profileConfig *Credential) (bool, error)
 	if res.StatusCode != 200 {
 		return false, nil
 	}
-	bodyBytes, err := ioutil.ReadAll(res.Body)
+	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return false, errors.New("Error occurred when reading HTTP request: " + err.Error())
 	}
@@ -207,7 +207,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 	var err error
 
 	if profileConfig.APIKey == "" && profileConfig.AccessToken == "" && profileConfig.APIEndpoint == "" {
-		return "", resp, errors.New("No credentials found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
+		return "", resp, fmt.Errorf("No credentials found in the configuration file! Please use \"./data-client configure\" to configure your credentials first %s", profileConfig)
 	}
 	host, _ := url.Parse(profileConfig.APIEndpoint)
 	prefixEndPoint := host.Scheme + "://" + host.Host
@@ -232,7 +232,10 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 		if err != nil {
 			return prefixEndPoint, resp, err
 		}
-		f.Config.UpdateConfigFile(*profileConfig)
+		err = f.Config.UpdateConfigFile(*profileConfig)
+		if err != nil {
+			return prefixEndPoint, resp, err
+		}
 
 		resp, err = f.Request.MakeARequest(method, apiEndpoint, profileConfig.AccessToken, contentType, nil, bytes.NewBuffer(bodyBytes), false)
 		if err != nil {
@@ -245,7 +248,7 @@ func (f *Functions) GetResponse(profileConfig *Credential, endpointPostPrefix st
 
 func (f *Functions) GetHost(profileConfig *Credential) (*url.URL, error) {
 	if profileConfig.APIEndpoint == "" {
-		return nil, errors.New("No APIEndpoint found in the configuration file! Please use \"./gen3-client configure\" to configure your credentials first")
+		return nil, errors.New("No APIEndpoint found in the configuration file! Please use \"./data-client configure\" to configure your credentials first")
 	}
 	host, _ := url.Parse(profileConfig.APIEndpoint)
 	return host, nil

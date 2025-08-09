@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/calypr/data-client/data-client/commonUtils"
+	"github.com/calypr/data-client/data-client/logs"
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
 )
 
 func init() {
@@ -23,12 +23,12 @@ func init() {
 		Use:   "upload",
 		Short: "Upload file(s) to object storage.",
 		Long:  `Gets a presigned URL for each file and then uploads the specified file(s).`,
-		Example: "For uploading a single file:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/data.bam>\n" +
-			"For uploading all files within an folder:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/>\n" +
-			"Can also support regex such as:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
-			"Or:\n./gen3-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>\n" +
-			"This command can also upload file metadata using the --metadata flag. If the --metadata flag is passed, the gen3-client will look for a file called [filename]_metadata.json in the same folder, which contains the metadata to upload.\n" +
-			"For example, if uploading the file `folder/my_file.bam`, the gen3-client will look for a metadata file at `folder/my_file_metadata.json`.\n" +
+		Example: "For uploading a single file:\n./data-client upload --profile=<profile-name> --upload-path=<path-to-files/data.bam>\n" +
+			"For uploading all files within an folder:\n./data-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/>\n" +
+			"Can also support regex such as:\n./data-client upload --profile=<profile-name> --upload-path=<path-to-files/folder/*>\n" +
+			"Or:\n./data-client upload --profile=<profile-name> --upload-path=<path-to-files/*/folder/*.bam>\n" +
+			"This command can also upload file metadata using the --metadata flag. If the --metadata flag is passed, the data-client will look for a file called [filename]_metadata.json in the same folder, which contains the metadata to upload.\n" +
+			"For example, if uploading the file `folder/my_file.bam`, the data-client will look for a metadata file at `folder/my_file_metadata.json`.\n" +
 			"For the format of the metadata files, see the README.",
 		Run: func(cmd *cobra.Command, args []string) {
 			// initialize transmission logs
@@ -39,7 +39,12 @@ func init() {
 
 			// Instantiate interface to Gen3
 			gen3Interface := NewGen3Interface()
-			profileConfig = conf.ParseConfig(profile)
+			var err error
+			profileConfig, err = conf.ParseConfig(profile)
+			if err != nil {
+				log.Println(err.Error())
+				return
+			}
 
 			if hasMetadata {
 				hasShepherd, err := gen3Interface.CheckForShepherdAPI(&profileConfig)
@@ -55,7 +60,7 @@ func init() {
 			uploadPath, _ = commonUtils.GetAbsolutePath(uploadPath)
 			filePaths, err := commonUtils.ParseFilePaths(uploadPath, hasMetadata)
 			if err != nil {
-				log.Fatalf("Error when parsing file paths: " + err.Error())
+				log.Fatalf("Error when parsing file paths: %s", err.Error())
 			}
 			if len(filePaths) == 0 {
 				log.Println("No file has been found in the provided location \"" + uploadPath + "\"")
@@ -154,7 +159,10 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				// NOTE(@mpingram) - For the moment Shepherd doesn't support multipart uploads.
 				// Throw an error if Shepherd is enabled and user attempts to multipart upload.
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				err := processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				if err != nil {
+					log.Println(err.Error())
+				}
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
