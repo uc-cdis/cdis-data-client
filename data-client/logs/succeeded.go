@@ -2,7 +2,7 @@ package logs
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -26,7 +26,7 @@ func InitSucceededLog(profile string) {
 
 	succeededLogFileMap = make(map[string]string)
 	if fi.Size() > 0 {
-		data, err := ioutil.ReadAll(succeededLogFile)
+		data, err := io.ReadAll(succeededLogFile)
 		if err != nil {
 			succeededLogFile.Close()
 			log.Fatal("Error occurred when reading from file \"" + succeededLogFilename + "\": " + err.Error())

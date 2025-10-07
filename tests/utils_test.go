@@ -3,16 +3,16 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/calypr/data-client/data-client/commonUtils"
+	g3cmd "github.com/calypr/data-client/data-client/g3cmd"
+	"github.com/calypr/data-client/data-client/jwt"
+	"github.com/calypr/data-client/data-client/mocks"
 	"github.com/golang/mock/gomock"
-	"github.com/uc-cdis/gen3-client/gen3-client/commonUtils"
-	g3cmd "github.com/uc-cdis/gen3-client/gen3-client/g3cmd"
-	"github.com/uc-cdis/gen3-client/gen3-client/jwt"
-	"github.com/uc-cdis/gen3-client/gen3-client/mocks"
 )
 
 // Expect GetDownloadResponse to:
@@ -43,7 +43,7 @@ func TestGetDownloadResponse_withShepherd(t *testing.T) {
 	}`, mockDownloadURL)
 	mockDownloadURLResponse := http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader(downloadURLBody)),
+		Body:       io.NopCloser(strings.NewReader(downloadURLBody)),
 	}
 	mockGen3Interface.
 		EXPECT().
@@ -53,7 +53,7 @@ func TestGetDownloadResponse_withShepherd(t *testing.T) {
 	// Mock the request for the file at mockDownloadURL.
 	mockFileResponse := http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader("It work")),
+		Body:       io.NopCloser(strings.NewReader("It work")),
 	}
 	mockGen3Interface.
 		EXPECT().
@@ -112,7 +112,7 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 	// Mock the request for the file at mockDownloadURL.
 	mockFileResponse := http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(strings.NewReader("It work")),
+		Body:       io.NopCloser(strings.NewReader("It work")),
 	}
 	mockGen3Interface.
 		EXPECT().
@@ -232,7 +232,7 @@ func TestGeneratePresignedURL_withShepherd(t *testing.T) {
 	}`, mockGUID, mockPresignedURL)
 	mockUploadURLResponse := http.Response{
 		StatusCode: 201,
-		Body:       ioutil.NopCloser(strings.NewReader(presignedURLBody)),
+		Body:       io.NopCloser(strings.NewReader(presignedURLBody)),
 	}
 	mockGen3Interface.
 		EXPECT().

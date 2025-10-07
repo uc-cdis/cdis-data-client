@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
-	"github.com/uc-cdis/gen3-client/gen3-client/logs"
+	"github.com/calypr/data-client/data-client/logs"
 )
 
 func init() {
@@ -15,12 +15,15 @@ func init() {
 		Use:     "auth",
 		Short:   "Return resource access privileges from profile",
 		Long:    `Gets resource access privileges for specified profile.`,
-		Example: `./gen3-client auth --profile=<profile-name>`,
+		Example: `./data-client auth --profile=<profile-name>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			// don't initialize transmission logs for non-uploading related commands
 			logs.SetToBoth()
 			gen3Interface := NewGen3Interface()
-			profileConfig = conf.ParseConfig(profile)
+				profileConfig, err := conf.ParseConfig(profile)
+			if err != nil {
+				log.Fatalf("Fatal config parse error: %s\n", err)
+			}
 
 			host, resourceAccess, err := gen3Interface.CheckPrivileges(&profileConfig)
 

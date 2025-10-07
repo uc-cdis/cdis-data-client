@@ -1,4 +1,4 @@
-module github.com/uc-cdis/gen3-client
+module github.com/calypr/data-client
 
 go 1.17
 
