@@ -474,6 +474,6 @@ func init() {
 	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
 	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel")
 	downloadMultipleCmd.Flags().BoolVar(&skipCompleted, "skip-completed", false, "If set to true, will check for filename and size before download and skip any files in \"download-path\" that matches both")
-	downloadMultipleCmd.Flags().BoolVar(&quiet, "quiet", false, "If set to true, will not display progress bars during download")
+	downloadMultipleCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "If set to true, will not display progress bars during download")
 	RootCmd.AddCommand(downloadMultipleCmd)
 }
