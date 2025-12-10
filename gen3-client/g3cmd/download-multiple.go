@@ -206,7 +206,7 @@ func validateLocalFileStat(downloadPath string, filename string, filesize int64,
 	return commonUtils.FileDownloadResponseObject{DownloadPath: downloadPath, Filename: filename, Range: localFilesize}
 }
 
-func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error) int {
+func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadResponseObject, protocolText string, workers int, errCh chan error, quiet bool) int {
 	bars := make([]*pb.ProgressBar, 0)
 	fdrs := make([]commonUtils.FileDownloadResponseObject, 0)
 	for _, fdrObject := range batchFDRSlice {
@@ -236,22 +236,34 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 			errCh <- errors.New("Error occurred during opening local file: " + err.Error())
 			continue
 		}
-		bar := pb.New64(fdrObject.Response.ContentLength + fdrObject.Range).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fdrObject.Filename + " ")
-		bar.Set64(fdrObject.Range)
-		writer := io.MultiWriter(file, bar)
-		bars = append(bars, bar)
-		fdrObject.Writer = writer
+		var bar *pb.ProgressBar
+		if quiet {
+			writer := io.MultiWriter(file)
+			fdrObject.Writer = writer
+		} else {
+			bar = pb.New64(fdrObject.Response.ContentLength + fdrObject.Range).SetUnits(pb.U_BYTES).SetRefreshRate(time.Millisecond * 10).Prefix(fdrObject.Filename + " ")
+			bar.Set64(fdrObject.Range)
+			writer := io.MultiWriter(file, bar)
+			bars = append(bars, bar)
+			fdrObject.Writer = writer
+		}
 		fdrs = append(fdrs, fdrObject)
 		defer file.Close()
 		defer fdrObject.Response.Body.Close()
-		defer bar.Finish()
+		if !quiet {
+			defer bar.Finish()
+		}
 	}
 
 	fdrCh := make(chan commonUtils.FileDownloadResponseObject, len(fdrs))
-	pool, err := pb.StartPool(bars...)
-	if err != nil {
-		errCh <- errors.New("Error occurred during initializing progress bars: " + err.Error())
-		return 0
+	var pool *pb.Pool
+	var err error
+	if !quiet {
+		pool, err = pb.StartPool(bars...)
+		if err != nil {
+			errCh <- errors.New("Error occurred during initializing progress bars: " + err.Error())
+			return 0
+		}
 	}
 
 	wg := sync.WaitGroup{}
@@ -276,15 +288,17 @@ func batchDownload(g3 Gen3Interface, batchFDRSlice []commonUtils.FileDownloadRes
 	close(fdrCh)
 
 	wg.Wait()
-	err = pool.Stop()
-	if err != nil {
-		errCh <- errors.New("Error occurred during stopping progress bars: " + err.Error())
-		return succeeded
+	if !quiet {
+		err = pool.Stop()
+		if err != nil {
+			errCh <- errors.New("Error occurred during stopping progress bars: " + err.Error())
+			return succeeded
+		}
 	}
 	return succeeded
 }
 
-func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool) {
+func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat string, rename bool, noPrompt bool, protocol string, numParallel int, skipCompleted bool, quiet bool) {
 	if numParallel < 1 {
 		log.Fatalln("Invalid value for option \"numparallel\": must be a positive integer! Please check your input.")
 	}
@@ -318,8 +332,11 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 
 	log.Printf("Total number of objects in manifest: %d", len(objects))
 	log.Println("Preparing file info for each file, please wait...")
-	fileInfoBar := pb.New(len(objects)).SetRefreshRate(time.Millisecond * 10)
-	fileInfoBar.Start()
+	var fileInfoBar *pb.ProgressBar
+	if !quiet {
+		fileInfoBar = pb.New(len(objects)).SetRefreshRate(time.Millisecond * 10)
+		fileInfoBar.Start()
+	}
 	for _, obj := range objects {
 		if obj.ObjectID == "" {
 			log.Println("Found empty object_id (GUID), skipping this entry")
@@ -338,9 +355,13 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 		}
 		fdrObject.GUID = obj.ObjectID
 		fdrObjects = append(fdrObjects, fdrObject)
-		fileInfoBar.Increment()
+		if !quiet {
+			fileInfoBar.Increment()
+		}
 	}
-	fileInfoBar.Finish()
+	if !quiet {
+		fileInfoBar.Finish()
+	}
 	log.Println("File info prepared successfully")
 
 	totalCompeleted := 0
@@ -356,12 +377,12 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 		if len(batchFDRSlice) < workers {
 			batchFDRSlice = append(batchFDRSlice, fdrObject)
 		} else {
-			totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh)
+			totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh, quiet)
 			batchFDRSlice = make([]commonUtils.FileDownloadResponseObject, 0)
 			batchFDRSlice = append(batchFDRSlice, fdrObject)
 		}
 	}
-	totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh) // download remainders
+	totalCompeleted += batchDownload(gen3Interface, batchFDRSlice, protocolText, workers, errCh, quiet) // download remainders
 
 	log.Printf("%d files downloaded.\n", totalCompeleted)
 
@@ -392,6 +413,7 @@ func init() {
 	var protocol string
 	var numParallel int
 	var skipCompleted bool
+	var quiet bool
 
 	var downloadMultipleCmd = &cobra.Command{
 		Use:     "download-multiple",
@@ -433,7 +455,7 @@ func init() {
 				log.Fatalf("Error has occurred during unmarshalling manifest object: %v\n", err)
 			}
 
-			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted)
+			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, numParallel, skipCompleted, quiet)
 			err = logs.CloseMessageLog()
 			if err != nil {
 				log.Println(err.Error())
@@ -452,5 +474,6 @@ func init() {
 	downloadMultipleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=s3")
 	downloadMultipleCmd.Flags().IntVar(&numParallel, "numparallel", 1, "Number of downloads to run in parallel")
 	downloadMultipleCmd.Flags().BoolVar(&skipCompleted, "skip-completed", false, "If set to true, will check for filename and size before download and skip any files in \"download-path\" that matches both")
+	downloadMultipleCmd.Flags().BoolVar(&quiet, "quiet", false, "If set to true, will not display progress bars during download")
 	RootCmd.AddCommand(downloadMultipleCmd)
 }
