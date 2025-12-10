@@ -15,6 +15,7 @@ func init() {
 	var rename bool
 	var noPrompt bool
 	var skipCompleted bool
+	var quiet bool
 
 	var downloadSingleCmd = &cobra.Command{
 		Use:     "download-single",
@@ -30,7 +31,7 @@ func init() {
 				ObjectID: guid,
 			}
 			objects := []ManifestObject{obj}
-			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted)
+			downloadFile(objects, downloadPath, filenameFormat, rename, noPrompt, protocol, 1, skipCompleted, quiet)
 			err := logs.CloseMessageLog()
 			if err != nil {
 				log.Println(err.Error())
@@ -48,5 +49,6 @@ func init() {
 	downloadSingleCmd.Flags().BoolVar(&noPrompt, "no-prompt", false, "If set to true, will not display user prompt message for confirmation")
 	downloadSingleCmd.Flags().StringVar(&protocol, "protocol", "", "Specify the preferred protocol with --protocol=gs")
 	downloadSingleCmd.Flags().BoolVar(&skipCompleted, "skip-completed", false, "If set to true, will check for filename and size before download and skip any files in \"download-path\" that matches both")
+	downloadSingleCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "If set to true, will not display progress bars during download")
 	RootCmd.AddCommand(downloadSingleCmd)
 }
