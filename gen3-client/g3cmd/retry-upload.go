@@ -46,7 +46,7 @@ func handleFailedRetry(ro commonUtils.RetryObject, retryObjCh chan commonUtils.R
 	}
 }
 
-func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
+func retryUpload(failedLogMap map[string]commonUtils.RetryObject, fileNameToIDMap map[string]string) {
 
 	gen3Interface := NewGen3Interface()
 
@@ -97,7 +97,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 
 		if ro.Multipart {
 			fileInfo := FileInfo{FilePath: ro.FilePath, Filename: ro.Filename}
-			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket)
+			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket, fileNameToIDMap)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
@@ -110,7 +110,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				}
 			}
 		} else {
-			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, ro.Filename, ro.FileMetadata, ro.Bucket)
+			presignedURL, guid, err = GeneratePresignedURL(gen3Interface, ro.Filename, ro.FileMetadata, ro.Bucket, fileNameToIDMap)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, guid, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, true)
@@ -181,7 +181,7 @@ func init() {
 
 			failedLogPath = commonUtils.ParseRootPath(failedLogPath)
 			logs.LoadFailedLogFile(failedLogPath)
-			retryUpload(logs.GetFailedLogMap())
+			retryUpload(logs.GetFailedLogMap(), nil)
 			logs.PrintScoreBoard()
 			logs.CloseAll()
 		},
