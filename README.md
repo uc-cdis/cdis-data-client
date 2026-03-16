@@ -4,7 +4,7 @@
 
 `gen3-client` is a command-line tool for downloading, uploading, and submitting data files to and from a Gen3 data commons.
 
-Read more about what it does and how to use it in the `gen3-client` [user guide](https://gen3.org/resources/user/gen3-client/).
+Read more about what it does and how to use it in the `gen3-client` [user guide](https://docs.gen3.org/gen3-resources/tools/data-client/).
 
 `gen3-client` is built on Cobra, a library providing a simple interface to create powerful modern CLI interfaces similar to git & go tools. Read more about Cobra [here](https://github.com/spf13/cobra).
 
@@ -36,8 +36,7 @@ go get -d ./...
 go install .
 ```
 
-Now you should have `gen3-client` successfully installed. For a comprehensive instruction on how to configure and use `gen3-client` for uploading / downloading object files, please refer to the `gen3-client` [user guide](https://gen3.org/resources/user/gen3-client/).
-
+Now you should have `gen3-client` successfully installed. For a comprehensive instruction on how to configure and use `gen3-client` for uploading / downloading object files, please refer to the `gen3-client` [user guide](https://docs.gen3.org/gen3-resources/tools/data-client/
 ## Enabling New Gen3 Object Management API
 Some Gen3 data commons support uploading files through the new Gen3 Object Management API.
 
