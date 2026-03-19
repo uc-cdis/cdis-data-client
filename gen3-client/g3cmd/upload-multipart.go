@@ -172,7 +172,7 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int, bucket
 	}
 
 	if updateRecordUrls {
-		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid)
+		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid, fileInfo.Filename)
 		if err != nil {
 			logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 			err = fmt.Errorf("FAILED to update indexd record after multipart upload for %s: %s", fileInfo.Filename, err.Error())

@@ -563,7 +563,7 @@ func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject,
 	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
 
 	if updateRecordUrls {
-		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid)
+		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid, furObject.Filename)
 		if err != nil {
 			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, retryCount, false, true)
 			furObject.Bar.Finish()
@@ -576,14 +576,15 @@ func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject,
 	return nil
 }
 
-func UpdateIndexdBlankRecordUrl(g3 Gen3Interface, bucketName string, guid string) error {
+func UpdateIndexdBlankRecordUrl(g3 Gen3Interface, bucketName string, guid string, fileName string) error {
 	// get the indexd record and extract the rev
 	endPoint := commonUtils.IndexdIndexEndpoint + "/" + guid
 	indexdMsg, err := g3.DoRequestWithSignedHeader(&profileConfig, "GET", endPoint, "", nil)
 	rev := indexdMsg.Rev
 
 	// generate a request body with the record's new url
-	updateUrlsObject := UpdateIndexdBlankRecordUrlsObject{Urls: []string{"todo url"}}
+	fileUrl := "s3://" + bucketName + "/" + guid + "/" + fileName
+	updateUrlsObject := UpdateIndexdBlankRecordUrlsObject{Urls: []string{fileUrl}}
 	objectBytes, err := json.Marshal(updateUrlsObject)
 	if err != nil {
 		return errors.New("Error occurred when marshalling object: " + err.Error())
