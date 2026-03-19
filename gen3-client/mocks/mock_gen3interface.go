@@ -64,16 +64,16 @@ func (mr *MockGen3InterfaceMockRecorder) CheckPrivileges(arg0 interface{}) *gomo
 }
 
 // DoRequestWithSignedHeader mocks base method
-func (m *MockGen3Interface) DoRequestWithSignedHeader(arg0 *jwt.Credential, arg1, arg2 string, arg3 []byte) (jwt.JsonMessage, error) {
-	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3)
+func (m *MockGen3Interface) DoRequestWithSignedHeader(arg0 *jwt.Credential, arg1 string, arg2 string, arg3 string, arg4 []byte) (jwt.JsonMessage, error) {
+	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(jwt.JsonMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DoRequestWithSignedHeader indicates an expected call of DoRequestWithSignedHeader
-func (mr *MockGen3InterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockGen3Interface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3)
+func (mr *MockGen3InterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockGen3Interface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3, arg4)
 }
 
 // GetHost mocks base method

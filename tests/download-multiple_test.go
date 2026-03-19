@@ -122,7 +122,7 @@ func Test_askGen3ForFileInfo_noShepherd(t *testing.T) {
 		Return(false, nil)
 	mockGen3Interface.
 		EXPECT().
-		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), commonUtils.IndexdIndexEndpoint+"/"+testGUID, "", nil).
+		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), "GET", commonUtils.IndexdIndexEndpoint+"/"+testGUID, "", nil).
 		Return(jwt.JsonMessage{FileName: testFileName, Size: testFileSize}, nil)
 	// ----------
 
@@ -156,7 +156,7 @@ func Test_askGen3ForFileInfo_noShepherd_indexdError(t *testing.T) {
 		Return(false, nil)
 	mockGen3Interface.
 		EXPECT().
-		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), commonUtils.IndexdIndexEndpoint+"/"+testGUID, "", nil).
+		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), "GET", commonUtils.IndexdIndexEndpoint+"/"+testGUID, "", nil).
 		Return(jwt.JsonMessage{}, fmt.Errorf("Error downloading file from Indexd"))
 	// ----------
 

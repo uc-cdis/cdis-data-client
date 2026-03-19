@@ -28,7 +28,7 @@ type FunctionInterface interface {
 	CheckPrivileges(profileConfig *Credential) (string, map[string]interface{}, error)
 	CheckForShepherdAPI(profileConfig *Credential) (bool, error)
 	GetResponse(profileConfig *Credential, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
-	DoRequestWithSignedHeader(profileConfig *Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error)
+	DoRequestWithSignedHeader(profileConfig *Credential, method string, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error)
 	ParseFenceURLResponse(resp *http.Response) (JsonMessage, error)
 	GetHost(profileConfig *Credential) (*url.URL, error)
 }
@@ -251,17 +251,12 @@ func (f *Functions) GetHost(profileConfig *Credential) (*url.URL, error) {
 	return host, nil
 }
 
-func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
+func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, method string, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error) {
 	/*
 	   Do request with signed header. User may have more than one profile and use a profile to make a request
 	*/
 	var err error
 	var msg JsonMessage
-
-	method := "GET"
-	if bodyBytes != nil {
-		method = "POST"
-	}
 
 	_, resp, err := f.GetResponse(profileConfig, endpointPostPrefix, method, contentType, bodyBytes)
 	if err != nil {
