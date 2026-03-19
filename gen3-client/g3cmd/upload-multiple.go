@@ -127,7 +127,7 @@ func init() {
 				processSingleUploads(gen3Interface, singlePartFilePaths, bucketName, includeSubDirName, uploadPath, updateRecordUrls)
 			}
 			if len(multipartFilePaths) > 0 {
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath, updateRecordUrls)
 			}
 			if !logs.IsFailedLogMapEmpty() {
 				retryUpload(logs.GetFailedLogMap())
@@ -207,7 +207,7 @@ func startSingleFileUpload(gen3Interface Gen3Interface, filePath string, file *o
 	file.Close()
 }
 
-func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string) {
+func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []string, bucketName string, includeSubDirName bool, uploadPath string, updateRecordUrls bool) {
 	profileConfig := conf.ParseConfig(profile)
 	if profileConfig.UseShepherd == "true" ||
 		profileConfig.UseShepherd == "" && commonUtils.DefaultUseShepherd == true {
@@ -222,7 +222,7 @@ func processMultipartUpload(gen3Interface Gen3Interface, multipartFilePaths []st
 			log.Println("Process filename error for file: " + err.Error())
 			continue
 		}
-		err = multipartUpload(gen3Interface, fileInfo, 0, bucketName)
+		err = multipartUpload(gen3Interface, fileInfo, 0, bucketName, updateRecordUrls)
 		if err != nil {
 			log.Println(err.Error())
 		} else {

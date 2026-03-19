@@ -543,7 +543,7 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	}
 }
 
-func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, retryCount int, bucketName string, guid string, updateRecordUrl bool) error {
+func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, retryCount int, bucketName string, guid string, updateRecordUrls bool) error {
 	log.Println("Uploading data ...")
 	furObject.Bar.Start()
 
@@ -562,12 +562,12 @@ func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject,
 	furObject.Bar.Finish()
 	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
 
-	if updateRecordUrl {
+	if updateRecordUrls {
 		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid)
 		if err != nil {
 			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, retryCount, false, true)
 			furObject.Bar.Finish()
-			return errors.New("Error occurred during upload: " + err.Error())
+			return errors.New("FAILED to update indexd record after upload: " + err.Error())
 		}
 	}
 

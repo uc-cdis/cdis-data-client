@@ -37,7 +37,7 @@ func retry(attempts int, filePath string, guid string, f func() error) (err erro
 	return fmt.Errorf("After %d attempts, last error: %s", attempts, err)
 }
 
-func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int, bucketName string) error {
+func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int, bucketName string, updateRecordUrls bool) error {
 	// NOTE @mpingram -- multipartUpload does not yet use the new Shepherd API
 	// because Shepherd does not yet support multipart uploads.
 	file, err := os.Open(fileInfo.FilePath)
@@ -169,6 +169,15 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int, bucket
 		logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 		err = fmt.Errorf("FAILED multipart upload for %s: %s", fileInfo.Filename, err.Error())
 		return err
+	}
+
+	if updateRecordUrls {
+		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid)
+		if err != nil {
+			logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
+			err = fmt.Errorf("FAILED to update indexd record after multipart upload for %s: %s", fileInfo.Filename, err.Error())
+			return err
+		}
 	}
 
 	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", fileInfo.FilePath, guid)
