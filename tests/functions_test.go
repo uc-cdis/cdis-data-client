@@ -90,7 +90,9 @@ func TestDoRequestWithSignedHeaderRefreshToken(t *testing.T) {
 	testFunction := &jwt.Functions{Config: mockConfig, Request: mockRequest}
 
 	profileConfig := jwt.Credential{KeyId: "", APIKey: "fake_api_key", AccessToken: "expired_token", APIEndpoint: "http://www.test.com"}
+	req, _ := http.NewRequest(http.MethodPut, "www.test.com", nil)
 	mockedResp := &http.Response{
+		Request:    req,
 		Body:       ioutil.NopCloser(bytes.NewBufferString("{\"url\": \"www.test.com/user/data/download/\"}")),
 		StatusCode: 401,
 	}

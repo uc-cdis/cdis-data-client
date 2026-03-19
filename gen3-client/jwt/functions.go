@@ -127,7 +127,7 @@ func (f *Functions) ParseResponse(resp *http.Response) (JsonMessage, error) {
 	str := ResponseToString(resp)
 
 	if !(resp.StatusCode == 200 || resp.StatusCode == 201) {
-		log.Printf("ERROR: '%s' returned %d: %s\n", resp.Request.URL.String(), resp.StatusCode, str)
+		log.Printf("ERROR from '%s': %d %s\n", resp.Request.URL.String(), resp.StatusCode, str)
 		switch resp.StatusCode {
 		case 401:
 			return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials")
