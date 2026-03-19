@@ -600,6 +600,7 @@ func UpdateIndexdBlankRecordUrl(g3 Gen3Interface, bucketName string, guid string
 		return errors.New("Something went wrong. Maybe you don't have permission to update the blank record in Indexd. Detailed error message: " + err.Error())
 	}
 
+	log.Printf("Successfully set the URL for GUID '%s' to '%s'.\n", guid, fileUrl)
 	return nil
 }
 
