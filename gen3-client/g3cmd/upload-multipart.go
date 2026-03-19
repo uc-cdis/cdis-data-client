@@ -78,12 +78,12 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int, bucket
 	bar.Start()
 
 	wg := sync.WaitGroup{}
+	var presignedURL string
 	for i := 0; i < numOfWorkers; i++ {
 		wg.Add(1)
 		go func() {
 			buf := make([]byte, chunkSize)
 			for chunkIndex := range chunkIndexCh {
-				var presignedURL string
 				err = retry(MaxRetryCount, fileInfo.FilePath, guid, func() (err error) {
 					presignedURL, err = GenerateMultipartPresignedURL(g3, key, uploadID, chunkIndex, bucketName)
 					return
@@ -172,7 +172,7 @@ func multipartUpload(g3 Gen3Interface, fileInfo FileInfo, retryCount int, bucket
 	}
 
 	if updateRecordUrls {
-		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid, fileInfo.Filename)
+		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid, fileInfo.Filename, presignedURL)
 		if err != nil {
 			logs.AddToFailedLog(fileInfo.FilePath, fileInfo.Filename, fileInfo.FileMetadata, guid, retryCount, true, true)
 			err = fmt.Errorf("FAILED to update indexd record after multipart upload for %s: %s", fileInfo.Filename, err.Error())

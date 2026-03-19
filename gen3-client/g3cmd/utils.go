@@ -454,7 +454,7 @@ func separateSingleAndMultipartUploads(filePaths []string, forceMultipart bool) 
 			}
 
 			if logs.ExistsInSucceededLog(filePath) {
-				log.Println("File \"" + filePath + "\" has been found in local submission history and has been skipped to prevent duplicated submissions.")
+				log.Println("File \"" + filePath + "\" has been found in local submission history (\"" + logs.SucceededLogFilename + "\") and has been skipped to prevent duplicated submissions.")
 				return
 			}
 			logs.AddToFailedLog(filePath, filepath.Base(filePath), commonUtils.FileMetadata{}, "", 0, false, true)
@@ -563,7 +563,7 @@ func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject,
 	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
 
 	if updateRecordUrls {
-		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid, furObject.Filename)
+		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid, furObject.Filename, furObject.PresignedURL)
 		if err != nil {
 			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, retryCount, false, true)
 			furObject.Bar.Finish()
@@ -576,13 +576,35 @@ func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject,
 	return nil
 }
 
-func UpdateIndexdBlankRecordUrl(g3 Gen3Interface, bucketName string, guid string, fileName string) error {
+func getBucketNameFromPresignedUrl(url string) string {
+	parsedURL, err := conf.ValidateUrl(url)
+	if err != nil {
+		log.Fatalln("Error occurred when validating apiendpoint URL: " + err.Error())
+	}
+
+	var bucket string
+	host := parsedURL.Hostname()
+	if strings.HasPrefix(host, "s3.") { // path-style s3 url
+		path := strings.TrimPrefix(parsedURL.Path, "/")
+		bucket = strings.SplitN(path, "/", 2)[0]
+	} else { // virtual hosted style s3 url
+		bucket = strings.SplitN(host, ".s3.", 2)[0]
+	}
+
+	return bucket
+}
+
+func UpdateIndexdBlankRecordUrl(g3 Gen3Interface, bucketName string, guid string, fileName string, presignedUrl string) error {
 	// get the indexd record and extract the rev
 	endPoint := commonUtils.IndexdIndexEndpoint + "/" + guid
 	indexdMsg, err := g3.DoRequestWithSignedHeader(&profileConfig, "GET", endPoint, "", nil)
 	rev := indexdMsg.Rev
 	if err != nil {
 		return errors.New("Error occurred when getting indexd record's rev: " + err.Error())
+	}
+
+	if bucketName == "" {
+		bucketName = getBucketNameFromPresignedUrl(presignedUrl)
 	}
 
 	// generate a request body with the record's new url
