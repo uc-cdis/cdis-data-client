@@ -29,7 +29,7 @@ type FunctionInterface interface {
 	CheckForShepherdAPI(profileConfig *Credential) (bool, error)
 	GetResponse(profileConfig *Credential, endpointPostPrefix string, method string, contentType string, bodyBytes []byte) (string, *http.Response, error)
 	DoRequestWithSignedHeader(profileConfig *Credential, method string, endpointPostPrefix string, contentType string, bodyBytes []byte) (JsonMessage, error)
-	ParseFenceURLResponse(resp *http.Response) (JsonMessage, error)
+	ParseResponse(resp *http.Response) (JsonMessage, error)
 	GetHost(profileConfig *Credential) (*url.URL, error)
 }
 
@@ -117,14 +117,17 @@ func (r *Request) RequestNewAccessToken(accessTokenEndpoint string, profileConfi
 	return nil
 }
 
-func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, error) {
+func (f *Functions) ParseResponse(resp *http.Response) (JsonMessage, error) {
 	msg := JsonMessage{}
 
 	if resp == nil {
 		return msg, errors.New("Nil response received")
 	}
 
+	str := ResponseToString(resp)
+
 	if !(resp.StatusCode == 200 || resp.StatusCode == 201) {
+		log.Printf("ERROR: '%s' returned %d: %s\n", resp.Request.URL.String(), resp.StatusCode, str)
 		switch resp.StatusCode {
 		case 401:
 			return msg, errors.New("401 Unauthorized error has occurred! Something went wrong during authentication, please check your configuration and/or credentials")
@@ -141,7 +144,6 @@ func (f *Functions) ParseFenceURLResponse(resp *http.Response) (JsonMessage, err
 		}
 	}
 
-	str := ResponseToString(resp)
 	if strings.Contains(str, "Can't find a location for the data") {
 		return msg, errors.New("The provided GUID is not found")
 	}
@@ -264,7 +266,7 @@ func (f *Functions) DoRequestWithSignedHeader(profileConfig *Credential, method 
 	}
 	defer resp.Body.Close()
 
-	msg, err = f.ParseFenceURLResponse(resp)
+	msg, err = f.ParseResponse(resp)
 	return msg, err
 }
 
