@@ -146,13 +146,14 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				continue
 			}
 
-			err = uploadFile(furObject, ro.RetryCount)
+			err = uploadFile(gen3Interface, furObject, ro.RetryCount, ro.Bucket, guid, ro.UpdateRecordUrls)
 			if err != nil {
 				updateRetryObject(&ro, furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
 				continue
 			}
+
 			logs.DeleteFromFailedLog(furObject.FilePath, true)
 			logs.IncrementScore(ro.RetryCount)
 			file.Close()

@@ -23,6 +23,7 @@ import (
 
 // mockgen -destination=../mocks/mock_gen3interface.go -package=mocks . Gen3Interface
 
+// returns the record's file name and size
 func AskGen3ForFileInfo(gen3Interface Gen3Interface, guid string, protocol string, downloadPath string, filenameFormat string, rename bool, renamedFiles *[]RenamedOrSkippedFileInfo) (string, int64) {
 	var fileName string
 	var fileSize int64
@@ -328,7 +329,7 @@ func downloadFile(objects []ManifestObject, downloadPath string, filenameFormat 
 		var fdrObject commonUtils.FileDownloadResponseObject
 		filename := obj.Filename
 		filesize := obj.Filesize
-		// only queries Gen3 services if any of these 2 values doesn't exists in manifest
+		// only queries Gen3 services if any of these 2 values doesn't exist in manifest
 		if filename == "" || filesize == 0 {
 			filename, filesize = AskGen3ForFileInfo(gen3Interface, obj.ObjectID, protocol, downloadPath, filenameFormat, rename, &renamedFiles)
 		}

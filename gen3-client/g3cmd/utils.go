@@ -75,6 +75,12 @@ type MultipartPartObject struct {
 	ETag       string `json:"ETag"`
 }
 
+// UpdateIndexdBlankRecordUrlsObject represents the payload sent to Indexd to update a blank
+// record's urls field
+type UpdateIndexdBlankRecordUrlsObject struct {
+	Urls []string `json:"urls"`
+}
+
 // FileInfo is a helper struct for including subdirname as filename
 type FileInfo struct {
 	FilePath     string
@@ -537,7 +543,7 @@ func getFullFilePath(filePath string, filename string) (string, error) {
 	}
 }
 
-func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) error {
+func uploadFile(g3 Gen3Interface, furObject commonUtils.FileUploadRequestObject, retryCount int, bucketName string, guid string, updateRecordUrl bool) error {
 	log.Println("Uploading data ...")
 	furObject.Bar.Start()
 
@@ -555,8 +561,41 @@ func uploadFile(furObject commonUtils.FileUploadRequestObject, retryCount int) e
 	}
 	furObject.Bar.Finish()
 	log.Printf("Successfully uploaded file \"%s\" to GUID %s.\n", furObject.FilePath, furObject.GUID)
+
+	if updateRecordUrl {
+		err = UpdateIndexdBlankRecordUrl(g3, bucketName, guid)
+		if err != nil {
+			logs.AddToFailedLog(furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, retryCount, false, true)
+			furObject.Bar.Finish()
+			return errors.New("Error occurred during upload: " + err.Error())
+		}
+	}
+
 	logs.DeleteFromFailedLog(furObject.FilePath, true)
 	logs.WriteToSucceededLog(furObject.FilePath, furObject.GUID, false)
+	return nil
+}
+
+func UpdateIndexdBlankRecordUrl(g3 Gen3Interface, bucketName string, guid string) error {
+	// get the indexd record and extract the rev
+	endPoint := commonUtils.IndexdIndexEndpoint + "/" + guid
+	indexdMsg, err := g3.DoRequestWithSignedHeader(&profileConfig, "GET", endPoint, "", nil)
+	rev := indexdMsg.Rev
+
+	// generate a request body with the record's new url
+	updateUrlsObject := UpdateIndexdBlankRecordUrlsObject{Urls: []string{"todo url"}}
+	objectBytes, err := json.Marshal(updateUrlsObject)
+	if err != nil {
+		return errors.New("Error occurred when marshalling object: " + err.Error())
+	}
+
+	// update the blank record's urls field
+	endPoint = commonUtils.IndexdBlankEndpoint + "/" + guid + "?rev=" + rev
+	_, err = g3.DoRequestWithSignedHeader(&profileConfig, "PUT", endPoint, "application/json", objectBytes)
+	if err != nil {
+		return errors.New("Something went wrong. Maybe you don't have permission to update the blank record in Indexd. Detailed error message: " + err.Error())
+	}
+
 	return nil
 }
 

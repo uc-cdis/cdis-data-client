@@ -17,6 +17,7 @@ func init() {
 	var guid string
 	var filePath string
 	var bucketName string
+	var updateRecordUrls bool
 
 	var uploadSingleCmd = &cobra.Command{
 		Use:     "upload-single",
@@ -77,7 +78,7 @@ func init() {
 				logs.CloseAll()
 				log.Fatalf("Error occurred during request generation: %s", err.Error())
 			}
-			err = uploadFile(furObject, 0)
+			err = uploadFile(gen3Interface, furObject, 0, bucketName, guid, updateRecordUrls)
 			if err != nil {
 				log.Println(err.Error())
 				logs.IncrementScore(logs.ScoreBoardLen - 1) // update failed score
@@ -96,5 +97,6 @@ func init() {
 	uploadSingleCmd.Flags().StringVar(&filePath, "file", "", "Specify file to upload to with --file=~/path/to/file")
 	uploadSingleCmd.MarkFlagRequired("file") //nolint:errcheck
 	uploadSingleCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded. If not provided, defaults to Gen3's configured DATA_UPLOAD_BUCKET.")
+	uploadSingleCmd.Flags().BoolVar(&updateRecordUrls, "update-record-urls", true, "Set the new indexd record's 'urls' field after uploading the file")
 	RootCmd.AddCommand(uploadSingleCmd)
 }

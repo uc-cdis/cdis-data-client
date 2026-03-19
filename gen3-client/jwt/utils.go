@@ -22,6 +22,7 @@ type JsonMessage struct {
 	FileName     string   `json:"file_name"`
 	URLs         []string `json:"urls"`
 	Size         int64    `json:"size"`
+	Rev          string   `json:"rev"`
 }
 
 type DoRequest func(*http.Response) *http.Response
