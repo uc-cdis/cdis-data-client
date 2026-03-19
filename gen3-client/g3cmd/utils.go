@@ -581,6 +581,9 @@ func UpdateIndexdBlankRecordUrl(g3 Gen3Interface, bucketName string, guid string
 	endPoint := commonUtils.IndexdIndexEndpoint + "/" + guid
 	indexdMsg, err := g3.DoRequestWithSignedHeader(&profileConfig, "GET", endPoint, "", nil)
 	rev := indexdMsg.Rev
+	if err != nil {
+		return errors.New("Error occurred when getting indexd record's rev: " + err.Error())
+	}
 
 	// generate a request body with the record's new url
 	fileUrl := "s3://" + bucketName + "/" + guid + "/" + fileName
