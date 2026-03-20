@@ -19,6 +19,7 @@ func init() {
 	var forceMultipart bool
 	var numParallel int
 	var hasMetadata bool
+	var updateRecordUrls bool
 	var uploadCmd = &cobra.Command{
 		Use:   "upload",
 		Short: "Upload file(s) to object storage.",
@@ -140,7 +141,7 @@ func init() {
 						log.Printf("Error occurred during request generation: %s\n", err.Error())
 						continue
 					}
-					err = uploadFile(furObject, 0)
+					err = uploadFile(gen3Interface, furObject, 0, bucketName, guid, updateRecordUrls)
 					if err != nil {
 						log.Println(err.Error())
 					} else {
@@ -154,7 +155,7 @@ func init() {
 			if len(multipartFilePaths) > 0 {
 				// NOTE(@mpingram) - For the moment Shepherd doesn't support multipart uploads.
 				// Throw an error if Shepherd is enabled and user attempts to multipart upload.
-				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath)
+				processMultipartUpload(gen3Interface, multipartFilePaths, bucketName, includeSubDirName, uploadPath, updateRecordUrls)
 			}
 
 			if !logs.IsFailedLogMapEmpty() {
@@ -175,5 +176,6 @@ func init() {
 	uploadCmd.Flags().BoolVar(&forceMultipart, "force-multipart", false, "Force to use multipart upload if possible")
 	uploadCmd.Flags().BoolVar(&hasMetadata, "metadata", false, "Search for and upload file metadata alongside the file")
 	uploadCmd.Flags().StringVar(&bucketName, "bucket", "", "The bucket to which files will be uploaded. If not provided, defaults to Gen3's configured DATA_UPLOAD_BUCKET.")
+	uploadCmd.Flags().BoolVar(&updateRecordUrls, "update-record-urls", true, "Set the new indexd record's 'urls' field after uploading the file")
 	RootCmd.AddCommand(uploadCmd)
 }

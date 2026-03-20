@@ -106,7 +106,7 @@ func TestGetDownloadResponse_noShepherd(t *testing.T) {
 	}
 	mockGen3Interface.
 		EXPECT().
-		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), commonUtils.FenceDataDownloadEndpoint+"/"+testGUID, "", nil).
+		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), "GET", commonUtils.FenceDataDownloadEndpoint+"/"+testGUID, "", nil).
 		Return(mockDownloadURLResponse, nil)
 
 	// Mock the request for the file at mockDownloadURL.
@@ -166,7 +166,7 @@ func TestGeneratePresignedURL_noShepherd(t *testing.T) {
 	}
 	mockGen3Interface.
 		EXPECT().
-		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), commonUtils.FenceDataUploadEndpoint, "application/json", expectedReqBody).
+		DoRequestWithSignedHeader(gomock.AssignableToTypeOf(testProfileConfig), "POST", commonUtils.FenceDataUploadEndpoint, "application/json", expectedReqBody).
 		Return(mockUploadURLResponse, nil)
 	// ----------
 

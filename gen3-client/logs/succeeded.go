@@ -8,28 +8,28 @@ import (
 	"sync"
 )
 
-var succeededLogFilename string
+var SucceededLogFilename string
 var succeededLogFileMap map[string]string
 var succeededLogFile *os.File
 var succeededLogLock sync.Mutex
 
 func InitSucceededLog(profile string) {
-	succeededLogFilename = MainLogPath + profile + "_succeeded_log.json"
+	SucceededLogFilename = MainLogPath + profile + "_succeeded_log.json"
 
-	succeededLogFile, _ = os.OpenFile(succeededLogFilename, os.O_RDWR|os.O_CREATE, 0766)
+	succeededLogFile, _ = os.OpenFile(SucceededLogFilename, os.O_RDWR|os.O_CREATE, 0766)
 	fi, err := succeededLogFile.Stat()
 	if err != nil {
 		succeededLogFile.Close()
-		log.Fatal("Error occurred when opening file \"" + succeededLogFilename + "\": " + err.Error())
+		log.Fatal("Error occurred when opening file \"" + SucceededLogFilename + "\": " + err.Error())
 	}
-	log.Println("Local succeeded log file \"" + succeededLogFilename + "\" has opened")
+	log.Println("Local succeeded log file \"" + SucceededLogFilename + "\" has opened")
 
 	succeededLogFileMap = make(map[string]string)
 	if fi.Size() > 0 {
 		data, err := ioutil.ReadAll(succeededLogFile)
 		if err != nil {
 			succeededLogFile.Close()
-			log.Fatal("Error occurred when reading from file \"" + succeededLogFilename + "\": " + err.Error())
+			log.Fatal("Error occurred when reading from file \"" + SucceededLogFilename + "\": " + err.Error())
 		}
 
 		err = json.Unmarshal(data, &succeededLogFileMap)
@@ -62,7 +62,7 @@ func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 	_, err = succeededLogFile.WriteAt(jsonData, 0)
 	if err != nil {
 		succeededLogFile.Close()
-		log.Fatal("Error occurred when writing to file \"" + succeededLogFilename + "\": " + err.Error())
+		log.Fatal("Error occurred when writing to file \"" + SucceededLogFilename + "\": " + err.Error())
 	}
 	if !isMuted {
 		log.Println("Local succeeded log file updated")
@@ -71,6 +71,6 @@ func WriteToSucceededLog(filePath string, guid string, isMuted bool) {
 
 func closeSucceededLog() error {
 	SetToMessageLog()
-	log.Println("Local succeeded log file \"" + succeededLogFilename + "\" has closed")
+	log.Println("Local succeeded log file \"" + SucceededLogFilename + "\" has closed")
 	return succeededLogFile.Close()
 }

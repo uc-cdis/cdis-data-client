@@ -97,7 +97,7 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 
 		if ro.Multipart {
 			fileInfo := FileInfo{FilePath: ro.FilePath, Filename: ro.Filename}
-			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket)
+			err = multipartUpload(gen3Interface, fileInfo, ro.RetryCount, ro.Bucket, ro.UpdateRecordUrls)
 			if err != nil {
 				updateRetryObject(&ro, ro.FilePath, ro.Filename, ro.FileMetadata, ro.GUID, ro.RetryCount, true)
 				handleFailedRetry(ro, retryObjCh, err, true)
@@ -146,13 +146,14 @@ func retryUpload(failedLogMap map[string]commonUtils.RetryObject) {
 				continue
 			}
 
-			err = uploadFile(furObject, ro.RetryCount)
+			err = uploadFile(gen3Interface, furObject, ro.RetryCount, ro.Bucket, guid, ro.UpdateRecordUrls)
 			if err != nil {
 				updateRetryObject(&ro, furObject.FilePath, furObject.Filename, furObject.FileMetadata, furObject.GUID, ro.RetryCount, false)
 				handleFailedRetry(ro, retryObjCh, err, false)
 				file.Close()
 				continue
 			}
+
 			logs.DeleteFromFailedLog(furObject.FilePath, true)
 			logs.IncrementScore(ro.RetryCount)
 			file.Close()

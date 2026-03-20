@@ -3,6 +3,7 @@ package jwt
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -22,13 +23,18 @@ type JsonMessage struct {
 	FileName     string   `json:"file_name"`
 	URLs         []string `json:"urls"`
 	Size         int64    `json:"size"`
+	Rev          string   `json:"rev"`
 }
 
 type DoRequest func(*http.Response) *http.Response
 
 func ResponseToString(resp *http.Response) string {
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body) // nolint: errcheck
+	_, err := buf.ReadFrom(resp.Body)
+	if err != nil {
+		log.Println("WARNING: unable to parse response body")
+		return ""
+	}
 	return buf.String()
 }
 

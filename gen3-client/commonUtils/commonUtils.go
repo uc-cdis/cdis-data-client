@@ -35,6 +35,9 @@ const ShepherdVersionEndpoint = "/mds/version"
 // IndexdIndexEndpoint is the endpoint postfix for INDEXD index
 const IndexdIndexEndpoint = "/index/index"
 
+// IndexdBlankEndpoint is the endpoint postfix for INDEXD blank
+const IndexdBlankEndpoint = "/index/index/blank"
+
 // FenceUserEndpoint is the endpoint postfix for FENCE user
 const FenceUserEndpoint = "/user/user"
 
@@ -74,7 +77,7 @@ type FileUploadRequestObject struct {
 	PresignedURL string
 	Request      *http.Request
 	Bar          *pb.ProgressBar
-	Bucket 	 	 string `json:"bucket,omitempty"`
+	Bucket       string `json:"bucket,omitempty"`
 }
 
 // FileDownloadResponseObject defines a object for file download
@@ -100,13 +103,14 @@ type FileMetadata struct {
 
 // RetryObject defines a object for retry upload
 type RetryObject struct {
-	FilePath     string
-	Filename     string
-	FileMetadata FileMetadata
-	GUID         string
-	RetryCount   int
-	Multipart    bool
-	Bucket 		 string
+	FilePath         string
+	Filename         string
+	FileMetadata     FileMetadata
+	GUID             string
+	RetryCount       int
+	Multipart        bool
+	Bucket           string
+	UpdateRecordUrls bool
 }
 
 // ParseRootPath parses dirname that has "~" in the beginning

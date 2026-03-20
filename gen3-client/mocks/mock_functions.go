@@ -63,16 +63,16 @@ func (mr *MockFunctionInterfaceMockRecorder) CheckPrivileges(arg0 interface{}) *
 }
 
 // DoRequestWithSignedHeader mocks base method
-func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 *jwt.Credential, arg1, arg2 string, arg3 []byte) (jwt.JsonMessage, error) {
-	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3)
+func (m *MockFunctionInterface) DoRequestWithSignedHeader(arg0 *jwt.Credential, arg1 string, arg2 string, arg3 string, arg4 []byte) (jwt.JsonMessage, error) {
+	ret := m.ctrl.Call(m, "DoRequestWithSignedHeader", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(jwt.JsonMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DoRequestWithSignedHeader indicates an expected call of DoRequestWithSignedHeader
-func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3)
+func (mr *MockFunctionInterfaceMockRecorder) DoRequestWithSignedHeader(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DoRequestWithSignedHeader", reflect.TypeOf((*MockFunctionInterface)(nil).DoRequestWithSignedHeader), arg0, arg1, arg2, arg3, arg4)
 }
 
 // GetHost mocks base method
@@ -102,15 +102,15 @@ func (mr *MockFunctionInterfaceMockRecorder) GetResponse(arg0, arg1, arg2, arg3,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResponse", reflect.TypeOf((*MockFunctionInterface)(nil).GetResponse), arg0, arg1, arg2, arg3, arg4)
 }
 
-// ParseFenceURLResponse mocks base method
-func (m *MockFunctionInterface) ParseFenceURLResponse(arg0 *http.Response) (jwt.JsonMessage, error) {
-	ret := m.ctrl.Call(m, "ParseFenceURLResponse", arg0)
+// ParseResponse mocks base method
+func (m *MockFunctionInterface) ParseResponse(arg0 *http.Response) (jwt.JsonMessage, error) {
+	ret := m.ctrl.Call(m, "ParseResponse", arg0)
 	ret0, _ := ret[0].(jwt.JsonMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ParseFenceURLResponse indicates an expected call of ParseFenceURLResponse
-func (mr *MockFunctionInterfaceMockRecorder) ParseFenceURLResponse(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseFenceURLResponse", reflect.TypeOf((*MockFunctionInterface)(nil).ParseFenceURLResponse), arg0)
+// ParseResponse indicates an expected call of ParseResponse
+func (mr *MockFunctionInterfaceMockRecorder) ParseResponse(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseResponse", reflect.TypeOf((*MockFunctionInterface)(nil).ParseResponse), arg0)
 }

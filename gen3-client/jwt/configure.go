@@ -69,7 +69,7 @@ func (conf *Configure) ReadFile(filePath string, fileType string) string {
 func (conf *Configure) ValidateUrl(apiEndpoint string) (*url.URL, error) {
 	parsedURL, err := url.Parse(apiEndpoint)
 	if err != nil {
-		return parsedURL, errors.New("Error occurred when parsing apiendpoint URL: " + err.Error())
+		return parsedURL, errors.New("Error occurred when parsing URL: " + err.Error())
 	}
 	if parsedURL.Host == "" {
 		return parsedURL, errors.New("Invalid endpoint. A valid endpoint looks like: https://www.tests.com")
